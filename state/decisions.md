@@ -93,3 +93,19 @@ Each task's bar starts at the left and its length is its working time on one sca
 ## 2026-10-15: Fixed: timeline events filtered by time, failed stats runs not cached
 
 server.task_stats compared event timestamps as text, wrong when the log mixes time zone offsets; it now compares epoch seconds (_when), keeping events whose time cannot be read. A failed or timed-out aaf.py run was cached until events.jsonl changed; now only successful runs are cached. Tests: test_events_filtered_by_time_not_text, test_failed_run_is_not_cached (both fail on the old code). Not done: a short wait before retrying a failing run (kept as a known issue). Reviewer PASS.
+
+## 2026-10-15: Change map: two-level squarified treemap, own endpoint, cached like Git info
+
+GET /api/files?name= runs the served workspace's 'aaf.py git files <name>' and caches it 30 s per project (dropped after Push/Pull); the page loads it separately, like the Git section, so the 2.5 s project poll stays cheap. Layout: files grouped by their top-level folder (top-level files in one group), squarified so tiles stay close to square and readable; deeper folders show in the tile's label. Group names are drawn over the tiles instead of in a header strip, so tile area stays proportional to file size across groups. Colour: one blue ramp in five steps by number of saved versions that changed the file (1, 2, 3-4, 5-8, 9+), roughly logarithmic because a few files change far more often than the rest. Very small files get a minimum area so they can still be tapped. Rejected: nested treemap per folder level (labels unreadable at phone width), area from lines changed (the task asks for size).
+
+## 2026-10-15: Change map: bookkeeping hidden by default
+
+The task asks to offer hiding state/ and plots/ so the code stands out. Hidden is the default because the map's question is where the agent works in the code; the framework's own notes, test records and screenshots change on every task and would otherwise dominate the colours. One tap shows them; the choice is remembered in the browser. Rejected: showing everything by default (the code is drowned out in every project that uses the framework).
+
+## 2026-10-15: Fixed: change map says when the history could not be read; legend for files with no counted change
+
+A failed or timed-out 'aaf.py git files' was shown as 'not saved with Git yet'; the page now says the history could not be read and that it retries every minute (the server does not cache failures). Files with 0 counted commits (older than the 500 commits aaf.py reads) are grey and get a legend entry. checks/change_map.py check_odd_data covers both (verified by the reviewer to fail without the fix). Reviewer PASS.
+
+## 2026-10-15: Fixed: change map keeps keyboard focus on a tapped tile
+
+Tapping a tile redrew the map and dropped focus. renderMapSlot(path) now focuses the tapped tile with preventScroll, only after a tap and only once the map is fully drawn, so the background redraws never move focus or the page (the lesson from the discarded timeline draft fix-2). checks/change_map.py check_keyboard: Enter opens and a second Enter closes the detail, focus stays, page does not move; fails without the fix. Its scroll assertion would not catch a missing preventScroll (the tile is fully on screen); the reviewer probed partly visible tiles by hand. Reviewer PASS.

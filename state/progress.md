@@ -54,6 +54,18 @@
   events.jsonl changes (see decision). A failed run is not cached; event times are compared as times
   (logs may mix time zone offsets). Fixture event logs rewritten in the framework's current
   structured format with realistic times. Check: `checks/timeline.py`; API tests: `TimelineTest`.
+- **Change map (roadmap 3, 2026-10-15)**: section "Where the agent works" after the Git section.
+  A squarified treemap of the project's files from `aaf.py git files` (via `/api/files`, cached 30 s,
+  loaded separately like the Git info): grouped by top-level folder (label drawn on the group; deeper
+  folders show in the tile name), tile area from file size (tiny files get a minimum so they can be
+  tapped), colour in five blue steps by how many saved versions changed the file (1, 2, 3-4, 5-8, 9+)
+  with a legend. Tapping a tile shows its path, size, how many versions changed it, lines changed and
+  its last change with the date. The agent's own records (state/, plots/) are hidden by default; a
+  button shows them, remembered in the browser. Empty states: not a Git repository yet; workspace
+  without the framework tool; only records and no code; the history could not be read (says so and
+  retries every minute, instead of claiming the project has no Git). Tapping a tile (or Enter) keeps keyboard focus on it without moving the page.
+  Files with no counted change (older
+  than the 500 commits read) are grey with their own legend entry. Redrawn on resize.
 - **Git section ("Saved versions")**, after the test history: a picture of this computer ⇄ GitHub
   (versions to send / to get, unsaved files with the list on demand), Push and Pull buttons, a link
   to the repo, and a commit timeline (oldest left; green = tests passed and review approved, amber
@@ -82,7 +94,7 @@
 
 ## Next
 
-- Roadmap 3: change map (see `ROADMAP.md`).
+- Roadmap 4: track record (see `ROADMAP.md`).
 
 - Show a Git summary (unsent versions, behind) in the project list.
 
@@ -115,16 +127,29 @@
 - Task timeline: the reason for a pause (stuck / waiting / finished) is read from the events sent
   with the stats; for tasks older than the newest 12 those events are not sent, so the pause says
   "No work was recorded". aaf.py's stats do not record intermediate outcomes per task.
-- Task timeline (draft fix-2 available): the end mark after each bar (✓ / ! / ✕) is not asserted by
-  the check; attempt numbers overlap when a very long running stage squeezes the early ones; keyboard
-  focus on a segment is lost on the 5 s live redraw. The draft fixes all three but restored focus without
-  preventScroll, which pulled the page back to the timeline every 5 s; see state/drafts-notes.md.
+- Task timeline: the end mark after each bar (✓ / ! / ✕) is not asserted by the check; attempt numbers
+  above a bar overlap when a very long running stage squeezes the early ones; keyboard focus on a
+  segment is lost on the live redraw (every 5 s, full page every 30 s). A fix was tried (draft fix-2,
+  4 attempts) and discarded: restoring focus before the Git section is drawn made the page jump up on
+  every full redraw. Notes for a next try are in state/drafts-notes.md (restore focus after the Git
+  section, or keep scrollY across the redraw; test on the Git workspace).
 - Task timeline: the number beside a bar is working time (pauses left out), not start-to-end; the
   pause is named in the row header (see decision).
 - Task timeline: a stats run that keeps failing is retried on every poll (no wait between tries);
   each try can take up to 20 s. Not seen in practice.
 - Task timeline: `checks/render.py` does not pin the clock, so the running fixtures' bars in
   `plots/render-*.png` grow to the real current time (honest, but they look stretched).
+- Change map: in the plain fixtures (no framework tool) it shows "not available" while the Git section
+  is hidden entirely; only the check's temporary Git workspace shows a real map.
+- Change map: `aaf.py git files` counts at most the last 500 commits, so very old projects undercount
+  (files untouched in that window are grey, "no change in the history read").
+- Change map: tiny files all get the same minimum area (0.4% of the total), so a folder of many small
+  files becomes a grid of equal tiles; with real data some tiles are only 6-10 px wide on a phone; only
+  the top-level folder groups tiles, so deep paths get long, cut-off labels; the "no change" grey and the
+  lightest blue are close in light mode; a failed read shows the raw error text; the background redraws
+  (data refresh, resize) do not keep keyboard focus, only a tap does.
+- Change map: check_keyboard's "page does not move" part uses a tile fully on screen, so it would not
+  catch a missing preventScroll; a case with a partly visible tile would.
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).
 
 ## Roadmap

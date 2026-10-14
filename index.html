@@ -226,6 +226,39 @@ pre.out { margin: 8px 0 0; padding: 12px 14px; background: var(--code-bg); borde
 .tt-legend .k-att i { width: 2px; background: var(--ink); border-radius: 1px; }
 .tt-older summary { color: var(--accent); font-size: 14px; margin-top: 8px; }
 
+/* Change map */
+.map-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px 20px; margin-bottom: 12px; }
+.map-intro { margin: 0; font-size: 14px; color: var(--muted); max-width: 640px; }
+.map-toggle { border: 1px solid var(--rule); background: var(--panel); color: var(--accent); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; cursor: pointer; flex: none; }
+.map-toggle[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.map { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: var(--paper); }
+.map-group { position: absolute; border-radius: 6px; background: var(--paper); }
+.map-gl { position: absolute; left: 4px; top: 3px; z-index: 2; pointer-events: none; font-size: 11.5px; font-weight: 700; color: var(--ink);
+  background: color-mix(in srgb, var(--panel) 82%, transparent); padding: 0 6px; border-radius: 4px; max-width: calc(100% - 8px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-tile { position: absolute; border: 0; margin: 0; padding: 0; border-radius: 3px; cursor: pointer; overflow: hidden; text-align: left;
+  background: var(--track); color: var(--ink); }
+.map-tile.s1 { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.map-tile.s2 { background: color-mix(in srgb, var(--accent) 32%, var(--panel)); }
+.map-tile.s3 { background: color-mix(in srgb, var(--accent) 52%, var(--panel)); }
+.map-tile.s4 { background: color-mix(in srgb, var(--accent) 74%, var(--panel)); color: var(--panel); }
+.map-tile.s5 { background: var(--accent); color: var(--panel); }
+.map-tile:hover { filter: brightness(1.06); }
+.map-tile[aria-pressed="true"] { outline: 2.5px solid var(--ink); outline-offset: -2.5px; z-index: 3; }
+.map-tile .mn { position: absolute; left: 6px; right: 6px; bottom: 4px; font-size: 12px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-tile .ms { display: block; font-weight: 400; font-size: 11px; opacity: .8; }
+.map-detail { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--paper); border-left: 4px solid var(--accent); font-size: 14px; }
+.map-detail p { margin: 0; }
+.map-detail .path { font: 600 13px var(--mono); overflow-wrap: anywhere; }
+.map-detail .sub { color: var(--muted); font-size: 13px; }
+.map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.map-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
+.map-legend i.s0 { background: var(--track); }
+.map-legend i.s1 { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.map-legend i.s2 { background: color-mix(in srgb, var(--accent) 32%, var(--panel)); }
+.map-legend i.s3 { background: color-mix(in srgb, var(--accent) 52%, var(--panel)); }
+.map-legend i.s4 { background: color-mix(in srgb, var(--accent) 74%, var(--panel)); }
+.map-legend i.s5 { background: var(--accent); }
+
 /* 5. Plots */
 .plots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .plot { margin: 0; background: var(--paper); border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); }
@@ -810,6 +843,7 @@ async function gitDo(action) {
                           : (action === "push" ? "Push did not work: " : "Pull did not work: ") + text };
   await loadGit(true);
   renderGitSlot();
+  loadMap();
 }
 
 // ---- Task timeline: where the time went. Data: aaf.py task_stats, sent with /api/project as "tasks".
@@ -958,6 +992,132 @@ function renderTimelineSlot() {
 }
 // Running tasks grow while you watch, without waiting for new data.
 setInterval(() => { if (ttData && (ttData.tasks || []).some(t => t.outcome === "running")) renderTimelineSlot(); }, 5000);
+
+// ---- Change map: where in the code the agent works. Data: aaf.py git files, through /api/files.
+const MAP_HIDE = ["state/", "plots/"];          // the framework's own records in every project
+const MAP_STEPS = ["1", "2", "3–4", "5–8", "9+"];
+const mapStep = n => n >= 9 ? 5 : n >= 5 ? 4 : n >= 3 ? 3 : n >= 2 ? 2 : n >= 1 ? 1 : 0;
+const sizeWords = b => b < 1024 ? plural(b, "byte") : `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB`;
+let mapData = null, mapFor = null, mapPick = null, mapLoading = false, mapShowAll = false;
+try { mapShowAll = localStorage.getItem("aaf.mapAll") === "1"; } catch (e) {}
+
+async function loadMap() {
+  const name = current;
+  if (!name) return;
+  try {
+    const res = await fetch("/api/files?name=" + encodeURIComponent(name));
+    if (!res.ok || name !== current) return;
+    const d = await res.json();
+    if (name !== current) return;
+    mapData = d; mapFor = name;
+  } catch (e) { return; }
+  renderMapSlot();
+}
+
+// Squarified treemap (Bruls et al.): lays items with .v into rect r, close to square, sets item.r.
+function squarify(items, r) {
+  let { x, y, w, h } = r;
+  const total = items.reduce((s, it) => s + it.v, 0);
+  if (!total || w <= 0 || h <= 0) { items.forEach(it => (it.r = { x, y, w: 0, h: 0 })); return; }
+  const k = w * h / total, rest = items.map(it => ({ it, a: it.v * k }));
+  const worst = (row, side) => {
+    const s = row.reduce((p, q) => p + q.a, 0);
+    return Math.max(...row.map(q => Math.max(side * side * q.a / (s * s), s * s / (side * side * q.a))));
+  };
+  const place = row => {
+    const s = row.reduce((p, q) => p + q.a, 0);
+    if (w >= h) { const cw = s / h; let cy = y; for (const q of row) { const qh = q.a / cw; q.it.r = { x, y: cy, w: cw, h: qh }; cy += qh; } x += cw; w -= cw; }
+    else { const rh = s / w; let cx = x; for (const q of row) { const qw = q.a / rh; q.it.r = { x: cx, y, w: qw, h: rh }; cx += qw; } y += rh; h -= rh; }
+  };
+  let row = [];
+  while (rest.length) {
+    const side = Math.min(w, h);
+    if (!row.length || worst([...row, rest[0]], side) <= worst(row, side)) row.push(rest.shift());
+    else { place(row); row = []; }
+  }
+  if (row.length) place(row);
+}
+
+function mapLayout(files, W, H) {
+  const total = files.reduce((s, f) => s + (f.bytes || 0), 0) || 1;
+  const floor = total * 0.004;  // tiny files still get a tile you can tap
+  const groups = new Map();
+  for (const f of files) {
+    const i = f.path.indexOf("/"), folder = i > 0 ? f.path.slice(0, i) : "";
+    if (!groups.has(folder)) groups.set(folder, { folder, files: [], v: 0 });
+    const g = groups.get(folder), v = Math.max(f.bytes || 0, floor);
+    g.files.push({ f, v, name: i > 0 ? f.path.slice(i + 1) : f.path });
+    g.v += v;
+  }
+  const list = [...groups.values()].sort((a, b) => b.v - a.v);
+  squarify(list, { x: 0, y: 0, w: W, h: H });
+  for (const g of list) {
+    g.files.sort((a, b) => b.v - a.v);
+    squarify(g.files, { x: 2, y: 2, w: Math.max(0, g.r.w - 4), h: Math.max(0, g.r.h - 4) });
+  }
+  return list;
+}
+
+function mapShell() {
+  const head = `<h3 class="sec-title">Where the agent works</h3><section class="panel sec" data-section="changes" aria-label="Where the agent works">`;
+  const d = mapFor === current ? mapData : null;
+  if (!d) return head + `<p class="empty">Reading the change history…</p></section>`;
+  if (d.available === false)
+    return head + `<p class="empty" data-empty data-map-ready>The change map is not available here: it needs the framework tool, which this workspace does not have.</p></section>`;
+  if (d.error)
+    return head + `<p class="empty" data-empty data-map-ready>The change history could not be read just now (${esc(d.error)}). The page tries again every minute.</p></section>`;
+  if (!d.repo)
+    return head + `<p class="empty" data-empty data-map-ready>This project is not saved with Git yet, so there is no history of changes to map. Once the agent saves its first version, every file appears here as a tile.</p></section>`;
+  const all = d.files || [], shown = mapShowAll ? all : all.filter(f => !MAP_HIDE.some(p => f.path.startsWith(p)));
+  const hidden = all.length - shown.length;
+  const toggle = hidden || mapShowAll ? `<button type="button" class="map-toggle" data-map-toggle aria-pressed="${!mapShowAll}">${
+    mapShowAll ? "Hide the agent's own records" : `Show the agent's own records too (${hidden})`}</button>` : "";
+  const pick = shown.find(f => f.path === mapPick);
+  const detail = pick ? `<div class="map-detail" data-file-detail>
+      <p class="path">${esc(pick.path)}</p><p class="sub">${esc(sizeWords(pick.bytes || 0))}</p>
+      <p>Changed in ${plural(pick.commits || 0, "saved version")}${pick.lines_changed ? `, ${pick.lines_changed} lines added or removed in total` : ""}.</p>
+      ${pick.last_changed ? `<p>Last change: “${esc(pick.last_subject || "")}” · ${esc(clock(pick.last_changed))} (${esc(ago(pick.last_changed))})</p>` : ""}</div>` : "";
+  const bytes = shown.reduce((s, f) => s + (f.bytes || 0), 0);
+  return head + `<div class="map-top"><p class="map-intro" data-map-intro>Each tile is a file of the project, grouped by folder and sized by how big the file is.
+      The stronger the blue, the more saved versions changed the file. Tap a tile to see its last change.${!mapShowAll && hidden ? " The agent's own records (notes, test results, screenshots) are hidden so the code stands out." : ""}</p>${toggle}</div>
+    ${shown.length ? `<div class="map" data-map data-map-ready role="group" aria-label="Files of the project"></div>`
+      : `<p class="empty" data-empty data-map-ready>So far there are only the agent's own records, no code.</p>`}
+    ${detail}
+    <div class="map-legend" data-map-legend><span>Changed in</span>${MAP_STEPS.map((s, i) => `<span><i class="s${i + 1}"></i>${s}</span>`).join("")}<span>saved versions</span>${shown.some(f => !f.commits) ? `<span><i class="s0"></i>no change in the history read</span>` : ""}<span>${plural(shown.length, "file")}, ${esc(sizeWords(bytes))}</span></div></section>`;
+}
+
+function renderMapSlot(focusPath) {
+  const slot = $("#map-slot");
+  if (!slot) return;
+  slot.innerHTML = mapShell();
+  const box = $("[data-map]", slot);
+  if (box) {
+    const W = box.clientWidth, H = Math.round(W < 600 ? Math.min(520, Math.max(300, W * 1.15)) : Math.min(460, Math.max(280, W * 0.45)));
+    box.style.height = H + "px";
+    const all = mapData.files || [], shown = mapShowAll ? all : all.filter(f => !MAP_HIDE.some(p => f.path.startsWith(p)));
+    box.innerHTML = mapLayout(shown, W, H).map(g => `<div class="map-group" data-group data-folder="${esc(g.folder)}"
+        style="left:${g.r.x}px;top:${g.r.y}px;width:${g.r.w}px;height:${g.r.h}px">${g.r.w > 40 && g.r.h > 20 ? `<span class="map-gl">${esc(g.folder ? g.folder + "/" : "top level")}</span>` : ""}${
+      g.files.map(t => { const r = t.r, f = t.f, n = f.commits || 0;
+        const label = `${f.path}: ${sizeWords(f.bytes || 0)}, changed in ${plural(n, "saved version")}`;
+        return `<button type="button" class="map-tile s${mapStep(n)}" data-tile data-path="${esc(f.path)}" data-commits="${n}" data-bytes="${f.bytes || 0}"
+          aria-pressed="${mapPick === f.path}" aria-label="${esc(label)}" title="${esc(label)}"
+          style="left:${r.x + 1}px;top:${r.y + 1}px;width:${Math.max(2, r.w - 2)}px;height:${Math.max(2, r.h - 2)}px">${
+          r.w >= 56 && r.h >= 32 ? `<span class="mn">${esc(t.name)}${r.h >= 48 ? `<span class="ms">${esc(sizeWords(f.bytes || 0))}</span>` : ""}</span>` : ""}</button>`; }).join("")}</div>`).join("");
+  }
+  slot.querySelectorAll("[data-tile]").forEach(b => b.addEventListener("click", () => {
+    mapPick = mapPick === b.dataset.path ? null : b.dataset.path; renderMapSlot(b.dataset.path);
+  }));
+  // After a tap the map is fully drawn again; keep the keyboard on the same tile, without scrolling.
+  if (focusPath) { const t = [...slot.querySelectorAll("[data-tile]")].find(x => x.dataset.path === focusPath); if (t) t.focus({ preventScroll: true }); }
+  const tg = $("[data-map-toggle]", slot);
+  if (tg) tg.addEventListener("click", () => {
+    mapShowAll = !mapShowAll;
+    try { localStorage.setItem("aaf.mapAll", mapShowAll ? "1" : "0"); } catch (e) {}
+    renderMapSlot();
+  });
+}
+let mapResize = null;
+addEventListener("resize", () => { clearTimeout(mapResize); mapResize = setTimeout(() => renderMapSlot(), 150); });
 
 function renderDetail(d) {
   const st = d.status || {}, meta = d.meta || {}, ck = d.checks, rv = d.review;
@@ -1122,9 +1282,10 @@ function renderDetail(d) {
       <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
     </section>`;
 
-  $("#main").innerHTML = glance + action + live + health + `<div id="tt-slot"></div>` + history + `<div id="git-slot"></div>` + plots + more;
+  $("#main").innerHTML = glance + action + live + health + `<div id="tt-slot"></div>` + history + `<div id="git-slot"></div><div id="map-slot"></div>` + plots + more;
   renderTimelineSlot();
   renderGitSlot();
+  renderMapSlot();
 
   $("#main").querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500); }
@@ -1139,6 +1300,7 @@ $("#lightbox").addEventListener("click", e => e.currentTarget.close());
 function select(name) {
   current = name; lastDetail = "";
   gitData = null; gitFor = null; gitPick = null; gitMsg = null; ttPick = null;
+  mapData = null; mapFor = null; mapPick = null;
   try { localStorage.setItem("aaf.project", name); } catch (e) {}
   history.replaceState(null, "", "#p=" + encodeURIComponent(name));
   document.querySelectorAll(".proj").forEach(b => b.setAttribute("aria-current", b.dataset.p === name));
@@ -1161,6 +1323,7 @@ async function tick() {
     const dsig = running ? text + "|" + Math.floor(Date.now() / 30000) : text;
     if (dsig !== lastDetail) { lastDetail = dsig; renderDetail(JSON.parse(text)); }
     if (gitFor !== current && !gitLoading) { gitLoading = true; loadGit(false).finally(() => { gitLoading = false; }); }
+    if (mapFor !== current && !mapLoading) { mapLoading = true; loadMap().finally(() => { mapLoading = false; }); }
   } catch (e) {
     $("#main").innerHTML = `<div class="welcome"><h2>Dashboard server not reachable</h2><p>Start it from the workspace folder with <code>python3 dashboard/server.py</code>, then reload this page.</p></div>`;
   }
@@ -1168,6 +1331,7 @@ async function tick() {
 let gitLoading = false;
 tick(); setInterval(tick, 2500);
 setInterval(() => { if (!gitBusy) loadGit(false); }, 30000);
+setInterval(() => { if (!mapLoading) loadMap(); }, 60000);
 </script>
 </body>
 </html>

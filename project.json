@@ -32,6 +32,11 @@
       "name": "Task timeline",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/timeline.py; else python3 checks/timeline.py; fi",
       "timeout": 240
+    },
+    {
+      "name": "Change map",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/change_map.py; else python3 checks/change_map.py; fi",
+      "timeout": 240
     }
   ]
 }

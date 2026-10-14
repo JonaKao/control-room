@@ -115,3 +115,35 @@ def make_workspace(projects=("example-done", "image-classifier", "parser")):
 
 def remove_workspace(root):
     shutil.rmtree(root, ignore_errors=True)
+
+
+# A small code project for the change map: (path, size in bytes, how many commits change it).
+CODE_TREE = [
+    ("scheduler/core.py", 6200, 9), ("scheduler/queue.py", 3100, 5), ("scheduler/clock.py", 1500, 3),
+    ("scheduler/__init__.py", 60, 1), ("tests/test_core.py", 4100, 6), ("tests/test_queue.py", 2000, 2),
+    ("README.md", 2600, 2), ("config/defaults.yaml", 700, 1), ("plots/latency.csv", 1800, 2),
+]
+
+
+def code_repo(root, name="scheduler"):
+    """Make projects/<name> a repository with a code tree whose files changed unevenly.
+    Returns {path: (commits, last subject)} for the code files."""
+    pdir = os.path.join(root, "projects", name)
+    git(pdir, "init", "-q", "-b", "main")
+    rounds = max(n for _, _, n in CODE_TREE)
+    want = {}
+    for r in range(rounds):
+        subject = "Round %d: %s" % (r + 1, "start the project" if r == 0 else "work on the scheduler")
+        for path, size, n in CODE_TREE:
+            if r >= n:
+                continue
+            full = os.path.join(pdir, path)
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            # The first commit writes most of the file; later ones grow it a little.
+            body = "x" * max(0, size - 40 * (n - 1) - 30) + "\n" if r == 0 else ""
+            with open(full, "a") as f:
+                f.write(body + ("# change %02d %s\n" % (r + 1, "." * 21))[:40])
+            want[path] = (n, subject)
+        git(pdir, "add", "-A")
+        git(pdir, "commit", "-q", "-m", subject)
+    return want

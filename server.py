@@ -57,6 +57,8 @@ _git_locks = {}
 _git_info_locks = {}
 _git_locks_guard = threading.Lock()
 _stats_cache = {}
+_files_cache = {}
+FILES_CACHE_S = 30
 STATS_TASKS_EVENTS = 400  # events of the shown tasks sent along, so the page can say what happened in a segment
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PLOT_EXT = (".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp")
@@ -315,6 +317,25 @@ def _git_info_run(name):
     return data
 
 
+def git_files(name, fresh=False):
+    """`aaf.py git files <name>` for the change map, cached briefly like the Git info."""
+    if not os.path.isfile(os.path.join(ROOT, "framework", "aaf.py")):
+        return {"available": False, "repo": False, "files": []}
+    hit = _files_cache.get((ROOT, name))
+    if hit and not fresh and time.time() - hit[0] < FILES_CACHE_S:
+        return hit[1]
+    code, out, err = aaf("git", "files", name, timeout=30)
+    try:
+        data = json.loads(out) if code == 0 else None
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        return {"available": True, "repo": False, "files": [], "error": (err or out).strip()[-400:]}
+    data["available"] = True
+    _files_cache[(ROOT, name)] = (time.time(), data)
+    return data
+
+
 def git_action(name, action):
     """Push or pull through aaf.py. Returns (http code, result)."""
     st = read_json(os.path.join(PROJECTS, name, "state", "status.json"), {}) or {}
@@ -330,6 +351,7 @@ def git_action(name, action):
     finally:
         lock.release()
     _git_cache.pop((ROOT, name), None)
+    _files_cache.pop((ROOT, name), None)
     text = (out + "\n" + err).strip()
     text = re.sub(r"^error: ", "", text)
     if code == 0:
@@ -369,6 +391,10 @@ class Handler(BaseHTTPRequestHandler):
             if name not in project_names():
                 return self.json({"error": "unknown project"}, 404)
             return self.json(git_info(name, fresh=bool(q.get("fresh"))))
+        if url.path == "/api/files":
+            if name not in project_names():
+                return self.json({"error": "unknown project"}, 404)
+            return self.json(git_files(name, fresh=bool(q.get("fresh"))))
         if url.path == "/plot":
             fn = (q.get("file") or [""])[0]
             if name not in project_names() or "/" in fn or "\\" in fn or fn.startswith(".") \

@@ -8,7 +8,7 @@ knows where to continue.
 |---|---|---|---|---|
 | 1 | Live activity feed | What is the agent doing right now? | `state/activity.jsonl`, written by `framework/hooks/activity.py` | Done (2026-10-14) |
 | 2 | Task timeline | Where did the time go? | `python3 framework/aaf.py stats <project>` → `tasks[].phases` | Done (2026-10-14) |
-| 3 | Change map | Where in the code does the agent work? | `python3 framework/aaf.py git files <project>` | Not started |
+| 3 | Change map | Where in the code does the agent work? | `python3 framework/aaf.py git files <project>` | Done (2026-10-15) |
 | 4 | Track record | How well is the agent doing over time? | `python3 framework/aaf.py stats <project>` → `summary`, plus `state/review_history.jsonl` | Not started |
 
 Shared requirements for all four: plain language, as visual as possible, calm and

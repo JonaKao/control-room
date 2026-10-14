@@ -294,5 +294,69 @@ class NoDirectGitTest(unittest.TestCase):
         self.assertIn("aaf.py", src)
 
 
+class ChangeMapApiTest(GitServer, unittest.TestCase):
+    """/api/files: the change map's data, exactly `aaf.py git files <name>`, cached like Git info."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.start_workspace()
+        cls.want = gw.code_repo(cls.root, "scheduler")
+        server._files_cache.clear()
+
+    @classmethod
+    def tearDownClass(cls):
+        server._files_cache.clear()
+        cls.stop_workspace()
+
+    def test_same_as_aaf_git_files(self):
+        import subprocess
+        out = subprocess.run([sys.executable, os.path.join(self.root, "framework", "aaf.py"), "git", "files", "scheduler"],
+                             capture_output=True, text=True, check=True).stdout
+        code, d = self.request("GET", "/api/files?name=scheduler&fresh=1")
+        self.assertEqual(code, 200)
+        self.assertTrue(d["available"])
+        self.assertTrue(d["repo"])
+        self.assertEqual(d["files"], json.loads(out)["files"])
+        core = [f for f in d["files"] if f["path"] == "scheduler/core.py"][0]
+        self.assertEqual(core["commits"], self.want["scheduler/core.py"][0])
+
+    def test_not_a_repository(self):
+        code, d = self.request("GET", "/api/files?name=brand-new")
+        self.assertEqual(code, 200)
+        self.assertTrue(d["available"])
+        self.assertFalse(d["repo"])
+        self.assertEqual(d["files"], [])
+
+    def test_unknown_project_and_traversal(self):
+        for name in ("nope", "../scheduler", "..%2Fscheduler"):
+            code, _ = self.request("GET", "/api/files?name=" + name)
+            self.assertEqual(code, 404, name)
+
+    def test_cached_unless_fresh(self):
+        calls = []
+        real = server.aaf
+        server.aaf = lambda *a, **k: calls.append(a) or real(*a, **k)
+        try:
+            server._files_cache.clear()
+            self.request("GET", "/api/files?name=scheduler")
+            self.request("GET", "/api/files?name=scheduler")
+            self.assertEqual(len(calls), 1)
+            self.request("GET", "/api/files?name=scheduler&fresh=1")
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(calls[0], ("git", "files", "scheduler"))
+        finally:
+            server.aaf = real
+
+    def test_unavailable_without_framework(self):
+        old = server.ROOT
+        server.set_root(os.path.join(PROJECT, "fixtures", "workspace"))
+        try:
+            d = server.git_files("example-done")
+        finally:
+            server.set_root(old)
+        self.assertFalse(d["available"])
+        self.assertEqual(d["files"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

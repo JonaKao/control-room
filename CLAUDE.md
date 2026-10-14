@@ -15,6 +15,8 @@ includes people who do not know the code behind it.
   `<workspace>/projects/*/state/` and `*/plots/` and never writes them itself. Endpoints:
   `/` (the page), `/api/projects`, `/api/project?name=`, `/plot?project=&file=`,
   `/api/git?name=[&fresh=1]` (runs `framework/aaf.py git info <name> --fetch`, cached 15 s),
+  `/api/files?name=[&fresh=1]` (the change map: `framework/aaf.py git files <name>`, cached 30 s,
+  dropped after Push/Pull),
   and `POST /api/git/push|pull` with `{"name": ...}`. `/api/project` also carries the newest
   30 steps of `state/activity.jsonl` (the live feed, written by `framework/hooks/activity.py`),
   read from the end of the file; `/api/projects` carries each project's newest step.
@@ -59,6 +61,10 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    top), one segment per stage in proportion to its time, one colour per stage, attempt marks,
    pause breaks, outcome and duration, the detail shown on tapping a segment, and that a running
    task grows; it saves `plots/render-timeline-*.png`.
+7. **Change map**: `checks/change_map.py` builds a Git workspace (`checks/git_workspace.py`;
+   `code_repo()` gives `scheduler` a small code tree with uneven change counts) and checks one tile
+   per file grouped by folder, area from size, colour from change count, the bookkeeping toggle
+   (remembered), the tile detail and the empty states; it saves `plots/render-map-*.png`.
 
 The render check needs Playwright once, installed into a local `.venv` in this folder:
 

@@ -1,13 +1,13 @@
 VERDICT: PASS
-SUMMARY: The timeline meets the task, I ran all 6 checks myself and they pass, no check was weakened, and the server stays read-only; I found only minor issues.
+SUMMARY: The change map meets the task. All 7 checks pass, including the new "Change map" check; no existing check or test was weakened. Findings are minor robustness/readability issues seen with real data.
 
 FINDINGS
-- [minor] plots/render-image-classifier-desktop.png — the running task's attempt numbers "2" and "3" sit on top of each other. checks/render.py does not pin the clock, so the running bar stretches to about 10 h and squeezes the early segments. progress.md already lists this. Pinning the clock in render.py would fix it.
-- [minor] index.html (timelineHtml, tt-total) — the number beside the bar is working time with pauses left out, not aaf.py's duration_s (start to end). The task says "total duration". decisions.md records this choice and the pause appears separately in the row header, so accepted, but it is a reading of the task.
-- [minor] checks/timeline.py:check_project — for finished, waiting and stuck tasks the check only asserts the outcome pill in the row header, not the end mark after the bar (✓ / ! / ✕). For running tasks it does check data-running-mark.
-- [minor] server.py:task_stats — events are filtered with a text comparison of timestamps; wrong if timezone offsets are mixed. Events for tasks older than the newest 12 are not sent, so a pause there says "No work was recorded" (listed in progress.md).
-- [minor] server.py:_stats_run — a failed or timed-out subprocess result is cached until events.jsonl changes; the subprocess can hold up an /api/project request for up to 20 s.
-- [minor] index.html (timeline setInterval) — every 5 s while a task runs the whole timeline is redrawn; keyboard focus on a segment is lost, and the bar keeps growing even when the feed has gone quiet for hours.
-- [minor] checks/timeline.py — expected attempt marks and pause counts use the same rules as the page; the proportion test only covers segments of at least 8% of the widest bar.
+- [minor] server.py git_files + index.html mapShell: if `aaf.py git files` fails or times out, the server returns {available: true, repo: false, error}; the page ignores error and says "This project is not saved with Git yet", which is false for a repository. Not covered by a test.
+- [minor] index.html mapLayout (floor = total * 0.004): every file below 0.4% of the total gets the same area; on the real control-room repo the fixtures/ group becomes a grid of identical tiles. Disclosed in decisions.md; the area test only looks at tiles >= 2500 px².
+- [minor] index.html renderMapSlot: with real data at phone width some tiles are very thin (6.8 px, 10 px), hard to tap; the check only requires 4 px.
+- [minor] index.html: grouping by top-level folder only, so deep files get long truncated labels; on the phone the "config/" label covers most of its only tile.
+- [minor] index.html mapStep: a file with 0 counted commits (older than aaf.py's 500-commit limit) gets class s0, which has no legend entry.
+- [minor] index.html: tapping a tile re-renders the whole map, so keyboard focus is lost after each tap.
+- [minor] Plain fixtures: the map shows "not available" while the Git section is hidden entirely (listed in progress.md).
 
-DONE.md: every item met (6/6 checks pass, nothing weakened, task covered by checks/timeline.py and TimelineTest, progress.md updated, screenshots inspected, plain language, server read-only, traversal tests pass).
+DONE.md: every item met (7/7 checks, nothing weakened, covered by checks/change_map.py and ChangeMapApiTest, progress.md updated, screenshots inspected, plain language, server read-only, traversal rejected).

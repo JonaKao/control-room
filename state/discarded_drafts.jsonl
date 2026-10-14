@@ -1,0 +1,1 @@
+{"at": "2026-10-15T01:13:05+02:00", "id": "fix-2", "issue": "Timeline: end mark not checked, attempt numbers overlap when squeezed, focus lost during live redraw", "summary": "Focus restore before the Git section is drawn makes the page jump up on every full redraw", "iterations": 4}
