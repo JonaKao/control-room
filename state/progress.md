@@ -29,6 +29,14 @@
   ring = not on GitHub yet). Picking a point shows the subject, tests, review and decisions.
   Data comes from `aaf.py git info --fetch`; Push/Pull run `aaf.py git push|pull`, only from the
   page itself; Pull is refused while the agent works. Hidden when the workspace has no aaf.py.
+  The Review trailer is read the same way for the colour and the detail, whatever its case or spacing
+  ("Review: PASS" is approved; values other than pass/fail count as not reviewed); `checks/git_section.py`
+  checks this with PASS, " Fail " and "skipped".
+  The Git screenshots (`plots/render-git-*.png`) show one screen scrolled to the Git section, as a person
+  sees it; the check fails if a saved screenshot is not exactly one screen (a full-page capture put the
+  sticky project list mid-page).
+  Git API tests that push, pull or change a phase (`GitWriteTest`) get a fresh workspace each; the read
+  tests share one. `GitTestOrderTest` runs them in reverse order to prove they don't depend on order.
   Git info is cached 15 s per project (counted from when the fetch finished); requests arriving
   during a run share its answer, even when the fetch takes longer than 15 s. After Push/Pull the page
   asks for fresh data, which never reuses a fetch that started before it asked.
@@ -61,4 +69,7 @@
   contain aaf.py ("python3 the framework tool check ...") read awkwardly. The agent-wording check
   uses one note on one fixture at desktop size.
 - No fixture is stuck below the attempt limit, so that wording of the stuck card is not exercised.
+- Git timeline: "not on GitHub yet" marks the newest `ahead` commits, which is only right for a straight
+  history (merges, more than 40 commits). A real fix needs `aaf.py git info` to report a per-commit pushed flag,
+  a change to the framework's data model; waiting for the human's go-ahead.
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).

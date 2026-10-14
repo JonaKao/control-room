@@ -1,8 +1,9 @@
 """Git endpoints: data comes from `aaf.py git info`, push/pull go through `aaf.py git push|pull`,
 and only the page itself (localhost, custom header) may ask for a push or pull.
 
-Each test class builds a fresh temporary workspace with real repositories
-(checks/git_workspace.py); nothing Git-related is stored in the fixtures.
+Tests run against temporary workspaces with real repositories (checks/git_workspace.py):
+one shared by the read-only tests, a fresh one for each test that pushes, pulls or changes
+a phase. Nothing Git-related is stored in the fixtures.
 """
 import http.client
 import json
@@ -24,21 +25,25 @@ import git_workspace as gw  # noqa: E402
 HEADER = {"X-AAF-Request": "control-room", "Content-Type": "application/json"}
 
 
-class GitApiTest(unittest.TestCase):
+class GitServer:
+    """Serves a temporary workspace with real repositories (see checks/git_workspace.py)."""
+
     @classmethod
-    def setUpClass(cls):
+    def start_workspace(cls):
         cls.old_root = server.ROOT
         cls.root, cls.expect = gw.make_workspace()
         server.set_root(cls.root)
+        server._git_cache.clear()
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         cls.port = cls.httpd.server_address[1]
         threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
 
     @classmethod
-    def tearDownClass(cls):
+    def stop_workspace(cls):
         cls.httpd.shutdown()
         cls.httpd.server_close()
         server.set_root(cls.old_root)
+        server._git_cache.clear()
         gw.remove_workspace(cls.root)
 
     def request(self, method, path, body=None, headers=None):
@@ -67,6 +72,19 @@ class GitApiTest(unittest.TestCase):
 
     def remote_log(self, name):
         return gw.git(os.path.join(self.root, "remotes", name + ".git"), "log", "--format=%s", "main")
+
+
+class GitApiTest(GitServer, unittest.TestCase):
+    """Reading and request checks. None of these change the workspace, so they share one."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.start_workspace()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.stop_workspace()
+
 
     # --- reading
 
@@ -140,7 +158,14 @@ class GitApiTest(unittest.TestCase):
             self.assertTrue(status.startswith("HTTP/1.0 4") or status.startswith("HTTP/1.1 4"),
                             "Content-Length %s: %r" % (length, status))
 
-    # --- push and pull
+class GitWriteTest(GitServer, unittest.TestCase):
+    """Push, pull and phase changes alter the repositories, so each test gets its own workspace."""
+
+    def setUp(self):
+        self.start_workspace()
+
+    def tearDown(self):
+        self.stop_workspace()
 
     def test_push_sends_local_commits(self):
         code, d = self.request("POST", "/api/git/push", {"name": "example-done"},
@@ -163,6 +188,19 @@ class GitApiTest(unittest.TestCase):
         self.assertEqual(code, 200, d)
         self.assertTrue(d["ok"])
         self.assertEqual(self.info("parser")["behind"], 0)
+
+
+class GitTestOrderTest(unittest.TestCase):
+    """The Git API tests pass in any order: a push or pull in one test must not change what another sees."""
+
+    def test_api_tests_pass_in_reverse_order(self):
+        loader = unittest.TestLoader()
+        loader.sortTestMethodsUsing = lambda a, b: (a < b) - (a > b)
+        suite = unittest.TestSuite(loader.loadTestsFromTestCase(c) for c in (GitWriteTest, GitApiTest))
+        with open(os.devnull, "w") as quiet:
+            result = unittest.TextTestRunner(stream=quiet, verbosity=0).run(suite)
+        failed = [str(t) for t, _ in result.failures + result.errors]
+        self.assertTrue(result.wasSuccessful(), "fail when run in reverse order: %s" % failed)
 
 
 class GitInfoSingleFlightTest(unittest.TestCase):

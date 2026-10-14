@@ -92,6 +92,44 @@ def check_timeline(page, label):
     return bad
 
 
+def check_trailer_case(page, label):
+    """Trailer values written in any case ("Review: PASS") read the same as lowercase ones."""
+    bad = []
+    for review, want_state, want_text in (("PASS", "ok", "Review approved"), (" Fail ", "bad", "Review did not approve"),
+                                          ("skipped", "tested", "")):
+        got = page.evaluate("""r => { const c = {subject: "x", author: "a", short: "abc", hash: "abc", date: "",
+                                                  body: "", trailers: {Checks: "2/2", Review: r}};
+                                       return [commitState(c), commitDetail(c, "")]; }""", review)
+        if got[0] != want_state:
+            bad.append("%s: 'Review: %s' colours the commit %r, expected %r" % (label, review, got[0], want_state))
+        if want_text and want_text not in got[1]:
+            bad.append("%s: 'Review: %s' is not described as %r in the commit detail" % (label, review, want_text))
+        if want_state != "bad" and "did not approve" in got[1]:
+            bad.append("%s: 'Review: %s' is described as 'did not approve' in the commit detail" % (label, review))
+    return bad
+
+
+def png_size(path):
+    with open(path, "rb") as f:
+        head = f.read(24)
+    return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+
+
+def check_screenshot_view(page, label, path):
+    """The saved screenshot shows the Git section as a person sees it: one screen, with the
+    section's top on it and the project list in its place. A full-page capture stitches the
+    sticky project list into the middle of the page."""
+    bad = []
+    view = page.viewport_size
+    sec = page.locator('[data-section="git"]').first.bounding_box()
+    if not sec or not (0 <= sec["y"] < view["height"]):
+        bad.append("%s: the Git section is not on screen in the screenshot" % label)
+    if png_size(path) != (view["width"], view["height"]):
+        bad.append("%s: screenshot is %dx%d, not the %dx%d screen a person sees"
+                   % ((label,) + png_size(path) + (view["width"], view["height"])))
+    return bad
+
+
 def check_sync(page, label, ahead, behind, changed):
     bad = []
     got = (attr(page, '[data-viz="git-sync"]', "data-ahead"), attr(page, '[data-viz="git-sync"]', "data-behind"),
@@ -118,16 +156,18 @@ def main():
                 page, errors = open_page(browser, base, "example-done", w, h, web=WEB)
                 problems += check_timeline(page, "example-done/" + label)
                 problems += check_sync(page, "example-done/" + label, 2, 0, 0)
+                if label == "desktop":
+                    problems += check_trailer_case(page, "example-done")
                 if page.locator('[data-section="git"] a[href="%s"]' % WEB).count() == 0:
                     problems.append("example-done/%s: no link to the repo on GitHub" % label)
                 if label == "phone":
                     over = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                     if over > 1:
                         problems.append("example-done/phone: page scrolls sideways by %dpx" % over)
-                if label == "phone":
-                    page.locator('[data-section="git"]').first.scroll_into_view_if_needed()
-                page.screenshot(path=os.path.join(PLOTS, "render-git-example-done-%s.png" % label),
-                                full_page=(label == "desktop"))
+                page.locator('[data-section="git"]').first.scroll_into_view_if_needed()
+                shot = os.path.join(PLOTS, "render-git-example-done-%s.png" % label)
+                page.screenshot(path=shot)
+                problems += check_screenshot_view(page, "example-done/" + label, shot)
                 problems += ["example-done/%s: JavaScript error: %s" % (label, e) for e in errors[:3]]
                 page.close()
 

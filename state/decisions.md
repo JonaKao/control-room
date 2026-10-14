@@ -53,3 +53,15 @@ do_POST accepts a Content-Length only if it is an integer in 0..4096; anything e
 ## 2026-10-14: Fixed: simultaneous Git info requests share one aaf.py git info --fetch
 
 Per-project lock in git_info; cache entries carry started and finished stamps. The 15 s cache life counts from finished; any waiter reuses a run that started after it asked; a fresh request never reuses a run that started before it asked (so data from before a push is never shown as fresh). Rejected: a single start-time stamp (draft fix-2, first attempt), because a fetch slower than the cache life left an expired entry and the waiting requests then ran aaf.py one after another.
+
+## 2026-10-14: Fixed: Review trailer read the same way everywhere
+
+A shared reviewOf() in index.html trims and lowercases the Review trailer and returns pass, fail or nothing; commitState (colour) and commitDetail (words and icon) both use it. 'Review: PASS' was green in the timeline but 'did not approve' in the detail; unknown values like 'skipped' now show no review line instead of a wrong one. checks/git_section.py check_trailer_case tests PASS, ' Fail ' and 'skipped'. Reviewer PASS (second round; the first failed only because progress.md was not updated).
+
+## 2026-10-14: Fixed: Git screenshots show one screen
+
+checks/git_section.py scrolls the Git section into view on desktop as well as phone and saves one viewport-sized screenshot; check_screenshot_view fails if the saved PNG is not exactly the viewport size or the section's top is off screen. The full-page capture stitched the sticky project list into the middle of the image. Rejected: keeping full_page and hiding the rail (would show something a person never sees). Reviewer PASS.
+
+## 2026-10-14: Fixed: Git API tests no longer depend on their order
+
+Push, pull and phase-change tests moved to GitWriteTest with a fresh workspace per test; read and refused-write tests share one workspace in GitApiTest. GitTestOrderTest runs both classes in reverse method order. Before, the push and pull tests changed the shared workspace and the info tests passed only because of alphabetical order. Cost: the Server API check takes about 18 s instead of 7 s. Reviewer PASS.

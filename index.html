@@ -548,9 +548,12 @@ async function loadGit(fresh) {
   renderGitSlot();
 }
 
+// The Review trailer as "pass", "fail" or "" (anything else), whatever its case or spacing.
+function reviewOf(t) { const r = (t.Review || "").trim().toLowerCase(); return r === "pass" || r === "fail" ? r : ""; }
+
 function commitState(c) {
   const t = c.trailers || {}, m = /^(\d+)\s*\/\s*(\d+)$/.exec(t.Checks || "");
-  const checksOk = m ? m[1] === m[2] : null, review = (t.Review || "").toLowerCase();
+  const checksOk = m ? m[1] === m[2] : null, review = reviewOf(t);
   if (review === "fail" || checksOk === false) return "bad";
   if (review === "pass") return "ok";
   if (checksOk) return "tested";
@@ -560,6 +563,7 @@ const STATE_WORDS = { ok: "tests passed, review approved", tested: "tests passed
 
 function commitDetail(c, web) {
   const t = c.trailers || {}, m = /^(\d+)\s*\/\s*(\d+)$/.exec(t.Checks || "");
+  const review = reviewOf(t);
   const body = c.body || "";
   const dec = (body.split(/\n\n/).find(p => /^Decisions:/.test(p)) || "").split("\n").slice(1);
   const decisions = [];
@@ -571,7 +575,7 @@ function commitDetail(c, web) {
     <div class="meta">${isNaN(d) ? "" : esc(d.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))} · ${esc(c.author)} · version ${esc(c.short)}${web ? ` · <a class="git-link" href="${esc(web)}/commit/${esc(c.hash)}" target="_blank" rel="noopener">see on GitHub ↗</a>` : ""}</div>
     <div class="facts">
       <span>${m ? (m[1] === m[2] ? ICON.pass : ICON.fail) + ` ${m[1]} of ${m[2]} tests passed` : "No test record"}</span>
-      ${t.Review ? `<span>${t.Review === "pass" ? ICON.pass : ICON.fail} Review ${t.Review === "pass" ? "approved" : "did not approve"}</span>` : ""}
+      ${review ? `<span>${review === "pass" ? ICON.pass : ICON.fail} Review ${review === "pass" ? "approved" : "did not approve"}</span>` : ""}
       ${t["Agent-Attempts"] ? `<span>${esc(plural(+t["Agent-Attempts"], "attempt"))}</span>` : ""}
     </div>
     ${decisions.length ? `<b>Decisions</b><ul>${decisions.map(x => `<li>${esc(plain(x.t))}${x.why ? `<div class="why">${esc(plain(x.why.trim()))}</div>` : ""}</li>`).join("")}</ul>` : ""}
