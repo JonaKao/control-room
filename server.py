@@ -50,6 +50,7 @@ WORKING = ("planning", "implementing", "checking", "reviewing", "fixing")
 WRITE_HEADER = ("X-AAF-Request", "control-room")
 LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]", "::1")
 GIT_CACHE_S = 15
+ACTIVITY_LAST = 30  # steps of the live feed sent to the page
 _git_cache = {}
 _git_locks = {}
 _git_info_locks = {}
@@ -88,6 +89,35 @@ def read_jsonl(path, last=None):
     except OSError:
         pass
     return out[-last:] if last else out
+
+
+def read_jsonl_tail(path, last, chunk=65536, limit=262144):
+    """The newest `last` JSON objects of a log that only grows at the end, without reading all of it.
+    Reads backwards in chunks until enough complete lines are found, but never more than `limit`
+    bytes. Broken lines are skipped."""
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            pos, buf = f.tell(), b""
+            while pos > 0 and buf.count(b"\n") <= last and len(buf) < limit:
+                step = min(chunk, pos)
+                pos -= step
+                f.seek(pos)
+                buf = f.read(step) + buf
+    except OSError:
+        return []
+    lines = buf.split(b"\n")
+    if pos > 0:
+        lines = lines[1:]  # the first line may be cut off
+    out = []
+    for line in lines:
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict):
+            out.append(row)
+    return out[-last:]
 
 
 def parse_decisions(md):
@@ -135,6 +165,7 @@ def summary(name):
         "checks_total": len(checks),
         "verdict": rv.get("verdict"),
         "drafts": len(drafts(name)),
+        "activity": (read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), 1) or [None])[-1],
     }
 
 
@@ -157,6 +188,7 @@ def detail(name):
         "decisions": parse_decisions(read_text(os.path.join(pdir, "state", "decisions.md"))),
         "progress": read_text(os.path.join(pdir, "state", "progress.md")),
         "events": read_jsonl(os.path.join(pdir, "state", "events.jsonl"), last=60),
+        "activity": read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), ACTIVITY_LAST),
         "plots": plots,
         "drafts": drafts(name),
         "discarded": read_jsonl(os.path.join(pdir, "state", "discarded_drafts.jsonl"), last=20),

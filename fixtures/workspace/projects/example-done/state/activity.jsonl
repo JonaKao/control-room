@@ -1,0 +1,13 @@
+{"ts": "2026-10-14T14:20:00+02:00", "kind": "read", "text": "Reading config.py"}
+{"ts": "2026-10-14T14:22:10+02:00", "kind": "edit", "text": "Writing config.yaml"}
+{"ts": "2026-10-14T14:23:00+02:00", "kind": "edit", "text": "Editing train.py"}
+{"ts": "2026-10-14T14:25:30+02:00", "kind": "framework", "text": "Running the tests", "detail": "python3 framework/aaf.py check example-done"}
+{"ts": "2026-10-14T14:30:00+02:00", "kind": "agent", "text": "Asking the reviewer: Review config change"}
+{"ts": "2026-10-14T14:30:02+02:00", "kind": "agent", "text": "Started the reviewer", "subagent": "reviewer"}
+{"ts": "2026-10-14T14:30:20+02:00", "kind": "read", "text": "Reading DONE.md", "subagent": "reviewer"}
+{"ts": "2026-10-14T14:31:05+02:00", "kind": "read", "text": "Reading train.py", "subagent": "reviewer"}
+{"ts": "2026-10-14T14:32:40+02:00", "kind": "test", "text": "Running tests", "detail": "python3 -m pytest tests -q", "subagent": "reviewer"}
+{"ts": "2026-10-14T14:34:00+02:00", "kind": "agent", "text": "The reviewer finished", "subagent": "reviewer"}
+{"ts": "2026-10-14T14:34:30+02:00", "kind": "framework", "text": "Recording the review", "detail": "python3 framework/aaf.py review example-done --verdict pass"}
+{"ts": "2026-10-14T14:44:30+02:00", "kind": "turn", "text": "Finished its turn"}
+{"ts": "2026-10-14T14:45:31+02:00", "kind": "waiting", "text": "Waiting for your reply in Claude Code", "detail": "Claude is waiting for your input"}

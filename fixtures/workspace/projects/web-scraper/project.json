@@ -1,0 +1,12 @@
+{
+  "name": "web-scraper",
+  "description": "Waiting for permission in Claude Code",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "python3 -m pytest tests -q"
+    }
+  ]
+}

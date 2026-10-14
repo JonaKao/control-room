@@ -35,7 +35,8 @@ except ImportError:
 FIXTURES = os.path.join(PROJECT, "fixtures", "workspace")
 VIEWS = [("desktop", 1440, 900), ("phone", 390, 844)]
 # Whether each fixture's situation needs the human.
-NEEDS = {"brand-new": "no", "example-done": "no", "image-classifier": "no", "parser": "yes", "scheduler": "yes"}
+NEEDS = {"brand-new": "no", "example-done": "no", "image-classifier": "no", "parser": "yes", "scheduler": "yes",
+         "web-scraper": "yes"}
 
 def fixture_has(name, state_file):
     return os.path.isfile(os.path.join(FIXTURES, "projects", name, "state", state_file))

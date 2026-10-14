@@ -22,6 +22,23 @@
   problem, and points to the failing test's output. The last step's hint names the outcome.
 - Phase names, event text, the task and the agent's notes are reworded in plain words: "iteration" → attempt,
   "checks" → tests, draft ids → unfinished fix N, framework files → "the progress note", "the decision log" etc.
+- **Live activity feed (roadmap 1, 2026-10-14)**: the summary has a "Right now" line (name-free words
+  per kind of step, how long ago). A "Step by step" section follows the summary (or the "What to do"
+  card): the latest step large with its icon, the 8 before it newest first with an icon per kind
+  and time, the rest of the recent steps (server sends 30) in a closed block. Steps by the reviewer
+  carry a "Reviewer" badge. A latest "waiting" step needs the human when it is a permission request
+  or comes mid-task: summary flag "Needs you in Claude Code", a "What to do" card, and the project
+  moves to "Needs you" in the list. After a finished task the idle prompt is calm ("Idle in Claude
+  Code, ready for a new task"; see the decision). A running task with no step for 5 min or more says
+  the feed has gone quiet; while a task runs the page re-renders every 30 s so this appears without
+  new data (otherwise only when data changes, so selected text is not dropped).
+  While quiet, the summary says "Probably nothing needs you, but it has been quiet for N min". A stuck
+  or decision-waiting project keeps its own message and red/blue dot; a waiting step only adds
+  "· Claude Code is waiting for your reply".
+  `tests/test_layout.py` makes sure each test file's `__main__` block comes last, so running a
+  test file directly runs all of it.
+  New fixture `web-scraper` (waiting for permission); activity logs in `image-classifier` and
+  `example-done`; `brand-new` shows the empty state. Check: `checks/activity.py` (pins the clock).
 - **Git section ("Saved versions")**, after the test history: a picture of this computer ⇄ GitHub
   (versions to send / to get, unsaved files with the list on demand), Push and Pull buttons, a link
   to the repo, and a commit timeline (oldest left; green = tests passed and review approved, amber
@@ -50,6 +67,8 @@
 
 ## Next
 
+- Roadmap 2: task timeline (see `ROADMAP.md`).
+
 - Show a Git summary (unsent versions, behind) in the project list.
 
 - Possibly a per-task timeline (when each attempt started, how long each took).
@@ -72,4 +91,15 @@
 - Git timeline: "not on GitHub yet" marks the newest `ahead` commits, which is only right for a straight
   history (merges, more than 40 commits). A real fix needs `aaf.py git info` to report a per-commit pushed flag,
   a change to the framework's data model; waiting for the human's go-ahead.
+- Activity feed: `framework/hooks/activity.py` logs nothing after a permission is granted (no
+  PostToolUse event), so a long command the human already approved keeps showing "Needs you in
+  Claude Code" until the next step. Needs a hook change outside this project.
+- Activity feed: on finished, stuck, waiting and idle projects the "N min ago" texts update only
+  when data changes (they could be updated in place without a full redraw).
+- Activity feed: the longer "stuck · Claude Code is waiting" flag is checked at desktop width only;
+  the decision-waiting case with a waiting step has no own assertion (same code path).
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).
+
+## Roadmap
+
+Four features are planned and must all be built, one `/task` each: see `ROADMAP.md` for the order, the data sources and the paste-ready task texts. Mark each item done there when finished.

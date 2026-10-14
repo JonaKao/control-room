@@ -218,6 +218,43 @@ details[open] > summary .chev { transform: rotate(45deg); }
 .md li.task-item { list-style: none; margin-left: -20px; }
 .md pre { background: var(--code-bg); padding: 10px 12px; border-radius: 8px; overflow: auto; font: 12.5px var(--mono); }
 
+.now-line { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.now-line svg { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.now-line .q { margin-left: 8px; white-space: nowrap; }
+.now-line.ask { color: var(--accent); font-weight: 600; }
+.now-line .q { color: var(--active); font-weight: 600; display: inline-block; }
+.kicon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex: none;
+  background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.kicon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.kicon.k-edit { background: color-mix(in srgb, var(--active) 16%, transparent); color: var(--active); }
+.kicon.k-test { background: color-mix(in srgb, var(--pass) 15%, transparent); color: var(--pass); }
+.kicon.k-agent, .kicon.k-waiting { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.live .current { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: center; }
+.live .current .kicon { width: 44px; height: 44px; border-radius: 12px; }
+.live .current .kicon svg { width: 22px; height: 22px; }
+.live .current .lbl { font-size: 12.5px; color: var(--muted); }
+.live .current .ctext { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.live .current[data-attention="yes"] { padding: 14px 16px; border-radius: 12px; border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.live .current[data-attention="yes"] .kicon { background: var(--accent); color: var(--panel); }
+.live .current[data-attention="yes"] .lbl { color: var(--accent); font-weight: 600; }
+.live .cmd { margin-top: 6px; font-size: 13px; }
+.live .cmd summary { cursor: pointer; color: var(--muted); }
+.live .cmd code { display: inline-block; margin-top: 4px; overflow-wrap: anywhere; white-space: normal; }
+.live .quiet { margin: 14px 0 0; padding: 10px 14px; border-radius: 10px; font-size: 14px;
+  background: color-mix(in srgb, var(--active) 14%, transparent); }
+.step-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.step-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.step-list .stext { overflow-wrap: anywhere; }
+.step-list .t { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.live details[data-detail="steps"] { margin-top: 8px; }
+.live details[data-detail="steps"] > summary { cursor: pointer; color: var(--muted); font-size: 13.5px; padding: 6px 0; }
+.who { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  white-space: nowrap; vertical-align: 1px; color: var(--muted); border: 1px solid var(--rule); }
+.who.rev { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.who svg { width: 12px; height: 12px; }
+.wait-card h3 { margin: 0 0 6px; }
+.action .wait-card + .wait-card, .action .wait-card + h3 { margin-top: 18px; }
 .activity { list-style: none; margin: 0; padding: 0; }
 .activity li { display: grid; grid-template-columns: 70px 10px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
 .activity li:first-child { border-top: 0; }
@@ -371,6 +408,57 @@ function plain(t) {
 }
 const needsYou = p => p === "waiting" || p === "stuck";
 
+// Live activity feed (state/activity.jsonl, one line per step the agent takes in Claude Code).
+const ACTIVE = new Set(["planning", "implementing", "checking", "reviewing", "fixing"]);
+const QUIET_MIN = 5;   // a running task with no step for this long has "gone quiet"
+const RECENT = 8;      // steps in the short history under the current one
+const KIND_ICON = {
+  read: `<path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>`,
+  edit: `<path d="M10.5 2.5l3 3L6 13H3v-3z"/><path d="M9 4l3 3"/>`,
+  search: `<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/>`,
+  test: `<path d="M6 1.5h4M6.5 1.5v4.5L2.8 12.8A1.2 1.2 0 0 0 3.9 14.5h8.2a1.2 1.2 0 0 0 1.1-1.7L9.5 6V1.5"/><path d="M4.5 10h7"/>`,
+  framework: `<rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5.5 5.5h5M5.5 8.5h5M5.5 11.5h3"/>`,
+  command: `<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M4.5 6l2 2-2 2M8.5 10.5h3"/>`,
+  agent: `<circle cx="6" cy="5.5" r="2.2"/><path d="M2 13.5c.5-2.5 2-3.7 4-3.7s3.5 1.2 4 3.7"/><circle cx="11.5" cy="6" r="1.8"/><path d="M11 9.8c1.6.1 2.6 1.3 3 3.2"/>`,
+  web: `<circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c2 2.2 2 10.8 0 13M8 1.5c-2 2.2-2 10.8 0 13"/>`,
+  plan: `<path d="M2.5 4l1.2 1.2L6 3M2.5 9l1.2 1.2L6 8M8.5 4.5h5M8.5 9.5h5M8.5 13h5"/>`,
+  waiting: `<path d="M2.5 3h11v7.5h-6l-3 3v-3h-2z"/><path d="M8 5v2.6M8 9.2v.1"/>`,
+  turn: `<path d="M5.5 3.5v9M10.5 3.5v9"/>`,
+  note: `<path d="M4 11V7.5a4 4 0 0 1 8 0V11l1.5 1.5h-11zM6.5 14.5h3"/>`,
+  other: `<circle cx="8" cy="8" r="2.5"/>`,
+};
+// Name-free words for the summary, which must not show file names.
+const KIND_WORDS = { read: "Reading the code", edit: "Changing a file", search: "Searching the code", test: "Running tests",
+  framework: "Recording its progress", command: "Running a command", agent: "Working with a helper agent",
+  web: "Looking something up online", plan: "Planning its next steps", waiting: "Waiting for you in Claude Code",
+  turn: "Paused between steps", note: "Got a notification", other: "Working" };
+const kindOf = a => (a && KIND_ICON[a.kind]) ? a.kind : "other";
+const kindIcon = k => `<svg viewBox="0 0 16 16" aria-hidden="true">${KIND_ICON[k] || KIND_ICON.other}</svg>`;
+const tsOf = a => { const t = Date.parse(a && a.ts); return isNaN(t) ? null : t; };
+// A "waiting" step needs the human when Claude Code asks for permission, or when it asks for a reply
+// in the middle of a task. After a finished task, Claude Code simply sits idle: nothing needs the human.
+const waitingNeedsYou = (a, phase) => !!a && a.kind === "waiting" && (/permission/i.test(String(a.text || "")) || !["done", "idle"].includes(phase));
+// Stuck stays red: a waiting step adds to that, it does not replace it.
+const toneOf = p => { const t = phaseOf(p.phase).tone; return t !== "bad" && waitingNeedsYou(p.activity, p.phase) ? "ask" : t; };
+function quietFor(a, phase) {
+  // Minutes without a step while a task runs; null when that is not worth saying.
+  const t = tsOf(a);
+  if (!ACTIVE.has(phase) || t === null || (a && a.kind === "waiting")) return null;
+  const m = Math.floor((Date.now() - t) / 60000);
+  return m >= QUIET_MIN ? m : null;
+}
+const minutes = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
+function stepWords(a, phase) {
+  if (a.kind === "waiting" && !waitingNeedsYou(a, phase)) return "Idle in Claude Code, ready for a new task";
+  const text = String(a.text ?? "");
+  return (a.kind === "waiting" ? text : plain(text)) || KIND_WORDS[kindOf(a)];
+}
+function whoBadge(a) {
+  if (!a.subagent) return "";
+  const rev = a.subagent === "reviewer";
+  return `<span class="who${rev ? " rev" : ""}">${rev ? ICON.shield : ""}${rev ? "Reviewer" : esc(String(a.subagent).replace(/[-_]/g, " "))}</span>`;
+}
+
 let current = null, lastProjects = "", lastDetail = "", railFirst = true;
 try { current = new URLSearchParams(location.hash.slice(1)).get("p") || localStorage.getItem("aaf.project"); } catch (e) {}
 try { const t = localStorage.getItem("aaf.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
@@ -386,6 +474,7 @@ $("#theme").addEventListener("click", () => {
 function ago(iso) {
   if (!iso) return "";
   const t = typeof iso === "number" ? iso * 1000 : Date.parse(iso);
+  if (isNaN(t)) return "";
   const s = Math.max(0, (Date.now() - t) / 1000);
   if (s < 45) return "just now";
   if (s < 3600) return Math.round(s / 60) + " min ago";
@@ -476,7 +565,7 @@ function reviewBadge(kind) {
 
 function renderOverview(list) {
   const groups = { bad: 0, ask: 0, busy: 0, ok: 0, idle: 0 };
-  list.forEach(p => groups[phaseOf(p.phase).tone]++);
+  list.forEach(p => groups[toneOf(p)]++);
   const need = groups.bad + groups.ask;
   const seg = (n, col) => n ? `<span style="flex:${n};background:${col}"></span>` : "";
   $("#overview").innerHTML = `<div class="overview" data-overview-needs="${need}">
@@ -492,15 +581,15 @@ function renderRail(list) {
   if (!list.length) { el.innerHTML = `<p class="empty" style="margin:0 8px">No projects yet.</p>`; return; }
   const order = { ask: 0, bad: 0, busy: 1, ok: 2, idle: 3 };
   const labels = ["Needs you", "Working", "Finished", "Not started"];
-  const sorted = list.slice().sort((a, b) => order[phaseOf(a.phase).tone] - order[phaseOf(b.phase).tone] || a.name.localeCompare(b.name));
+  const sorted = list.slice().sort((a, b) => order[toneOf(a)] - order[toneOf(b)] || a.name.localeCompare(b.name));
   let html = "", last = -1;
   for (const p of sorted) {
-    const ph = phaseOf(p.phase), g = order[ph.tone];
+    const ph = phaseOf(p.phase), tone = toneOf(p), g = order[tone], asks = tone !== ph.tone;
     if (g !== last) { html += `<div class="group-label">${labels[g]}</div>`; last = g; }
-    const extra = ph.tone === "bad" ? "" : p.drafts ? ` · ${plural(p.drafts, "fix", "fixes")}` : p.checks_total ? ` · ${p.checks_pass}/${p.checks_total} tests pass` : "";
+    const extra = asks || ph.tone === "bad" ? "" : p.drafts ? ` · ${plural(p.drafts, "fix", "fixes")}` : p.checks_total ? ` · ${p.checks_pass}/${p.checks_total} tests pass` : "";
     html += `<button class="proj" type="button" data-p="${esc(p.name)}" aria-current="${p.name === current}">
-      <span class="dot ${ph.tone}"></span><span class="name">${esc(p.name)}</span>
-      <span class="meta">${esc(ph.short)}${esc(extra)}</span></button>`;
+      <span class="dot ${tone}"></span><span class="name">${esc(p.name)}</span>
+      <span class="meta">${asks ? "Waiting for you in Claude Code" : esc(ph.short)}${esc(extra)}</span></button>`;
   }
   el.innerHTML = html;
   el.querySelectorAll(".proj").forEach(b => b.addEventListener("click", () => select(b.dataset.p)));
@@ -676,6 +765,9 @@ function renderDetail(d) {
   const name = meta.name || current, phase = st.phase || "idle", ph = phaseOf(phase);
   gitPhase = phase;
   const drafts = d.drafts || [], hist = d.check_history || [], events = d.events || [];
+  const steps = (d.activity || []).filter(a => a && typeof a === "object"), now = steps[steps.length - 1];
+  const asks = waitingNeedsYou(now, phase), quiet = quietFor(now, phase);
+  const asksFor = now && /permission/i.test(String(now.text || "")) ? "your permission" : "your reply";
   const checks = ck && ck.checks ? ck.checks : [];
   const nPass = checks.filter(c => c.passed).length;
   const kept = new Set([...document.querySelectorAll("main details[open][data-keep]")].map(x => x.dataset.keep));
@@ -683,16 +775,24 @@ function renderDetail(d) {
 
   // 1. At a glance: what it is doing, and whether it needs you.
   const needsTone = phase === "stuck" ? "t-bad" : "t-ask";
+  const inCode = asks ? ` · Claude Code is waiting for ${asksFor}` : "";
   const needs = needsYou(phase)
     ? `<div class="needs ${needsTone}" data-needs="yes">${ICON.ask}<span>${phase === "stuck" ? "Needs you: it is stuck and waits for your input"
-        : drafts.length ? `Needs you: decide what happens to ${plural(drafts.length, "unfinished fix", "unfinished fixes")}` : "Needs you: it is waiting for your decision"}</span></div>`
+        : drafts.length ? `Needs you: decide what happens to ${plural(drafts.length, "unfinished fix", "unfinished fixes")}` : "Needs you: it is waiting for your decision"}${esc(inCode)}</span></div>`
+    : asks
+    ? `<div class="needs t-ask" data-needs="yes">${ICON.ask}<span>Needs you in Claude Code: it is waiting for ${asksFor}</span></div>`
     : `<div class="needs" data-needs="no">${ICON.ok}<span>${phase === "done" ? "Nothing needs you. The task is finished"
-        : phase === "idle" ? "Nothing needs you. No task is running" : "Nothing needs you. It will keep going on its own"}</span></div>`;
+        : phase === "idle" ? "Nothing needs you. No task is running"
+        : quiet !== null ? `Probably nothing needs you, but it has been quiet for ${minutes(quiet)}` : "Nothing needs you. It will keep going on its own"}</span></div>`;
   const doing = phase === "idle" && !st.task && !events.some(e => e.kind === "check") ? "Waiting for its first task" : ph.doing;
-  const glance = `<section class="panel sec glance t-${ph.tone}" data-section="glance" aria-label="At a glance">
+  const nowLine = now ? `<p class="now-line k-${kindOf(now)}${asks ? " ask" : ""}" data-now>${kindIcon(kindOf(now))}<span>Right now: ${esc(
+      now.kind === "waiting" && !asks ? "Idle in Claude Code, ready for a new task" : KIND_WORDS[kindOf(now)])}${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</span>${
+      quiet !== null ? `<span class="q">no new step for ${esc(minutes(quiet))}</span>` : ""}</p>` : "";
+  const glance = `<section class="panel sec glance t-${asks && ph.tone !== "bad" ? "ask" : ph.tone}" data-section="glance" aria-label="At a glance">
       <div class="eyebrow"><span><span class="pname">${esc(name)}</span>${meta.description ? ` · ${esc(meta.description)}` : ""}</span><span>Updated ${esc(ago(st.updated))} · live</span></div>
       ${needs}
       <h2 class="doing" data-doing>${esc(doing)}</h2>
+      ${nowLine}
       ${st.task ? `<p class="task-line"><span class="lbl">Task: </span>${esc(plain(st.task))}</p>` : `<p class="task-line"><span class="lbl">Give it a task in Claude Code to get started.</span></p>`}
       ${st.note && st.note !== "Project created" ? `<p class="agent-note">Agent's latest note: “${esc(plain(st.note))}”</p>` : ""}
       ${loopPicture(st, meta.max_iterations)}
@@ -729,6 +829,36 @@ function renderDetail(d) {
           ${drafts.length ? `<p class="how">Copy one command and paste it into Claude Code.</p>` : ""}
         </section>`;
   }
+
+  if (asks) {
+    const card = `<div class="wait-card" data-wait-card>
+        <h3>Claude Code is waiting for ${esc(asksFor)}</h3>
+        <p class="lead">${esc(stepWords(now, phase))}${now.detail ? `: “${esc(plain(String(now.detail)))}”` : ""}${tsOf(now) !== null ? ` (${esc(ago(now.ts))})` : ""}.
+          The agent cannot go on until you answer.</p>
+        <p class="how">Switch to Claude Code and answer there. This page only shows what is happening; it cannot answer for you.</p></div>`;
+    action = action ? action.replace(/(aria-label="What to do">)/, `$1${card}`)
+      : `<section class="panel sec action" data-section="action" aria-label="What to do">${card}</section>`;
+  }
+
+  // 2b. Live activity: the step the agent is on, and the few before it.
+  const stepRow = a => `<li data-step data-kind="${kindOf(a)}"${a.subagent ? ` data-subagent="${esc(a.subagent)}"` : ""}>
+      <span class="kicon k-${kindOf(a)}">${kindIcon(kindOf(a))}</span><span class="stext">${esc(stepWords(a, phase))}${whoBadge(a)}</span>
+      <span class="t">${esc(clock(a.ts))}</span></li>`;
+  const earlier = steps.slice(0, -1).reverse();
+  const live = `<h3 class="sec-title">Step by step</h3>
+    <section class="panel sec live" data-section="live" aria-label="Step by step">${!now
+      ? `<p class="empty" data-live-empty>${ACTIVE.has(phase) ? "No steps have arrived yet. They appear here as the agent works in Claude Code (this needs the activity hook)."
+          : "No steps yet. Each step the agent takes in Claude Code appears here as it happens."}</p>`
+      : `<div class="current k-${kindOf(now)}" data-current-step data-kind="${kindOf(now)}" data-attention="${asks ? "yes" : "no"}">
+          <span class="kicon k-${kindOf(now)}">${kindIcon(kindOf(now))}</span>
+          <div class="cbody"><div class="lbl">${asks ? "Needs you now" : "Latest step"}${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</div>
+            <div class="ctext">${esc(stepWords(now, phase))}${whoBadge(now)}</div>
+            ${now.detail && ["command", "test", "web"].includes(now.kind) ? `<details class="cmd" ${open("step-detail")}><summary>Exact command</summary><code>${esc(now.detail)}</code></details>` : ""}</div></div>
+        ${quiet !== null ? `<p class="quiet" data-quiet><b>No new step for ${esc(minutes(quiet))}.</b> The feed has gone quiet: the agent may be busy with one long step, or Claude Code may have stopped. Have a look in Claude Code if it stays like this.</p>` : ""}
+        ${earlier.length ? `<ol class="step-list" aria-label="Steps before it, newest first">${earlier.slice(0, RECENT).map(stepRow).join("")}</ol>` : ""}
+        ${earlier.length > RECENT ? `<details data-detail="steps" ${open("steps")}><summary>${plural(earlier.length - RECENT, "earlier step")}</summary>
+          <ol class="step-list">${earlier.slice(RECENT).map(stepRow).join("").replace(/ data-step /g, " ")}</ol></details>` : ""}`}
+    </section>`;
 
   // 3. Health: tests, independent review, attempts used.
   const testsTile = checks.length ? `<div class="panel tile"><h4>Tests</h4>
@@ -792,7 +922,7 @@ function renderDetail(d) {
       <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
     </section>`;
 
-  $("#main").innerHTML = glance + action + health + history + `<div id="git-slot"></div>` + plots + more;
+  $("#main").innerHTML = glance + action + live + health + history + `<div id="git-slot"></div>` + plots + more;
   renderGitSlot();
 
   $("#main").querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
@@ -823,7 +953,12 @@ async function tick() {
     const res = await fetch("/api/project?name=" + encodeURIComponent(current));
     if (!res.ok) return;
     const text = await res.text();
-    if (text !== lastDetail) { lastDetail = text; renderDetail(JSON.parse(text)); }
+    // While a task runs, redraw every 30 s even without new data, so "gone quiet" can appear.
+    // Otherwise leave the page alone: a redraw would drop text the reader has selected.
+    let running = false;
+    try { running = ACTIVE.has((JSON.parse(text).status || {}).phase); } catch (e) {}
+    const dsig = running ? text + "|" + Math.floor(Date.now() / 30000) : text;
+    if (dsig !== lastDetail) { lastDetail = dsig; renderDetail(JSON.parse(text)); }
     if (gitFor !== current && !gitLoading) { gitLoading = true; loadGit(false).finally(() => { gitLoading = false; }); }
   } catch (e) {
     $("#main").innerHTML = `<div class="welcome"><h2>Dashboard server not reachable</h2><p>Start it from the workspace folder with <code>python3 dashboard/server.py</code>, then reload this page.</p></div>`;

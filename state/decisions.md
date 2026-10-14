@@ -65,3 +65,19 @@ checks/git_section.py scrolls the Git section into view on desktop as well as ph
 ## 2026-10-14: Fixed: Git API tests no longer depend on their order
 
 Push, pull and phase-change tests moved to GitWriteTest with a fresh workspace per test; read and refused-write tests share one workspace in GitApiTest. GitTestOrderTest runs both classes in reverse method order. Before, the push and pull tests changed the shared workspace and the info tests passed only because of alphabetical order. Cost: the Server API check takes about 18 s instead of 7 s. Reviewer PASS.
+
+## 2026-10-14: Activity feed: an idle prompt after a finished task does not need the human
+
+framework/hooks/activity.py logs kind 'waiting' both for permission prompts and for Claude Code's idle 'waiting for your input' notice, which fires after every finished turn. Treating every latest 'waiting' entry as 'needs you' would flag every finished or idle project forever. Rule: a latest 'waiting' entry needs the human when it is a permission request, or when the project's stage is not finished/not started (the agent stopped mid-task for a reply). After a finished task, an idle prompt is shown calmly as 'idle in Claude Code, ready for a new task'. Rejected: flagging every 'waiting' entry (noise), ignoring the idle notice entirely (misses an agent that asked a question mid-task).
+
+## 2026-10-14: Fixed: summary flag stays specific when quiet or stuck
+
+A waiting step adds 'Claude Code is waiting' to a stuck or decision message instead of replacing it, and toneOf keeps stuck projects red. While the feed is quiet the calm flag says 'Probably nothing needs you, but it has been quiet for N min' instead of 'It will keep going on its own'. checks/activity.py covers both. Reviewer PASS.
+
+## 2026-10-14: Fixed: every test file runs completely on its own
+
+tests/test_api.py had ActivityTailTest after its __main__ block, so running the file directly skipped 3 tests. The block moved to the end; tests/test_layout.py fails if any test file defines a test class after its __main__ block. Reviewer PASS.
+
+## 2026-10-14: Fixed: the page redraws on a timer only while a task runs
+
+The 30 s time-based redraw (needed so 'gone quiet' appears without new data) now applies only to running stages; finished, stuck, waiting and idle projects redraw only when their data changes, so selected text is kept. Cost: 'N min ago' texts on those projects update only with new data, as before the feed. checks/activity.py asserts a finished project is not redrawn. Reviewer PASS.
