@@ -21,7 +21,7 @@ A task is finished only when every item below holds. The reviewer checks each on
       available on demand rather than all shown at once
 - [ ] Information is shown visually wherever a picture says it better than text
 - [ ] Wording is plain language; internal terms (phase names, file names) are explained or avoided
-- [ ] The server still only reads files and still rejects path traversal (API tests)
+- [ ] The server writes no project files itself (Git only through `aaf.py`, page-only requests) and still rejects path traversal (API tests)
 
 ## When stuck, report
 

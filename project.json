@@ -17,6 +17,11 @@
       "name": "Understandable at a glance",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/glance.py; else python3 checks/glance.py; fi",
       "timeout": 180
+    },
+    {
+      "name": "Git section works",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/git_section.py; else python3 checks/git_section.py; fi",
+      "timeout": 240
     }
   ]
 }

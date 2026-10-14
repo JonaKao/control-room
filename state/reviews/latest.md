@@ -1,26 +1,26 @@
 VERDICT: PASS
-SUMMARY: The redesign does what the task asks; all 3 checks pass, glance.py fails on the old page, and progress.md is updated. Only minor issues.
+SUMMARY: The Git section, page-only Push/Pull endpoints, pull refusal while the agent works and temporary-repo tests all work as asked; 4/4 checks pass; screenshots look right.
 
 FINDINGS
-- [minor] index.html:460-461 — Task text and the agent's latest note are shown raw in the glance; on the real workspace `example` shows "fix-1 CLI errors, fix-2 step validation; no drafts". glance.py only checks fixture text.
-- [minor] index.html:359-367 — When stuck, Plan/Change/Test/Review are drawn as never reached even after 8 attempts; looks as if nothing was done.
-- [minor] index.html:482-483 — Stuck card asserts "kept running into the same problem" (not from data; may be the attempt limit) and points to "More detail", which may be empty.
-- [minor] index.html:363 — Fifth step's hint stays "done or ask you" whatever its label.
-- [minor] index.html:237-246 — On phones the project chips sit above the summary; many projects would push the summary below the first screen.
-- [minor] checks/glance.py:39 — NEEDS hard-codes the five fixtures; a new fixture would be skipped silently.
-- [minor] checks/render.py — Identical to the snapshot, so the "2 → 5 screenshots" change can't be verified against a true before state (disclosed in decisions).
+- [minor] server.py:288 (do_POST) — min(length, 4096) lets a negative Content-Length through; rfile.read(-1) blocks the thread. Only reachable by a caller passing the page-only checks; should be 400.
+- [minor] server.py:180 (git_info) — cache has no lock / no single-flight; on expiry several polls or tabs can each start `aaf.py git info --fetch`.
+- [minor] index.html — commitState lowercases the Review trailer, commitDetail compares `=== "pass"` exactly; "Review: PASS" would show green next to "did not approve".
+- [minor] index.html (gitHtml) — the newest `ahead` points are marked "not on GitHub"; only right for linear history (merges, >40 commits).
+- [minor] checks/git_section.py:127 — desktop now a full-page screenshot without scrolling; sidebar sits mid-page in the image (screenshot quirk, nothing weakened).
+- [minor] tests/test_git.py — test_info_reports_commits_trailers_and_sync_state relies on alphabetical order (push test later in the same class mutates the shared workspace).
+- Verified hardening: only sys.executable aaf.py git info|push|pull; loopback + header + localhost Host/port + Origin checks; Origin null 403; no OPTIONS; 409 while working; refused push leaves remote unchanged; nothing Git-related in fixtures.
 
 DONE.md
-- Every check passes: met (3 of 3)
-- No check weakened: met (checkVisibility change recorded, makes it accurate)
-- Task success covered by a check: met (glance.py fails on old page)
+- All checks pass: met (4/4)
+- No check weakened: met
+- Task success covered by a check: met (tests/test_git.py, checks/git_section.py)
 - Reviewer PASS: met
 - progress.md updated: met
-- Screenshots opened: met
-- Fixtures render without JS errors in light/dark/phone: met
-- No sideways scrolling at 390 px: met (also 0 px on real workspace)
+- Screenshots inspected: met
+- Fixtures render without JS errors: met
+- No sideways scrolling at 390 px: met
 - Top of page answers what/needs-you: met
-- Calm, sectioned, detail on demand: met
-- Visual where possible: met
-- Plain language: met with reservations (raw agent notes)
-- Server read-only, rejects traversal: met
+- Calm, detail on demand: met
+- Visual: met
+- Plain language: met
+- Server writes no project files itself, Git only via aaf.py, page-only, rejects traversal: met

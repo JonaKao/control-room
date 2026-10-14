@@ -22,7 +22,18 @@
   problem, and points to the failing test's output. The last step's hint names the outcome.
 - Phase names, event text, the task and the agent's notes are reworded in plain words: "iteration" → attempt,
   "checks" → tests, draft ids → unfinished fix N, framework files → "the progress note", "the decision log" etc.
-- Three checks: server API tests; a headless render of all five fixtures (screenshots of
+- **Git section ("Saved versions")**, after the test history: a picture of this computer ⇄ GitHub
+  (versions to send / to get, unsaved files with the list on demand), Push and Pull buttons, a link
+  to the repo, and a commit timeline (oldest left; green = tests passed and review approved, amber
+  = tests passed but not reviewed, red = a test or the review failed, grey = no record; dashed
+  ring = not on GitHub yet). Picking a point shows the subject, tests, review and decisions.
+  Data comes from `aaf.py git info --fetch`; Push/Pull run `aaf.py git push|pull`, only from the
+  page itself; Pull is refused while the agent works. Hidden when the workspace has no aaf.py.
+  Git info is cached 15 s per project (counted from when the fetch finished); requests arriving
+  during a run share its answer, even when the fetch takes longer than 15 s. After Push/Pull the page
+  asks for fresh data, which never reuses a fetch that started before it asked.
+  Write requests whose stated body length is negative, above 4096 bytes or not a number get 400 at once.
+- Checks: server API tests (now also `tests/test_git.py`, on a temporary Git workspace); a headless render of all five fixtures (screenshots of
   all of them in `plots/`); and `checks/glance.py`, which checks the glance summary is first,
   fits the first screen on desktop and phone, says what the agent does and whether the
   human is needed, uses no file names or internal terms, shows the visuals, and keeps
@@ -30,6 +41,8 @@
   whether that situation needs the human.
 
 ## Next
+
+- Show a Git summary (unsent versions, behind) in the project list.
 
 - Possibly a per-task timeline (when each attempt started, how long each took).
 - Phone project row: compute "is the open chip hidden" from the visible area, and skip the

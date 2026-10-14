@@ -33,3 +33,23 @@ A shared plain() rewords the task, the agent's notes and the activity log: frame
 ## 2026-10-14: Phone project list is one sideways-scrolling row
 
 Wrapping chips pushed the summary off the first screen with many projects (967px with 35). Under 860px the list is now a single row that scrolls on its own with a fade on the right; the overview line ('2 need you') stays visible regardless. A refresh keeps the user's swipe position; the open chip is scrolled into view only on first load or project change, and only if off-screen. Rejected: a <select> dropdown (hides the coloured status dots) and collapsing the list (one more tap). glance.py checks 35 projects on phone. Reviewer PASS (two rounds).
+
+## 2026-10-14: Git data and actions go through the served workspace's aaf.py
+
+The server runs <workspace>/framework/aaf.py (git info --fetch, git push, git pull) with the current Python, never git itself; aaf.py derives its workspace from its own location, so tests build a temporary workspace with a copy of aaf.py, real repositories and a bare repo standing in for GitHub (checks/git_workspace.py). A workspace without aaf.py (the plain fixtures) reports Git as unavailable. Rejected: committing a .git into fixtures (asked against), and passing --root to aaf.py (would change the data model outside this project).
+
+## 2026-10-14: Write requests only from the page itself
+
+POST /api/git/push|pull is accepted only when the client is on this machine, the custom header X-AAF-Request: control-room is set (a cross-site page cannot send it without a CORS preflight, which the server never answers), the Host header is localhost/127.0.0.1 (DNS rebinding) and any Origin is this server. Pull is refused (409) while the project's agent is planning, implementing, checking, reviewing or fixing. Rejected: a token in the page (adds secrets handling for no gain on localhost) and allowing GET for actions.
+
+## 2026-10-14: DONE.md: server read-only item reworded for Git
+
+The task explicitly adds Push/Pull to the server and asks to update CLAUDE.md, which called it read-only. The DONE.md item 'The server still only reads files' could no longer hold, so it now reads: the server writes no project files itself (Git only through aaf.py, page-only requests) and still rejects path traversal. Everything else in that item (traversal tests) is unchanged; tests/test_git.py adds checks that the server never calls git and that writes from other origins/hosts or without the header are refused.
+
+## 2026-10-14: Write requests refuse bad body lengths
+
+do_POST accepts a Content-Length only if it is an integer in 0..4096; anything else gets 400 at once and the connection is closed. A negative length used to make rfile.read(-1) block the server thread. Reviewer PASS.
+
+## 2026-10-14: Fixed: simultaneous Git info requests share one aaf.py git info --fetch
+
+Per-project lock in git_info; cache entries carry started and finished stamps. The 15 s cache life counts from finished; any waiter reuses a run that started after it asked; a fresh request never reuses a run that started before it asked (so data from before a push is never shown as fresh). Rejected: a single start-time stamp (draft fix-2, first attempt), because a fetch slower than the cache life left an expired entry and the waiting requests then ran aaf.py one after another.

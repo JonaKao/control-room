@@ -229,6 +229,62 @@ details[open] > summary .chev { transform: rotate(45deg); }
 .activity .k.good { background: var(--pass); }
 .activity span:last-child { overflow-wrap: anywhere; }
 
+
+/* Git: saved versions */
+.git-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; align-items: start; }
+.sync { display: grid; grid-template-columns: auto minmax(90px, 1fr) auto; align-items: center; gap: 10px; }
+.place { border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 12px; text-align: center; font-size: 13px; font-weight: 600; background: var(--paper); }
+.place small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.place.dirty { border-color: var(--active); }
+.lanes { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); text-align: center; }
+.lane { position: relative; padding-bottom: 6px; }
+.lane::after { content: ""; position: absolute; left: 0; right: 8px; bottom: 0; height: 2px; background: var(--rule); }
+.lane::before { content: ""; position: absolute; right: 0; bottom: -4px; border: 5px solid transparent; border-left: 8px solid var(--rule); border-right: 0; }
+.lane.back::after { left: 8px; right: 0; }
+.lane.back::before { left: 0; right: auto; border-left: 0; border-right: 8px solid var(--rule); }
+.lane.on { color: var(--ink); font-weight: 600; }
+.lane.on::after { background: var(--accent); }
+.lane.on::before { border-left-color: var(--accent); }
+.lane.back.on::before { border-right-color: var(--accent); border-left-color: transparent; }
+.sync-words { margin: 12px 0 0; font-size: 14.5px; }
+.git-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.git-actions button { border: 1px solid var(--accent); background: var(--accent); color: var(--panel); border-radius: 8px; padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.git-actions button.secondary { background: transparent; color: var(--accent); }
+.git-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.git-why { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; text-align: right; }
+.git-link { font-size: 14px; color: var(--accent); }
+.git-msg { margin: 12px 0 0; padding: 8px 12px; border-radius: 8px; font-size: 14px; background: color-mix(in srgb, var(--pass) 12%, transparent); }
+.git-msg.bad { background: color-mix(in srgb, var(--fail) 12%, transparent); }
+.git-files ul { margin: 6px 0 0; padding-left: 20px; font: 12.5px var(--mono); }
+.git-files summary { color: var(--accent); font-size: 14px; margin-top: 12px; }
+.tl-wrap { overflow-x: auto; margin-top: 18px; padding: 4px 2px 2px; }
+.tl { display: inline-flex; align-items: center; gap: 0; position: relative; height: 44px; }
+.tl::before { content: ""; position: absolute; left: 12px; right: 12px; top: 50%; height: 2px; background: var(--rule); }
+.tl button { position: relative; width: 30px; height: 30px; flex: none; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.tl button + button { margin-left: 14px; }
+.tl .pt { width: 16px; height: 16px; border-radius: 50%; background: var(--rule); border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--rule); }
+.tl [data-state="ok"] .pt { background: var(--pass); box-shadow: 0 0 0 1px var(--pass); }
+.tl [data-state="tested"] .pt { background: var(--active); box-shadow: 0 0 0 1px var(--active); }
+.tl [data-state="bad"] .pt { background: var(--fail); box-shadow: 0 0 0 1px var(--fail); }
+.tl [data-pushed="no"] .pt { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.tl button[aria-pressed="true"] .pt { transform: scale(1.35); }
+.tl-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.tl-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.commit-detail { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.commit-detail .subj { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
+.commit-detail .meta { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
+.commit-detail .facts .mk { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+.commit-detail .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; margin-bottom: 8px; }
+.commit-detail ul { margin: 4px 0 0; padding-left: 20px; font-size: 14px; }
+.commit-detail .why { color: var(--muted); font-size: 13.5px; }
+.hint-pick { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+@media (max-width: 860px) {
+  .git-top { grid-template-columns: minmax(0, 1fr); }
+  .git-actions { justify-content: flex-start; }
+  .git-why { text-align: left; }
+}
+
 .welcome { max-width: 60ch; padding-top: 10vh; }
 .welcome h2 { font-size: 30px; margin: 0 0 12px; }
 .welcome ol { padding-left: 20px; }
@@ -474,9 +530,147 @@ function copyRow(cmd) {
   return `<div class="copy-row"><code>${esc(cmd)}</code><button type="button" data-copy="${esc(cmd)}">Copy</button></div>`;
 }
 
+
+// ---- Git: saved versions, read through aaf.py on the server; Push/Pull only via the server.
+let gitData = null, gitFor = null, gitPick = null, gitMsg = null, gitBusy = null, gitPhase = "idle", gitName = "";
+const WORKING = ["planning", "implementing", "checking", "reviewing", "fixing"];
+
+async function loadGit(fresh) {
+  const name = current;
+  if (!name) return;
+  try {
+    const res = await fetch("/api/git?name=" + encodeURIComponent(name) + (fresh ? "&fresh=1" : ""));
+    if (!res.ok || name !== current) return;
+    const d = await res.json();
+    if (name !== current) return;
+    gitData = d; gitFor = name;
+  } catch (e) { return; }
+  renderGitSlot();
+}
+
+function commitState(c) {
+  const t = c.trailers || {}, m = /^(\d+)\s*\/\s*(\d+)$/.exec(t.Checks || "");
+  const checksOk = m ? m[1] === m[2] : null, review = (t.Review || "").toLowerCase();
+  if (review === "fail" || checksOk === false) return "bad";
+  if (review === "pass") return "ok";
+  if (checksOk) return "tested";
+  return "none";
+}
+const STATE_WORDS = { ok: "tests passed, review approved", tested: "tests passed, not reviewed", bad: "a test failed or the review did not approve", none: "no test record (saved by hand)" };
+
+function commitDetail(c, web) {
+  const t = c.trailers || {}, m = /^(\d+)\s*\/\s*(\d+)$/.exec(t.Checks || "");
+  const body = c.body || "";
+  const dec = (body.split(/\n\n/).find(p => /^Decisions:/.test(p)) || "").split("\n").slice(1);
+  const decisions = [];
+  dec.forEach(l => { if (/^- /.test(l)) decisions.push({ t: l.slice(2), why: "" }); else if (decisions.length && l.trim()) decisions[decisions.length - 1].why += " " + l.trim(); });
+  const rest = body.split(/\n\n/).filter(p => p.trim() && !/^Decisions:/.test(p) && !/^(Checks|Independent review):/.test(p));
+  const d = new Date(c.date);
+  return `<div class="commit-detail" data-commit-detail>
+    <div class="subj">${esc(plain(c.subject))}</div>
+    <div class="meta">${isNaN(d) ? "" : esc(d.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))} · ${esc(c.author)} · version ${esc(c.short)}${web ? ` · <a class="git-link" href="${esc(web)}/commit/${esc(c.hash)}" target="_blank" rel="noopener">see on GitHub ↗</a>` : ""}</div>
+    <div class="facts">
+      <span>${m ? (m[1] === m[2] ? ICON.pass : ICON.fail) + ` ${m[1]} of ${m[2]} tests passed` : "No test record"}</span>
+      ${t.Review ? `<span>${t.Review === "pass" ? ICON.pass : ICON.fail} Review ${t.Review === "pass" ? "approved" : "did not approve"}</span>` : ""}
+      ${t["Agent-Attempts"] ? `<span>${esc(plural(+t["Agent-Attempts"], "attempt"))}</span>` : ""}
+    </div>
+    ${decisions.length ? `<b>Decisions</b><ul>${decisions.map(x => `<li>${esc(plain(x.t))}${x.why ? `<div class="why">${esc(plain(x.why.trim()))}</div>` : ""}</li>`).join("")}</ul>` : ""}
+    ${rest.length ? `<p class="why">${esc(plain(rest.join(" ")))}</p>` : ""}
+  </div>`;
+}
+
+function gitHtml() {
+  if (!gitData || gitFor !== current) {
+    return `<h3 class="sec-title">Saved versions (Git)</h3><section class="panel sec" data-section="git" aria-label="Saved versions"><p class="empty">Checking GitHub…</p></section>`;
+  }
+  const g = gitData;
+  if (g.available === false) return "";
+  const head = `<h3 class="sec-title">Saved versions (Git)</h3>`;
+  if (!g.repo) {
+    return head + `<section class="panel sec" data-section="git" aria-label="Saved versions"><p class="empty" data-git-ready>This project is not saved with Git yet, so there is no version history or GitHub copy.${g.error ? " (" + esc(g.error) + ")" : ""}</p></section>`;
+  }
+  const ahead = g.ahead, behind = g.behind, changed = g.n_changed || 0, remote = !!g.remote;
+  const working = WORKING.includes(gitPhase);
+  // Sync picture: this computer <-> GitHub.
+  const sendTxt = !remote ? "not linked" : ahead == null ? "not sent yet" : ahead ? `${ahead} to send` : "nothing to send";
+  const getTxt = !remote ? "" : behind == null ? "" : behind ? `${behind} to get` : "nothing new";
+  const words = !remote ? "Only on this computer: there is no GitHub copy linked."
+    : ahead == null ? "Linked to GitHub, but nothing has been sent there yet."
+    : !ahead && !behind ? `In sync with GitHub${changed ? "" : ", nothing waiting"}.`
+    : [ahead ? `${plural(ahead, "saved version")} not on GitHub yet` : "", behind ? `${plural(behind, "newer version")} on GitHub` : ""].filter(Boolean).join(" · ") + ".";
+  const sync = `<div data-viz="git-sync" data-ahead="${ahead ?? "?"}" data-behind="${behind ?? "?"}" data-changed="${changed}" role="img" aria-label="${esc(words)}">
+      <div class="sync">
+        <div class="place${changed ? " dirty" : ""}">This computer<small>${changed ? plural(changed, "unsaved change") : "all saved"}</small></div>
+        <div class="lanes"><div class="lane${ahead ? " on" : ""}">${esc(sendTxt)}</div>${remote ? `<div class="lane back${behind ? " on" : ""}">${esc(getTxt)}</div>` : ""}</div>
+        <div class="place">GitHub<small>${esc(g.branch || "")}</small></div>
+      </div>
+      <p class="sync-words">${esc(words)}${changed ? ` ${plural(changed, "file")} changed since the last saved version.` : ""}</p></div>`;
+  const pushDis = !remote || ahead === 0 || !!gitBusy, pullDis = !remote || working || behind === 0 || !!gitBusy;
+  const why = !remote ? "Push and Pull need a GitHub copy." : working ? "Pull waits while the agent is working on this project." : "";
+  const actions = `<div><div class="git-actions">
+      <button type="button" data-git-action="push"${pushDis ? " disabled" : ""} title="Send saved versions from this computer to GitHub">${gitBusy === "push" ? "Pushing…" : "Push"}</button>
+      <button type="button" class="secondary" data-git-action="pull"${pullDis ? " disabled" : ""} title="Get newer versions from GitHub">${gitBusy === "pull" ? "Pulling…" : "Pull"}</button></div>
+      ${why ? `<p class="git-why">${esc(why)}</p>` : ""}
+      ${g.web ? `<p class="git-why"><a class="git-link" href="${esc(g.web)}" target="_blank" rel="noopener">Open on GitHub ↗</a></p>` : ""}</div>`;
+  const files = changed ? `<details class="git-files" data-detail="git-files" data-keep="git-files"${document.querySelector('details[data-keep="git-files"][open]') ? " open" : ""}>
+      <summary>${plural(changed, "file")} changed but not saved yet</summary><ul>${(g.changed || []).map(f => `<li>${esc(f)}</li>`).join("")}${changed > (g.changed || []).length ? `<li>… and ${changed - g.changed.length} more</li>` : ""}</ul></details>` : "";
+  const msg = gitMsg ? `<p class="git-msg${gitMsg.ok ? "" : " bad"}" data-git-message role="status">${esc(gitMsg.text)}</p>` : "";
+  // Timeline: oldest left, newest right.
+  const cs = (g.commits || []).slice().reverse();
+  const n = cs.length;
+  const pts = cs.map((c, i) => {
+    const st = commitState(c), pushed = remote && ahead != null && (n - 1 - i) < ahead ? "no" : "yes";
+    return `<button type="button" data-commit="${esc(c.hash)}" data-state="${st}" data-pushed="${pushed}" aria-pressed="${gitPick === c.hash}"
+      aria-label="${esc(c.subject)}: ${esc(STATE_WORDS[st])}${pushed === "no" ? ", not on GitHub yet" : ""}" title="${esc(c.subject)}"><span class="pt"></span></button>`;
+  }).join("");
+  const picked = cs.find(c => c.hash === gitPick);
+  const fmt = c => { const d = new Date(c.date); return isNaN(d) ? "" : d.toLocaleDateString([], { day: "numeric", month: "short" }); };
+  const timeline = n ? `<div class="tl-wrap"><div class="tl" data-viz="git-timeline" role="group" aria-label="${plural(n, "saved version")}, oldest first">${pts}</div></div>
+      <div class="tl-ends"><span>${esc(fmt(cs[0]))} · oldest</span><span>newest · ${esc(fmt(cs[n - 1]))}</span></div>
+      <div class="tl-legend"><span><i style="background:var(--pass)"></i>tests passed, review approved</span><span><i style="background:var(--active)"></i>tests passed, not reviewed</span>
+        <span><i style="background:var(--fail)"></i>a test or the review failed</span><span><i style="background:var(--rule)"></i>no test record</span>
+        <span><i style="background:transparent;outline:2px dashed var(--accent);outline-offset:1px"></i>not on GitHub yet</span></div>
+      ${picked ? commitDetail(picked, g.web) : `<p class="hint-pick">Pick a point to see what changed and why.</p>`}`
+    : `<p class="empty">No saved versions yet.</p>`;
+  return head + `<section class="panel sec" data-section="git" aria-label="Saved versions">
+      <div class="git-top" data-git-ready>${sync}${actions}</div>${msg}${files}${timeline}</section>`;
+}
+
+function renderGitSlot() {
+  const slot = $("#git-slot");
+  if (!slot) return;
+  const sc = $(".tl-wrap", slot), keep = sc ? sc.scrollLeft : null;
+  slot.innerHTML = gitHtml();
+  const wrap = $(".tl-wrap", slot);
+  if (wrap) wrap.scrollLeft = keep ?? wrap.scrollWidth;
+  slot.querySelectorAll("[data-commit]").forEach(b => b.addEventListener("click", () => {
+    gitPick = gitPick === b.dataset.commit ? null : b.dataset.commit; renderGitSlot();
+  }));
+  slot.querySelectorAll("[data-git-action]").forEach(b => b.addEventListener("click", () => gitDo(b.dataset.gitAction)));
+}
+
+async function gitDo(action) {
+  const name = current;
+  gitBusy = action; gitMsg = null; renderGitSlot();
+  let ok = false, text = "";
+  try {
+    const res = await fetch("/api/git/" + action, { method: "POST",
+      headers: { "Content-Type": "application/json", "X-AAF-Request": "control-room" }, body: JSON.stringify({ name }) });
+    const d = await res.json().catch(() => ({}));
+    ok = res.ok && d.ok; text = d.message || "";
+  } catch (e) { text = "The dashboard server did not answer."; }
+  gitBusy = null;
+  if (name !== current) return;
+  gitMsg = { ok, text: ok ? (action === "push" ? "Sent to GitHub." : "Got the newest versions from GitHub.")
+                          : (action === "push" ? "Push did not work: " : "Pull did not work: ") + text };
+  await loadGit(true);
+  renderGitSlot();
+}
+
 function renderDetail(d) {
   const st = d.status || {}, meta = d.meta || {}, ck = d.checks, rv = d.review;
   const name = meta.name || current, phase = st.phase || "idle", ph = phaseOf(phase);
+  gitPhase = phase;
   const drafts = d.drafts || [], hist = d.check_history || [], events = d.events || [];
   const checks = ck && ck.checks ? ck.checks : [];
   const nPass = checks.filter(c => c.passed).length;
@@ -594,7 +788,8 @@ function renderDetail(d) {
       <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
     </section>`;
 
-  $("#main").innerHTML = glance + action + health + history + plots + more;
+  $("#main").innerHTML = glance + action + health + history + `<div id="git-slot"></div>` + plots + more;
+  renderGitSlot();
 
   $("#main").querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500); }
@@ -608,6 +803,7 @@ $("#lightbox").addEventListener("click", e => e.currentTarget.close());
 
 function select(name) {
   current = name; lastDetail = "";
+  gitData = null; gitFor = null; gitPick = null; gitMsg = null;
   try { localStorage.setItem("aaf.project", name); } catch (e) {}
   history.replaceState(null, "", "#p=" + encodeURIComponent(name));
   document.querySelectorAll(".proj").forEach(b => b.setAttribute("aria-current", b.dataset.p === name));
@@ -624,11 +820,14 @@ async function tick() {
     if (!res.ok) return;
     const text = await res.text();
     if (text !== lastDetail) { lastDetail = text; renderDetail(JSON.parse(text)); }
+    if (gitFor !== current && !gitLoading) { gitLoading = true; loadGit(false).finally(() => { gitLoading = false; }); }
   } catch (e) {
     $("#main").innerHTML = `<div class="welcome"><h2>Dashboard server not reachable</h2><p>Start it from the workspace folder with <code>python3 dashboard/server.py</code>, then reload this page.</p></div>`;
   }
 }
+let gitLoading = false;
 tick(); setInterval(tick, 2500);
+setInterval(() => { if (!gitBusy) loadGit(false); }, 30000);
 </script>
 </body>
 </html>
