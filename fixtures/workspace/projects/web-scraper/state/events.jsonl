@@ -1,2 +1,2 @@
-{"ts": "2026-10-14T14:38:00+02:00", "kind": "status", "text": "Planning (iteration 0): Collect product prices into a spreadsheet file"}
-{"ts": "2026-10-14T14:40:00+02:00", "kind": "status", "text": "Implementing (iteration 1): Adding the page fetcher"}
+{"ts": "2026-10-14T14:38:00+02:00", "kind": "status", "text": "Planning: Collect product prices into a spreadsheet file", "phase": "planning", "iteration": 0, "task": "Collect product prices into a spreadsheet file"}
+{"ts": "2026-10-14T14:40:00+02:00", "kind": "status", "text": "Implementing (iteration 1): Adding the page fetcher", "phase": "implementing", "iteration": 1, "task": null}

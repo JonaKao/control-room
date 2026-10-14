@@ -27,6 +27,11 @@
       "name": "Live activity feed",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/activity.py; else python3 checks/activity.py; fi",
       "timeout": 240
+    },
+    {
+      "name": "Task timeline",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/timeline.py; else python3 checks/timeline.py; fi",
+      "timeout": 240
     }
   ]
 }

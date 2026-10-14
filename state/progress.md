@@ -39,6 +39,21 @@
   test file directly runs all of it.
   New fixture `web-scraper` (waiting for permission); activity logs in `image-classifier` and
   `example-done`; `brand-new` shows the empty state. Check: `checks/activity.py` (pins the clock).
+- **Task timeline (roadmap 2, 2026-10-14)**: section "Where the time went" right after "Is the work
+  sound?". One row per task, latest on top: name, outcome pill (Finished / Waits for your decision /
+  Stuck / Still running), start, attempts, paused time; a bar split into one segment per stage
+  (colours `--ph-plan/change/test/review/fix`, light and dark), a line with the number where a new
+  attempt starts, a hatched fixed-width break where the task stood still between a stop and a resume,
+  an end mark (✓ / ! / ✕ / pulsing dot) and the working time beside it. Bars share one working-time
+  scale with an axis below (see decision). Tapping a segment shows the stage, attempt, times,
+  duration, the agent's note and what was recorded in it (test runs, review verdicts, decisions,
+  saved unfinished fixes); tapping a pause says how long and why it stopped. A running task's bar
+  grows every 5 s without new data and keeps the open segment. More than 6 tasks: the rest behind
+  "N earlier tasks". Empty state when no task has run.
+  Data: `/api/project` → `tasks`, from aaf.py `task_stats()` in a subprocess, cached until
+  events.jsonl changes (see decision). A failed run is not cached; event times are compared as times
+  (logs may mix time zone offsets). Fixture event logs rewritten in the framework's current
+  structured format with realistic times. Check: `checks/timeline.py`; API tests: `TimelineTest`.
 - **Git section ("Saved versions")**, after the test history: a picture of this computer ⇄ GitHub
   (versions to send / to get, unsaved files with the list on demand), Push and Pull buttons, a link
   to the repo, and a commit timeline (oldest left; green = tests passed and review approved, amber
@@ -67,11 +82,10 @@
 
 ## Next
 
-- Roadmap 2: task timeline (see `ROADMAP.md`).
+- Roadmap 3: change map (see `ROADMAP.md`).
 
 - Show a Git summary (unsent versions, behind) in the project list.
 
-- Possibly a per-task timeline (when each attempt started, how long each took).
 - Phone project row: compute "is the open chip hidden" from the visible area, and skip the
   delayed scroll after tapping a chip; add a check for the scroll behaviour.
 
@@ -98,6 +112,19 @@
   when data changes (they could be updated in place without a full redraw).
 - Activity feed: the longer "stuck · Claude Code is waiting" flag is checked at desktop width only;
   the decision-waiting case with a waiting step has no own assertion (same code path).
+- Task timeline: the reason for a pause (stuck / waiting / finished) is read from the events sent
+  with the stats; for tasks older than the newest 12 those events are not sent, so the pause says
+  "No work was recorded". aaf.py's stats do not record intermediate outcomes per task.
+- Task timeline (draft fix-2 available): the end mark after each bar (✓ / ! / ✕) is not asserted by
+  the check; attempt numbers overlap when a very long running stage squeezes the early ones; keyboard
+  focus on a segment is lost on the 5 s live redraw. The draft fixes all three but restored focus without
+  preventScroll, which pulled the page back to the timeline every 5 s; see state/drafts-notes.md.
+- Task timeline: the number beside a bar is working time (pauses left out), not start-to-end; the
+  pause is named in the row header (see decision).
+- Task timeline: a stats run that keeps failing is retried on every poll (no wait between tries);
+  each try can take up to 20 s. Not seen in practice.
+- Task timeline: `checks/render.py` does not pin the clock, so the running fixtures' bars in
+  `plots/render-*.png` grow to the real current time (honest, but they look stretched).
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).
 
 ## Roadmap

@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -55,6 +56,8 @@ _git_cache = {}
 _git_locks = {}
 _git_info_locks = {}
 _git_locks_guard = threading.Lock()
+_stats_cache = {}
+STATS_TASKS_EVENTS = 400  # events of the shown tasks sent along, so the page can say what happened in a segment
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PLOT_EXT = (".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp")
 
@@ -190,6 +193,7 @@ def detail(name):
         "events": read_jsonl(os.path.join(pdir, "state", "events.jsonl"), last=60),
         "activity": read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), ACTIVITY_LAST),
         "plots": plots,
+        "tasks": task_stats(name),
         "drafts": drafts(name),
         "discarded": read_jsonl(os.path.join(pdir, "state", "discarded_drafts.jsonl"), last=20),
     }
@@ -207,6 +211,74 @@ def aaf(*args, timeout=60):
     except subprocess.TimeoutExpired:
         return 124, "", "timed out after %d s" % timeout
     return proc.returncode, proc.stdout, proc.stderr
+
+
+def stats_aaf_path():
+    """The aaf.py whose task_stats() derives the task timeline: the served workspace's, or, for a
+    workspace without one (the fixtures), the one of the workspace this server lives in."""
+    for root in (ROOT, find_root(HERE)):
+        path = os.path.join(root, "framework", "aaf.py")
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+_STATS_CODE = ("import importlib.util, json, sys\n"
+               "spec = importlib.util.spec_from_file_location('aaf', sys.argv[1])\n"
+               "aaf = importlib.util.module_from_spec(spec); spec.loader.exec_module(aaf)\n"
+               "print(json.dumps(aaf.task_stats(sys.argv[2])))\n")
+
+
+def _stats_run(pdir):
+    """aaf.task_stats(<project folder>), i.e. what `aaf.py stats <name>` prints, in a subprocess."""
+    path = stats_aaf_path()
+    if not path:
+        return {"available": False, "summary": {}, "tasks": [], "error": "framework/aaf.py not found"}
+    try:
+        proc = subprocess.run([sys.executable, "-c", _STATS_CODE, path, pdir], capture_output=True,
+                              text=True, timeout=20, cwd=pdir)
+        data = json.loads(proc.stdout) if proc.returncode == 0 else None
+    except (subprocess.TimeoutExpired, ValueError):
+        data = None
+    if not isinstance(data, dict):
+        return {"available": False, "summary": {}, "tasks": [], "error": "could not read the task history"}
+    data["available"] = True
+    return data
+
+
+def task_stats(name):
+    """The task timeline, recomputed only when the project's event log changes."""
+    pdir = os.path.join(PROJECTS, name)
+    events = os.path.join(pdir, "state", "events.jsonl")
+    try:
+        st = os.stat(events)
+        sig = (st.st_size, st.st_mtime_ns)
+    except OSError:
+        sig = None
+    if stats_aaf_path() is None:
+        return {"available": False, "summary": {}, "tasks": [], "events": []}
+    hit = _stats_cache.get((ROOT, name))
+    if hit and hit[0] == sig:
+        return hit[1]
+    data = _stats_run(pdir)
+    # The events inside the shown tasks, so the page can say what happened in each segment.
+    # Times are compared as times: the log may mix time zone offsets.
+    first = _when(data["tasks"][-12]["start"]) if len(data.get("tasks") or []) > 12 else None
+    rows = [e for e in read_jsonl(events) if first is None or (_when(e.get("ts")) or first) >= first]
+    data["events"] = [{k: e[k] for k in ("ts", "kind", "text", "verdict", "passed") if k in e}
+                      for e in rows[-STATS_TASKS_EVENTS:]]
+    if data["available"]:  # a failed run is tried again on the next request
+        _stats_cache[(ROOT, name)] = (sig, data)
+    return data
+
+
+def _when(ts):
+    """An ISO time stamp as seconds since the epoch, or None."""
+    try:
+        d = datetime.fromisoformat(str(ts))
+    except ValueError:
+        return None
+    return d.timestamp() if d.tzinfo else None
 
 
 def git_info(name, fresh=False):

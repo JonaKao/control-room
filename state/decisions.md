@@ -81,3 +81,15 @@ tests/test_api.py had ActivityTailTest after its __main__ block, so running the 
 ## 2026-10-14: Fixed: the page redraws on a timer only while a task runs
 
 The 30 s time-based redraw (needed so 'gone quiet' appears without new data) now applies only to running stages; finished, stuck, waiting and idle projects redraw only when their data changes, so selected text is kept. Cost: 'N min ago' texts on those projects update only with new data, as before the feed. checks/activity.py asserts a finished project is not redrawn. Reviewer PASS.
+
+## 2026-10-14: Task timeline: data from aaf.py task_stats, run against any project folder
+
+The server runs the served workspace's framework/aaf.py (or, when that workspace has none, as with the plain fixtures, the aaf.py of the workspace the server lives in) in a subprocess and calls its task_stats(<project folder>), which is exactly what 'aaf.py stats <name>' prints. The CLI derives the project folder from its own location, so it cannot read the fixture workspace. Result cached per project until events.jsonl changes (size + mtime), so polling costs one stat() call. Rejected: re-implementing the event parsing in the server or page (two copies of the data model), and copying aaf.py into the fixtures (would also turn on the Git section in every render).
+
+## 2026-10-14: Task timeline: bars on a shared working-time scale, pauses drawn as a short break
+
+Each task's bar starts at the left and its length is its working time on one scale shared by all rows, so tasks can be compared; the start time is written on the row. An absolute calendar axis was rejected: tasks hours or days apart would shrink to slivers. Time between a stop (stuck or waiting) and a resume is not work; it is drawn as a fixed-width hatched break with its length in words, otherwise one overnight pause would flatten every other bar. The duration beside the bar is working time; the pause is named separately.
+
+## 2026-10-15: Fixed: timeline events filtered by time, failed stats runs not cached
+
+server.task_stats compared event timestamps as text, wrong when the log mixes time zone offsets; it now compares epoch seconds (_when), keeping events whose time cannot be read. A failed or timed-out aaf.py run was cached until events.jsonl changed; now only successful runs are cached. Tests: test_events_filtered_by_time_not_text, test_failed_run_is_not_cached (both fail on the old code). Not done: a short wait before retrying a failing run (kept as a known issue). Reviewer PASS.

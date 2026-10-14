@@ -18,6 +18,10 @@ includes people who do not know the code behind it.
   and `POST /api/git/push|pull` with `{"name": ...}`. `/api/project` also carries the newest
   30 steps of `state/activity.jsonl` (the live feed, written by `framework/hooks/activity.py`),
   read from the end of the file; `/api/projects` carries each project's newest step.
+  `/api/project` also carries `tasks`: the task timeline, i.e. `task_stats()` from `framework/aaf.py`
+  (what `aaf.py stats <name>` prints), run in a subprocess on the project folder with the served
+  workspace's aaf.py (or this workspace's, for a workspace without one, like the fixtures), cached
+  until `state/events.jsonl` changes (a failed run is not cached), plus the events of the shown tasks for the segment details.
 - **Git is the one exception to read-only.** Push and Pull run
   `<workspace>/framework/aaf.py git push|pull <name>`, never `git` directly. Writes are
   accepted only from the page itself: the request must come from this machine, carry the
@@ -51,6 +55,10 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
 5. **Live activity feed**: `checks/activity.py` pins the browser clock and checks the current
    step, the recent history, reviewer marks, the "waiting for you in Claude Code" state and the
    "gone quiet" notice; it saves `plots/render-activity-*.png`.
+6. **Task timeline**: `checks/timeline.py` pins the clock and checks one bar per task (latest on
+   top), one segment per stage in proportion to its time, one colour per stage, attempt marks,
+   pause breaks, outcome and duration, the detail shown on tapping a segment, and that a running
+   task grows; it saves `plots/render-timeline-*.png`.
 
 The render check needs Playwright once, installed into a local `.venv` in this folder:
 
@@ -70,7 +78,10 @@ handle: `image-classifier` (running, failing a check), `parser` (waiting for a d
 on a draft), `example-done` (finished, with a plot and reviewer steps in its activity log),
 `scheduler` (stuck), `brand-new` (nothing run yet, no activity log) and `web-scraper`
 (mid-task, Claude Code waiting for permission). `state/activity.jsonl` in a fixture is
-the live feed's data; its timestamps are fixed, so `checks/activity.py` pins the clock. If you add a new kind of state, add a fixture for it.
+the live feed's data; its timestamps are fixed, so `checks/activity.py` pins the clock.
+`state/events.jsonl` drives the task timeline: `example-done` has four tasks (finished first try,
+stuck, stuck then resumed and finished, finished with a polish step), `image-classifier` a finished
+and a running task, `parser` one that waits for a decision, `scheduler` one stuck after 8 attempts. If you add a new kind of state, add a fixture for it.
 
 Git data is never stored in the fixtures. `checks/git_workspace.py` copies the fixtures
 and `framework/aaf.py` into a temporary folder at test time, turns some projects into

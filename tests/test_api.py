@@ -143,5 +143,95 @@ class ActivityTailTest(unittest.TestCase):
         self.assertEqual(server.read_jsonl_tail(os.path.join(self.dir, "missing.jsonl"), 30), [])
 
 
+class TimelineTest(unittest.TestCase):
+    """/api/project carries the task timeline: exactly what aaf.py's task_stats derives, cached until
+    the event log changes."""
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        path = os.path.join(os.path.dirname(os.path.dirname(PROJECT)), "framework", "aaf.py")
+        spec = importlib.util.spec_from_file_location("aaf_for_test", path)
+        cls.aaf = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.aaf)
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        self.old_root = server.ROOT
+        self.tmp = tempfile.mkdtemp()
+        shutil.copytree(os.path.join(FIXTURES, "projects"), os.path.join(self.tmp, "projects"))
+        server.set_root(self.tmp)
+        server._stats_cache.clear()
+
+    def tearDown(self):
+        import shutil
+        server.set_root(self.old_root)
+        server._stats_cache.clear()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_same_as_aaf_stats(self):
+        for name in ("brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
+            d = server.detail(name)
+            self.assertIn("tasks", d, name)
+            want = self.aaf.task_stats(os.path.join(self.tmp, "projects", name))
+            self.assertEqual(d["tasks"]["tasks"], want["tasks"], name)
+            self.assertTrue(d["tasks"]["available"], name)
+        self.assertEqual(server.detail("brand-new")["tasks"]["tasks"], [])
+
+    def test_cached_until_the_event_log_changes(self):
+        runs = []
+        real = server._stats_run
+        server._stats_run = lambda pdir: runs.append(pdir) or real(pdir)
+        try:
+            server.task_stats("parser")
+            server.task_stats("parser")
+            self.assertEqual(len(runs), 1)
+            with open(os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl"), "a") as f:
+                f.write(json.dumps({"ts": "2026-10-14T14:00:00+02:00", "kind": "status", "text": "Planning: Next",
+                                    "phase": "planning", "iteration": 0, "task": "Next"}) + "\n")
+            d = server.task_stats("parser")
+            self.assertEqual(len(runs), 2)
+            self.assertEqual(d["tasks"][-1]["task"], "Next")
+        finally:
+            server._stats_run = real
+
+    def test_events_filtered_by_time_not_text(self):
+        # 13 tasks; the oldest shown starts 10:00+02:00. An event at 09:30+01:00 (= 10:30+02:00) belongs to it.
+        path = os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl")
+        with open(path, "w") as f:
+            for h in range(13):
+                f.write(json.dumps({"ts": "2026-10-14T%02d:00:00+02:00" % (9 + h), "kind": "status", "text": "Planning: T%d" % h,
+                                    "phase": "planning", "iteration": 0, "task": "T%d" % h}) + "\n")
+                if h == 1:
+                    f.write(json.dumps({"ts": "2026-10-14T09:30:00+01:00", "kind": "decision", "text": "Mixed offset"}) + "\n")
+        d = server.task_stats("parser")
+        self.assertIn("Mixed offset", [e["text"] for e in d["events"]])
+        self.assertNotIn("Planning: T0", [e["text"] for e in d["events"]])
+
+    def test_failed_run_is_not_cached(self):
+        real = server._stats_run
+        calls = []
+        def flaky(pdir):
+            calls.append(1)
+            return {"available": False, "summary": {}, "tasks": [], "error": "boom"} if len(calls) == 1 else real(pdir)
+        server._stats_run = flaky
+        try:
+            self.assertFalse(server.task_stats("parser")["available"])
+            self.assertTrue(server.task_stats("parser")["available"])
+        finally:
+            server._stats_run = real
+
+    def test_unavailable_without_aaf(self):
+        real = server.stats_aaf_path
+        server.stats_aaf_path = lambda: None
+        try:
+            d = server.task_stats("parser")
+        finally:
+            server.stats_aaf_path = real
+        self.assertFalse(d["available"])
+        self.assertEqual(d["tasks"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

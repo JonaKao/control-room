@@ -19,6 +19,7 @@
   --active: #C7870F;
   --accent: #2E5A88;
   --code-bg: #EDF1F5;
+  --ph-plan: #8C99AB; --ph-change: #3A6EA5; --ph-test: #C7870F; --ph-review: #7B5CB0; --ph-fix: #B5577F;
   --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
@@ -26,11 +27,13 @@
   :root:not([data-theme="light"]) {
     --paper: #0F161E; --panel: #16202B; --ink: #E2E9F1; --muted: #8B99AC; --rule: #283544;
     --track: #223040; --pass: #3BB48D; --fail: #E2634F; --active: #E3A83A; --accent: #79A5D6; --code-bg: #111A23;
+    --ph-plan: #6E7D91; --ph-change: #6D9DD4; --ph-test: #E3A83A; --ph-review: #A98BDB; --ph-fix: #DB86AB;
   }
 }
 :root[data-theme="dark"] {
   --paper: #0F161E; --panel: #16202B; --ink: #E2E9F1; --muted: #8B99AC; --rule: #283544;
   --track: #223040; --pass: #3BB48D; --fail: #E2634F; --active: #E3A83A; --accent: #79A5D6; --code-bg: #111A23;
+    --ph-plan: #6E7D91; --ph-change: #6D9DD4; --ph-test: #E3A83A; --ph-review: #A98BDB; --ph-fix: #DB86AB;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -173,6 +176,55 @@ pre.out { margin: 8px 0 0; padding: 12px 14px; background: var(--code-bg); borde
 .history .cap { grid-column: 2; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
 .legend { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* 4b. Task timeline */
+.tt-list { display: grid; gap: 4px; }
+.tt-row { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 2px 12px; align-items: center; padding: 8px 0 4px; min-width: 0; }
+.tt-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.tt-head .tt-name { font-weight: 600; font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.tt-head .tt-when { font-size: 12.5px; color: var(--muted); }
+.tt-out { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; padding: 1px 9px 1px 6px; border-radius: 999px; }
+.tt-out svg { width: 14px; height: 14px; }
+.tt-out.o-done { color: var(--pass); background: color-mix(in srgb, var(--pass) 12%, transparent); }
+.tt-out.o-waiting { color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.tt-out.o-stuck { color: var(--fail); background: color-mix(in srgb, var(--fail) 12%, transparent); }
+.tt-out.o-running { color: var(--active); background: color-mix(in srgb, var(--active) 14%, transparent); }
+.tt-track { position: relative; display: flex; align-items: center; height: 40px; padding-top: 14px; min-width: 0; }
+.tt-bar { display: flex; height: 22px; flex: none; }
+.tt-seg { flex: var(--d) 1 0; min-width: 2px; height: 100%; border: 0; padding: 0; margin: 0; cursor: pointer; position: relative;
+  background: var(--c); box-shadow: inset -1px 0 0 var(--panel); }
+.tt-seg:first-child { border-radius: 5px 0 0 5px; }
+.tt-seg:last-child { border-radius: 0 5px 5px 0; box-shadow: none; }
+.tt-seg:only-child { border-radius: 5px; }
+.tt-seg:hover { filter: brightness(1.08); }
+.tt-seg[aria-pressed="true"] { outline: 2.5px solid var(--ink); outline-offset: 1px; z-index: 2; }
+.tt-seg.att::before { content: ""; position: absolute; left: -1px; top: -6px; bottom: -3px; width: 2px; background: var(--ink); border-radius: 1px; }
+.tt-seg [data-attempt-mark] { position: absolute; left: -4px; top: -19px; font-size: 10.5px; line-height: 1; font-weight: 600; color: var(--muted); }
+.tt-gap { flex: 0 0 14px; height: 22px; border: 0; padding: 0; margin: 0 2px; cursor: pointer; border-radius: 3px;
+  background: repeating-linear-gradient(135deg, var(--rule) 0 3px, transparent 3px 6px); }
+.tt-gap[aria-pressed="true"] { outline: 2.5px solid var(--ink); outline-offset: 1px; }
+.tt-end { flex: none; width: 18px; height: 18px; margin-left: 4px; display: inline-flex; }
+.tt-end svg { width: 18px; height: 18px; }
+.tt-end.o-done { color: var(--pass); } .tt-end.o-waiting { color: var(--accent); } .tt-end.o-stuck { color: var(--fail); }
+.tt-end.o-running span { width: 10px; height: 10px; margin: 4px; border-radius: 50%; background: var(--active);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--active) 22%, transparent); animation: pulse 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .tt-end.o-running span { animation: none; } }
+.tt-total { font-size: 14px; font-weight: 600; text-align: right; padding-top: 14px; white-space: nowrap; }
+.tt-detail { grid-column: 1 / -1; margin: 6px 0 4px; padding: 10px 14px; border-radius: 10px; background: var(--paper); border-left: 4px solid var(--c, var(--rule)); font-size: 14px; }
+.tt-detail p { margin: 0; }
+.tt-detail .tt-dt { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+.tt-detail ul { margin: 6px 0 0; padding-left: 18px; }
+.tt-axis { position: relative; height: 22px; margin-right: 88px; border-top: 1px solid var(--rule); margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.tt-axis span { position: absolute; top: 3px; transform: translateX(-50%); white-space: nowrap; }
+.tt-axis span:first-child { transform: none; }
+.tt-axis span::before { content: ""; position: absolute; left: 50%; top: -7px; height: 5px; border-left: 1px solid var(--rule); }
+.tt-axis span:first-child::before { left: 0; }
+.tt-cap { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
+.tt-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.tt-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.tt-legend .k-gap i { background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); }
+.tt-legend .k-att i { width: 2px; background: var(--ink); border-radius: 1px; }
+.tt-older summary { color: var(--accent); font-size: 14px; margin-top: 8px; }
 
 /* 5. Plots */
 .plots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
@@ -760,10 +812,158 @@ async function gitDo(action) {
   renderGitSlot();
 }
 
+// ---- Task timeline: where the time went. Data: aaf.py task_stats, sent with /api/project as "tasks".
+const TT_VAR = { planning: "--ph-plan", implementing: "--ph-change", checking: "--ph-test", reviewing: "--ph-review", fixing: "--ph-fix" };
+const TT_DOES = { planning: "Reading the task and deciding how to tackle it.", implementing: "Changing the code.",
+  checking: "Running the tests on the latest change.", reviewing: "A second, independent agent reviewed the work.",
+  fixing: "Fixing a small point the reviewer raised." };
+const TT_SHOWN = 6, TT_GAP = 14, TT_END = 24;  // rows shown before "earlier tasks"; px of a pause break; px kept for the end mark
+const TT_X = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="var(--panel)" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+const TT_OK = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M5.8 10.4l2.9 2.9 5.6-6.4" fill="none" stroke="var(--panel)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const TT_OUT = { done: ["Finished", TT_OK], waiting: ["Waits for your decision", ICON.ask], stuck: ["Stuck", TT_X], running: ["Still running", ""] };
+let ttData = null, ttPick = null;
+
+const ttSec = iso => { const t = Date.parse(iso); return isNaN(t) ? null : t / 1000; };
+const durWords = s => minutes(Math.max(0, Math.round(s / 60)));
+const hhmm = sec => new Date(sec * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function ttWhen(sec) {
+  const d = new Date(sec * 1000), day = new Date(); day.setHours(0, 0, 0, 0);
+  const diff = Math.round((day - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  return (diff === 0 ? "today " : diff === 1 ? "yesterday " : d.toLocaleDateString([], { day: "numeric", month: "short" }) + ", ") + hhmm(sec);
+}
+const phaseWord = e => e.phase || String(e.text || "").split(/[ :(]/)[0].toLowerCase();
+
+// One task as a row of items: a segment per phase, a break wherever work stood still between two phases.
+function ttModel(t, now) {
+  const items = [], phases = t.phases || [];
+  let work = 0, gaps = 0, paused = 0, seen = 0, prevEnd = null;
+  phases.forEach((p, i) => {
+    const a = ttSec(p.start);
+    if (a === null) return;
+    const live = t.outcome === "running" && i === phases.length - 1 && !p.end;
+    const b = live ? Math.max(now, a) : Math.max(ttSec(p.end) ?? a, a);
+    if (prevEnd !== null && a - prevEnd > 0) { items.push({ gap: true, a: prevEnd, b: a, d: a - prevEnd }); gaps++; paused += a - prevEnd; }
+    const it = p.iteration || 0;
+    let att = 0;
+    if (p.phase === "implementing" && it > seen) { if (seen) att = it; seen = it; }
+    items.push({ phase: p.phase, it, a, b, d: b - a, att, live });
+    work += b - a;
+    prevEnd = p.end ? b : null;
+  });
+  return { items, work, gaps, paused };
+}
+
+// What happened in one segment: the events the framework recorded while it lasted.
+function ttHappened(m, x) {
+  const evs = (ttData && ttData.events) || [];
+  const segs = m.items.filter(y => !y.gap);
+  const mine = evs.filter(e => {
+    const ts = ttSec(e.ts);
+    return ts !== null && ts >= x.a && ts <= x.b && segs.find(y => ts >= y.a && ts <= y.b) === x;
+  });
+  const lines = [];
+  for (const e of mine) {
+    const text = String(e.text || ""), rest = text.includes(": ") ? text.slice(text.indexOf(": ") + 2) : "";
+    if (e.kind === "status") {
+      const ph = phaseWord(e);
+      if (Math.abs(ttSec(e.ts) - x.a) < 1 && ph === x.phase && rest && !e.task) lines.push(`The agent's note: “${plain(rest)}”`);
+      else if (["done", "stuck", "waiting"].includes(ph)) lines.push(`Then: ${ph === "done" ? "the task was finished" : ph === "stuck" ? "it got stuck" : "it waited for your decision"}${rest ? ` (“${plain(rest)}”)` : ""}`);
+    } else if (e.kind === "check") {
+      const n = /(\d+) of (\d+) passed/.exec(text);
+      lines.push(n ? `Tests ran: ${n[1]} of ${n[2]} tests passed` : plain(text));
+    } else if (e.kind === "review") {
+      const ok = e.verdict ? e.verdict === "pass" : /PASS/.test(text);
+      lines.push(`${ok ? "The independent review approved the work" : "The independent review did not approve the work"}${rest ? `: ${plain(rest)}` : ""}`);
+    } else if (e.kind === "decision") lines.push(`Decision recorded: ${plain(text)}`);
+    else if (e.kind === "draft" && /^Draft saved/.test(text)) lines.push(`Saved an unfinished fix for you to decide on: ${plain(rest.replace(/ \(.*\)$/, ""))}`);
+    else if (e.kind !== "git") lines.push(plain(text));
+  }
+  return lines;
+}
+
+function ttDetail(m, x) {
+  if (x.gap) {
+    const why = ((ttData && ttData.events) || []).filter(e => e.kind === "status" && Math.abs((ttSec(e.ts) ?? -9) - x.a) < 1).map(phaseWord)
+      .find(p => ["stuck", "waiting", "done"].includes(p));
+    const words = why === "stuck" ? "The agent had got stuck and stopped to wait for you."
+      : why === "waiting" ? "The agent had stopped to wait for your decision on an unfinished fix."
+      : why === "done" ? "The task had been marked finished." : "No work was recorded.";
+    return `<div class="tt-detail" data-seg-detail><p><b>Paused for ${esc(durWords(x.d))}</b></p>
+      <p class="tt-dt">${esc(ttWhen(x.a))} – ${esc(ttWhen(x.b))}</p><p>${words} Then work on this task started again.</p></div>`;
+  }
+  const ph = phaseOf(x.phase), lines = ttHappened(m, x);
+  const which = x.it ? (x.phase === "fixing" ? ` · small fix ${x.it}` : ` · attempt ${x.it}`) : "";
+  return `<div class="tt-detail" data-seg-detail style="--c:var(${TT_VAR[x.phase] || "--rule"})">
+    <p><b>${esc(ph.short)}</b>${which}</p>
+    <p class="tt-dt">${esc(ttWhen(x.a))} – ${x.live ? "now" : esc(hhmm(x.b))} · ${esc(durWords(x.d))}${x.live ? " so far" : ""}</p>
+    <p>${esc(TT_DOES[x.phase] || ph.doing)}</p>
+    ${lines.length ? `<ul>${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : `<p class="tt-dt" style="margin-top:4px">Nothing else was recorded during this stage.</p>`}</div>`;
+}
+
+function timelineHtml() {
+  const head = `<h3 class="sec-title">Where the time went</h3><section class="panel sec" data-section="timeline" aria-label="Where the time went">`;
+  const d = ttData;
+  if (!d || d.available === false)
+    return head + `<p class="empty" data-empty>The task history cannot be read here: the framework tool that keeps it was not found.</p></section>`;
+  const tasks = (d.tasks || []).slice().reverse();
+  if (!tasks.length)
+    return head + `<p class="empty" data-empty>No task has run yet. Once one has, each task appears here as a bar showing how long it spent planning, changing the code, testing and being reviewed, and how it ended.</p></section>`;
+  const now = Date.now() / 1000, models = tasks.map(t => ttModel(t, now));
+  const maxWork = Math.max(60, ...models.map(m => m.work)), G = Math.max(0, ...models.map(m => m.gaps));
+  const fixed = TT_END + G * (TT_GAP + 4);
+  const scaled = f => `calc((100% - ${fixed}px) * ${f.toFixed(5)})`;
+  const row = (t, m) => {
+    const [words, icon] = TT_OUT[t.outcome] || TT_OUT.running, running = t.outcome === "running";
+    let pick = null;
+    const items = m.items.map((x, k) => {
+      const key = `${t.start}#${k}`, on = ttPick === key;
+      if (on) pick = x;
+      if (x.gap) return `<button type="button" class="tt-gap" data-gap data-key="${esc(key)}" aria-pressed="${on}" aria-label="Paused for ${esc(durWords(x.d))}" title="Paused for ${esc(durWords(x.d))}"></button>`;
+      const label = `${phaseOf(x.phase).short}${x.it && x.phase !== "fixing" ? `, attempt ${x.it}` : ""}: ${durWords(x.d)}`;
+      return `<button type="button" class="tt-seg${x.att ? " att" : ""}" data-seg data-key="${esc(key)}" data-phase="${esc(x.phase)}" data-iteration="${x.it}"
+        style="--c:var(${TT_VAR[x.phase] || "--rule"});--d:${Math.max(0, x.d)}" aria-pressed="${on}" aria-label="${esc(label)}" title="${esc(label)}">${x.att ? `<span data-attempt-mark aria-hidden="true">${x.att}</span>` : ""}</button>`;
+    }).join("");
+    const width = `calc((100% - ${fixed}px) * ${(m.work / maxWork).toFixed(5)} + ${m.gaps * (TT_GAP + 4)}px)`;
+    const facts = [`started ${ttWhen(ttSec(t.start))}`, t.attempts ? plural(t.attempts, "attempt") : "", m.paused ? `paused ${durWords(m.paused)}` : ""].filter(Boolean).join(" · ");
+    return `<div class="tt-row" data-task-row data-start="${esc(t.start)}" data-outcome="${esc(t.outcome)}"${running ? " data-running" : ""}>
+      <div class="tt-head" data-task-head><span class="tt-name" title="${esc(plain(t.task))}">${esc(plain(t.task))}</span>
+        <span class="tt-out o-${esc(t.outcome)}" data-outcome-mark>${icon}${words}</span><span class="tt-when">${esc(facts)}</span></div>
+      <div class="tt-track"><div class="tt-bar" data-bar style="width:${width}">${items}</div>
+        <span class="tt-end o-${esc(t.outcome)}"${running ? " data-running-mark" : ""} aria-hidden="true">${running ? "<span></span>" : icon}</span></div>
+      <div class="tt-total" data-total>${esc(durWords(m.work))}</div>
+      ${pick ? ttDetail(m, pick) : ""}</div>`;
+  };
+  const rows = tasks.map((t, i) => row(t, models[i]));
+  const older = rows.length > TT_SHOWN ? `<details class="tt-older" data-tt-older${$("[data-tt-older][open]") ? " open" : ""}>
+      <summary>${plural(rows.length - TT_SHOWN, "earlier task")}</summary><div class="tt-list">${rows.slice(TT_SHOWN).join("")}</div></details>` : "";
+  const step = [1, 2, 5, 10, 15, 30, 60, 120, 180, 240, 360, 720, 1440, 2880].find(s => maxWork / 60 / s <= 5) || 2880;
+  const ticks = [];
+  for (let mm = 0; mm * 60 <= maxWork; mm += step) ticks.push(`<span style="left:${scaled(mm * 60 / maxWork)}">${mm ? esc(minutes(mm)) : "0"}</span>`);
+  const used = Object.keys(TT_VAR).filter(p => tasks.some(t => (t.phases || []).some(x => x.phase === p)));
+  const anyGap = models.some(m => m.gaps), anyAtt = models.some(m => m.items.some(x => x.att));
+  return head + `<div class="tt-list">${rows.slice(0, TT_SHOWN).join("")}</div>${older}
+    <div class="tt-axis" data-axis aria-hidden="true">${ticks.join("")}</div>
+    <p class="tt-cap">Working time since each task started, latest task on top. Tap a part of a bar to see what happened in it.</p>
+    <div class="tt-legend" data-legend>${used.map(p => `<span data-legend-phase="${p}"><i style="background:var(${TT_VAR[p]})"></i>${esc(phaseOf(p).short)}</span>`).join("")}${
+      anyAtt ? `<span class="k-att"><i></i>a new attempt starts</span>` : ""}${anyGap ? `<span class="k-gap"><i></i>paused (stopped, then resumed; not to scale)</span>` : ""}</div></section>`;
+}
+
+function renderTimelineSlot() {
+  const slot = $("#tt-slot");
+  if (!slot) return;
+  slot.innerHTML = timelineHtml();
+  slot.querySelectorAll("[data-key]").forEach(b => b.addEventListener("click", () => {
+    ttPick = ttPick === b.dataset.key ? null : b.dataset.key; renderTimelineSlot();
+  }));
+}
+// Running tasks grow while you watch, without waiting for new data.
+setInterval(() => { if (ttData && (ttData.tasks || []).some(t => t.outcome === "running")) renderTimelineSlot(); }, 5000);
+
 function renderDetail(d) {
   const st = d.status || {}, meta = d.meta || {}, ck = d.checks, rv = d.review;
   const name = meta.name || current, phase = st.phase || "idle", ph = phaseOf(phase);
   gitPhase = phase;
+  ttData = d.tasks || null;
   const drafts = d.drafts || [], hist = d.check_history || [], events = d.events || [];
   const steps = (d.activity || []).filter(a => a && typeof a === "object"), now = steps[steps.length - 1];
   const asks = waitingNeedsYou(now, phase), quiet = quietFor(now, phase);
@@ -922,7 +1122,8 @@ function renderDetail(d) {
       <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
     </section>`;
 
-  $("#main").innerHTML = glance + action + live + health + history + `<div id="git-slot"></div>` + plots + more;
+  $("#main").innerHTML = glance + action + live + health + `<div id="tt-slot"></div>` + history + `<div id="git-slot"></div>` + plots + more;
+  renderTimelineSlot();
   renderGitSlot();
 
   $("#main").querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
@@ -937,7 +1138,7 @@ $("#lightbox").addEventListener("click", e => e.currentTarget.close());
 
 function select(name) {
   current = name; lastDetail = "";
-  gitData = null; gitFor = null; gitPick = null; gitMsg = null;
+  gitData = null; gitFor = null; gitPick = null; gitMsg = null; ttPick = null;
   try { localStorage.setItem("aaf.project", name); } catch (e) {}
   history.replaceState(null, "", "#p=" + encodeURIComponent(name));
   document.querySelectorAll(".proj").forEach(b => b.setAttribute("aria-current", b.dataset.p === name));
