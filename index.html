@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Control Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --paper: #E8EDF1;
+  --panel: #F6F8FA;
+  --ink: #13233A;
+  --muted: #5B6A7F;
+  --rule: #CCD5DE;
+  --track: #DCE3EA;
+  --pass: #1D8A6B;
+  --fail: #C2412F;
+  --active: #C7870F;
+  --accent: #2E5A88;
+  --code-bg: #EDF1F5;
+  --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0F161E; --panel: #16202B; --ink: #E2E9F1; --muted: #8B99AC; --rule: #283544;
+    --track: #223040; --pass: #3BB48D; --fail: #E2634F; --active: #E3A83A; --accent: #79A5D6; --code-bg: #111A23;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0F161E; --panel: #16202B; --ink: #E2E9F1; --muted: #8B99AC; --rule: #283544;
+  --track: #223040; --pass: #3BB48D; --fail: #E2634F; --active: #E3A83A; --accent: #79A5D6; --code-bg: #111A23;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--sans);
+  font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+code { font: 12.5px var(--mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+
+.app { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; }
+
+/* Project rail */
+.rail { border-right: 1px solid var(--rule); padding: 24px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.rail-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 8px 4px; }
+.rail h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.rail .sub { font-size: 13px; color: var(--muted); margin: 0 8px 16px; }
+#theme { background: none; border: 1px solid var(--rule); border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.overview { margin: 0 8px 18px; }
+.overview .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--track); gap: 2px; }
+.overview .bar span { display: block; height: 100%; }
+.overview .words { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.overview .words strong { color: var(--ink); }
+.proj {
+  display: grid; grid-template-columns: 12px 1fr; gap: 2px 10px; align-items: center;
+  width: 100%; text-align: left; background: none; border: 0; padding: 9px 8px; border-radius: 8px; cursor: pointer;
+}
+.proj:hover { background: var(--panel); }
+.proj[aria-current="true"] { background: var(--panel); box-shadow: inset 3px 0 0 var(--accent); }
+.proj .name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj .meta { grid-column: 2; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rule); flex: none; }
+.dot.busy { background: var(--active); }
+.dot.ask { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.dot.ok { background: var(--pass); }
+.dot.bad { background: var(--fail); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fail) 25%, transparent); }
+.group-label { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 8px 4px; }
+
+/* Main */
+main { padding: 28px 40px 64px; max-width: 1180px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 22px; min-width: 0; }
+.sec { margin-bottom: 20px; }
+.sec-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 28px 2px 10px; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+/* 1. At a glance */
+.glance { padding: 22px 24px 20px; border-left: 6px solid var(--rule); }
+.glance.t-ok { border-left-color: var(--pass); }
+.glance.t-busy { border-left-color: var(--active); }
+.glance.t-ask { border-left-color: var(--accent); }
+.glance.t-bad { border-left-color: var(--fail); }
+.eyebrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+.eyebrow .pname { font-weight: 600; color: var(--ink); }
+.needs { display: inline-flex; align-items: center; gap: 10px; margin: 14px 0 10px; padding: 7px 14px 7px 10px; border-radius: 999px; font-weight: 600; font-size: 14.5px; }
+.needs svg { width: 20px; height: 20px; flex: none; }
+.needs[data-needs="no"] { background: color-mix(in srgb, var(--pass) 13%, transparent); color: var(--pass); }
+.needs.t-ask { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.needs.t-bad { background: color-mix(in srgb, var(--fail) 14%, transparent); color: var(--fail); }
+.doing { font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 6px; }
+.task-line { margin: 0; font-size: 15.5px; }
+.task-line .lbl { color: var(--muted); }
+.agent-note { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+/* Loop picture */
+.steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
+.steps li { position: relative; text-align: center; font-size: 13px; color: var(--muted); padding-top: 30px; }
+.steps li::before { /* connector to the previous step */
+  content: ""; position: absolute; top: 10px; right: 50%; width: 100%; height: 3px; background: var(--track); }
+.steps li:first-child::before { display: none; }
+.steps li.past::before, .steps li.now::before { background: color-mix(in srgb, var(--pass) 55%, var(--track)); }
+.steps .node { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 23px; height: 23px; border-radius: 50%;
+  background: var(--panel); border: 3px solid var(--track); z-index: 1; }
+.steps li.past .node { background: color-mix(in srgb, var(--pass) 55%, var(--panel)); border-color: color-mix(in srgb, var(--pass) 55%, var(--panel)); }
+.steps li.now .node { background: var(--active); border-color: var(--active); box-shadow: 0 0 0 5px color-mix(in srgb, var(--active) 22%, transparent); animation: pulse 1.8s ease-in-out infinite; }
+.steps li.now { color: var(--ink); font-weight: 600; }
+.steps li.tried::before { background: color-mix(in srgb, var(--muted) 40%, var(--track)); }
+.steps li.tried .node { background: color-mix(in srgb, var(--muted) 45%, var(--panel)); border-color: color-mix(in srgb, var(--muted) 45%, var(--panel)); }
+.steps li.end-ok .node { background: var(--pass); border-color: var(--pass); animation: none; box-shadow: none; }
+.steps li.end-ask .node { background: var(--accent); border-color: var(--accent); animation: none; box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }
+.steps li.end-bad::before { background: var(--track); }
+.steps li.end-bad .node { background: var(--fail); border-color: var(--fail); animation: none; box-shadow: 0 0 0 5px color-mix(in srgb, var(--fail) 22%, transparent); }
+.steps .hint { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--active) 8%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .steps li.now .node { animation: none; } }
+.loopback { position: relative; margin: 6px 10% 0 30%; height: 22px; border: 2px dashed var(--rule); border-top: 0; border-radius: 0 0 12px 12px; width: 40%; }
+.loopback span { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); background: var(--panel); padding: 0 8px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.loopback::after { content: ""; position: absolute; left: -6px; top: -4px; border: 5px solid transparent; border-bottom: 7px solid var(--rule); border-top: 0; }
+
+/* 2. What to do */
+.action { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+.action.t-bad { border-color: var(--fail); background: color-mix(in srgb, var(--fail) 5%, var(--panel)); }
+.action h3 { margin: 0 0 4px; font-size: 18px; }
+.action .lead { margin: 0 0 14px; color: var(--muted); }
+.draft { border-top: 1px solid var(--rule); padding: 14px 0 6px; }
+.draft:first-of-type { border-top: 0; padding-top: 4px; }
+.draft .issue { font-weight: 700; font-size: 16px; }
+.draft p { margin: 2px 0 6px; }
+.safe { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--pass); font-weight: 600; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 12px 0 6px; }
+.choice { border: 1px solid var(--rule); background: var(--panel); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.choice b { display: block; }
+.choice .why { font-size: 13.5px; color: var(--muted); margin: 2px 0 8px; }
+.copy-row { display: flex; gap: 8px; align-items: center; }
+.copy-row code { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.copy-row button { border: 0; border-radius: 6px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--accent); color: var(--panel); flex: none; }
+.how { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+
+/* 3. Health tiles */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.tile h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; }
+.tile .big { font-size: 15px; font-weight: 600; margin: 0; }
+.tile .small { font-size: 13.5px; color: var(--muted); margin: 4px 0 0; }
+.tile-row { display: flex; gap: 16px; align-items: center; }
+.donut { width: 76px; height: 76px; flex: none; }
+.donut text { font: 700 17px var(--sans); fill: var(--ink); }
+.tests { list-style: none; margin: 14px 0 0; padding: 0; font-size: 14px; }
+.tests li { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.tests li .mk { width: 16px; height: 16px; flex: none; }
+.badge { width: 64px; height: 64px; flex: none; }
+.pips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.pips span { width: 18px; height: 18px; border-radius: 5px; background: var(--track); }
+.pips span.used { background: color-mix(in srgb, var(--muted) 55%, var(--track)); }
+.pips span.used.last { background: var(--active); }
+.pips span.used.last-ok { background: var(--pass); }
+.pips span.used.last-bad { background: var(--fail); }
+.pips span.used.last-ask { background: var(--accent); }
+.tile details { margin-top: 12px; }
+summary { cursor: pointer; }
+.tile summary, .more summary { color: var(--accent); font-size: 14px; }
+pre.out { margin: 8px 0 0; padding: 12px 14px; background: var(--code-bg); border-radius: 8px;
+  font: 12.5px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; }
+
+/* 4. Over time */
+.history { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; }
+.history .axis { display: flex; flex-direction: column; justify-content: space-between; font-size: 11.5px; color: var(--muted); height: 90px; text-align: right; }
+.history .bars { display: flex; gap: 3px; align-items: flex-end; height: 90px; border-bottom: 1px solid var(--rule); border-top: 1px dashed var(--rule); }
+.history .bars span { flex: 1 1 0; max-width: 22px; min-height: 4px; border-radius: 3px 3px 0 0; background: var(--pass); }
+.history .bars span.f { background: var(--fail); }
+.history .cap { grid-column: 2; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* 5. Plots */
+.plots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.plot { margin: 0; background: var(--paper); border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); }
+.plot button { display: block; width: 100%; padding: 0; border: 0; background: #fff; cursor: zoom-in; }
+.plot img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; }
+.plot figcaption { padding: 8px 12px; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.plot figcaption span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plot figcaption span:last-child { color: var(--muted); white-space: nowrap; }
+dialog { border: 0; padding: 0; border-radius: 12px; max-width: 92vw; max-height: 92vh; background: #fff; }
+dialog::backdrop { background: rgba(10, 20, 32, 0.7); }
+dialog img { display: block; max-width: 92vw; max-height: 86vh; }
+dialog p { margin: 0; padding: 8px 14px; font-size: 13px; color: #13233A; }
+
+/* 6. More detail */
+.more { padding: 0; }
+.more > details { border-top: 1px solid var(--rule); }
+.more > details:first-child { border-top: 0; }
+.more > details > summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; gap: 12px; align-items: center; padding: 14px 22px; color: var(--ink); }
+.more > details > summary > span:first-child { min-width: 0; }
+.more > details > summary::-webkit-details-marker { display: none; }
+.more summary .st { font-weight: 600; font-size: 15px; }
+.more summary .teaser { display: block; font-weight: 400; font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more summary .n { font-size: 13px; color: var(--muted); }
+.chev { width: 8px; height: 8px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; }
+details[open] > summary .chev { transform: rotate(45deg); }
+.more .body { padding: 0 22px 18px; }
+
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--rule); }
+.timeline li { position: relative; padding: 0 0 14px 26px; }
+.timeline li::before { content: ""; position: absolute; left: 0; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+.timeline .dt { font-size: 12.5px; color: var(--muted); }
+.timeline .dtitle { font-weight: 600; }
+.timeline .dbody { font-size: 14px; color: var(--muted); margin-top: 2px; }
+
+.md { font-size: 14.5px; max-width: 72ch; }
+.md h1 { font-size: 17px; margin: 0 0 8px; }
+.md h2 { font-size: 15px; margin: 14px 0 6px; }
+.md h3 { font-size: 14px; margin: 12px 0 4px; }
+.md p { margin: 0 0 8px; }
+.md ul, .md ol { margin: 0 0 8px; padding-left: 20px; }
+.md li.task-item { list-style: none; margin-left: -20px; }
+.md pre { background: var(--code-bg); padding: 10px 12px; border-radius: 8px; overflow: auto; font: 12.5px var(--mono); }
+
+.activity { list-style: none; margin: 0; padding: 0; }
+.activity li { display: grid; grid-template-columns: 70px 10px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.activity li:first-child { border-top: 0; }
+.activity .t { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.activity .k { width: 8px; height: 8px; border-radius: 2px; background: var(--muted); transform: translateY(-1px); }
+.activity .k.decision { background: var(--ink); }
+.activity .k.draft { background: var(--accent); }
+.activity .k.bad { background: var(--fail); }
+.activity .k.good { background: var(--pass); }
+.activity span:last-child { overflow-wrap: anywhere; }
+
+.welcome { max-width: 60ch; padding-top: 10vh; }
+.welcome h2 { font-size: 30px; margin: 0 0 12px; }
+.welcome ol { padding-left: 20px; }
+
+@media (max-width: 1100px) {
+  .tiles { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 14px 16px 12px; }
+  .rail .sub, .group-label, .proj .meta { display: none; }
+  .overview { margin: 8px 0 10px; }
+  .rail-top { margin: 0; }
+  /* One row that scrolls on its own, so a long list never pushes the summary down. */
+  #projects { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  #projects::-webkit-scrollbar { display: none; }
+  .proj { flex: none; width: auto; display: inline-flex; gap: 6px; padding: 5px 10px; border: 1px solid var(--rule); border-radius: 999px; }
+  .proj[aria-current="true"] { box-shadow: none; border-color: var(--accent); }
+  .proj .name { font-size: 13px; }
+  main { padding: 16px 16px 48px; }
+  .tiles { grid-template-columns: minmax(0, 1fr); }
+  .glance { padding: 16px 16px 16px 14px; }
+  .doing { font-size: 22px; }
+  .steps li { font-size: 11.5px; }
+  .steps .hint { display: none; }
+  .loopback { margin-left: 30%; }
+  .more > details > summary { padding: 12px 16px; }
+  .more .body { padding: 0 16px 14px; }
+  .panel { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Projects">
+    <div class="rail-top"><h1>Agent Control Room</h1><button id="theme" type="button" aria-label="Switch between light and dark">Theme</button></div>
+    <p class="sub">What each project's agent is doing, live</p>
+    <div id="overview"></div>
+    <div id="projects"></div>
+  </nav>
+  <main id="main" aria-live="polite"></main>
+</div>
+<dialog id="lightbox"><img alt=""><p></p></dialog>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + "s")}`;
+
+// Every phase in plain words: what it means for someone who doesn't know the code.
+const PHASES = {
+  idle:         { tone: "idle", short: "Not started",          doing: "Not working on anything right now" },
+  planning:     { tone: "busy", short: "Planning",             doing: "Planning how to tackle the task" },
+  implementing: { tone: "busy", short: "Making a change",      doing: "Making a change to the code" },
+  fixing:       { tone: "busy", short: "Polishing",            doing: "Polishing: fixing small points the reviewer raised" },
+  checking:     { tone: "busy", short: "Testing",              doing: "Testing its latest change" },
+  reviewing:    { tone: "busy", short: "Being reviewed",       doing: "A second, independent agent is reviewing the work" },
+  waiting:      { tone: "ask",  short: "Needs your decision",  doing: "Paused until you decide on an unfinished fix" },
+  done:         { tone: "ok",   short: "Finished",             doing: "Finished the task" },
+  stuck:        { tone: "bad",  short: "Stuck, needs you",     doing: "Stopped: it could not solve this on its own" },
+};
+const phaseOf = p => PHASES[p] || PHASES.idle;
+
+// Agent-written text (notes, task, events) reworded: framework terms and file names in plain words.
+const FILE_WORDS = [[/\b(?:state\/)?progress\.md\b/g, "the progress note"], [/\b(?:state\/)?decisions\.md\b/g, "the decision log"],
+  [/\bDONE\.md\b/g, "the definition of done"], [/\bCLAUDE\.md\b/g, "the project instructions"],
+  [/\bproject\.json\b/g, "the project settings"], [/\b(?:state\/)?reviews\/latest\.md\b/g, "the review"],
+  [/\b(?:state\/)?checks\.json\b/g, "the test results"], [/\b(?:state\/)?check_history\.jsonl\b/g, "the test history"],
+  [/\b(?:state\/)?status\.json\b/g, "the status"], [/\b(?:state\/)?events\.jsonl\b/g, "the activity log"],
+  [/\b(?:state\/)?review\.json\b/g, "the review"], [/\b(?:framework\/)?aaf\.py\b/g, "the framework tool"], [/\bvia aaf\b/g, "with the framework tool"]];
+function plain(t) {
+  let s = String(t ?? "");
+  for (const [re, words] of FILE_WORDS) s = s.replace(re, words);
+  return s.replace(/\biterations?\b/gi, m => /s$/i.test(m) ? "attempts" : "attempt")
+    .replace(/^Implementing\b/, "Making a change").replace(/^Checking\b/, "Testing").replace(/^Reviewing\b/, "Being reviewed")
+    .replace(/^Fixing\b/, "Polishing").replace(/^Waiting\b/, "Waiting for you").replace(/^Planning\b/, "Planning")
+    .replace(/\bimplementing\b/gi, "making a change")
+    .replace(/\b(\d+)\s*\/\s*(\d+) checks?\b/gi, "$1 of $2 tests").replace(/\bchecks\b|\bcheck(?= (?:pass|fail|result|run))/gi, m => (m[0] === "C" ? "T" : "t") + "est" + (m.length > 5 ? "s" : ""))
+    .replace(/\bdrafts? (fix-(\d+))\b/gi, "unfinished fix $2").replace(/(^|[^\w-])fix-(\d+)\b/gi, "$1fix $2")
+    .replace(/\b(\d+) drafts\b/gi, "$1 unfinished fixes").replace(/\b1 draft\b/gi, "1 unfinished fix").replace(/\bno drafts\b/gi, "no unfinished fixes")
+    .replace(/\bminor findings?\b/gi, m => /s$/i.test(m) ? "small review points" : "small review point")
+    .replace(/\bphase\b/gi, m => m[0] === "P" ? "Stage" : "stage");
+}
+const needsYou = p => p === "waiting" || p === "stuck";
+
+let current = null, lastProjects = "", lastDetail = "", railFirst = true;
+try { current = new URLSearchParams(location.hash.slice(1)).get("p") || localStorage.getItem("aaf.project"); } catch (e) {}
+try { const t = localStorage.getItem("aaf.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+$("#theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("aaf.theme", next); } catch (e) {}
+});
+
+function ago(iso) {
+  if (!iso) return "";
+  const t = typeof iso === "number" ? iso * 1000 : Date.parse(iso);
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 45) return "just now";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  return Math.round(s / 86400) + " d ago";
+}
+function clock(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const today = new Date().toDateString() === d.toDateString();
+  return today ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+               : d.toLocaleDateString([], { day: "numeric", month: "short" });
+}
+
+function markdown(src) {
+  src = src.replace(/<!--[\s\S]*?-->/g, "");
+  const lines = src.split("\n"); let html = "", list = null, inCode = false, para = [];
+  const inline = t => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  const flush = () => { if (para.length) { html += "<p>" + inline(para.join(" ")) + "</p>"; para = []; } };
+  const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+  const openList = kind => { if (list !== kind) { closeList(); html += `<${kind}>`; list = kind; } };
+  for (const line of lines) {
+    if (line.startsWith("```")) { flush(); closeList(); html += inCode ? "</pre>" : "<pre>"; inCode = !inCode; continue; }
+    if (inCode) { html += esc(line) + "\n"; continue; }
+    const h = line.match(/^(#{1,3})\s+(.*)/);
+    const li = line.match(/^\s*[-*]\s+(\[( |x)\]\s+)?(.*)/);
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)/);
+    if (h) { flush(); closeList(); html += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`; }
+    else if (li) {
+      flush(); openList("ul");
+      html += li[1] ? `<li class="task-item">${li[2] === "x" ? "☑" : "☐"} ${inline(li[3])}</li>` : `<li>${inline(li[3])}</li>`;
+    }
+    else if (ol) { flush(); openList("ol"); html += `<li>${inline(ol[1])}</li>`; }
+    else if (!line.trim()) { flush(); closeList(); }
+    else para.push(line.trim());
+  }
+  flush(); closeList(); if (inCode) html += "</pre>";
+  return html;
+}
+
+// Small icons, drawn inline so they work offline.
+const ICON = {
+  ok: `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor" opacity=".18"/><path d="M5.5 10.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  ask: `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M10 5.5v5.5" stroke="var(--panel)" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="14.4" r="1.3" fill="var(--panel)"/></svg>`,
+  pass: `<svg class="mk" viewBox="0 0 16 16" role="img" aria-label="passed"><circle cx="8" cy="8" r="8" fill="var(--pass)"/><path d="M4.5 8.3l2.3 2.3 4.7-5" fill="none" stroke="var(--panel)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  fail: `<svg class="mk" viewBox="0 0 16 16" role="img" aria-label="failed"><circle cx="8" cy="8" r="8" fill="var(--fail)"/><path d="M5.2 5.2l5.6 5.6M10.8 5.2l-5.6 5.6" stroke="var(--panel)" stroke-width="2" stroke-linecap="round"/></svg>`,
+  shield: `<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M8 1l6 2.5v4c0 3.6-2.6 6.4-6 7.5-3.4-1.1-6-3.9-6-7.5v-4z" fill="currentColor" opacity=".25"/><path d="M5 8l2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+// The agent's loop as a row of steps; the current one pulses.
+function loopPicture(st, maxIt) {
+  const phase = st.phase || "idle";
+  const at = { planning: 0, implementing: 1, fixing: 1, checking: 2, reviewing: 3 }[phase];
+  const ends = { done: ["Finished", "end-ok", "tests pass, review approved"], waiting: ["Your call", "end-ask", "waiting for your decision"],
+                 stuck: ["Stuck", "end-bad", "needs your help"] };
+  const end = ends[phase];
+  const steps = [["Plan", "decide the approach"], ["Change", "edit the code"], ["Test", "run every test"],
+                 ["Review", "second agent checks"], [end ? end[0] : "Finish", end ? end[2] : "done or ask you"]];
+  const reached = phase === "done" ? 5 : phase === "waiting" ? 4 : at === undefined ? -1 : at;
+  const items = steps.map(([name, hint], i) => {
+    // Stuck: it went round the loop, but none of it led to a pass, so earlier steps are grey, not green.
+    let cls = phase === "stuck" && st.iteration ? (i < 4 ? "tried" : "") : i < reached ? "past" : i === reached ? "now" : "";
+    if (i === 4 && end) cls = "now " + end[1];
+    return `<li class="${cls}"${cls.includes("now") ? ' aria-current="step"' : ""}><span class="node"></span>${esc(name)}<span class="hint">${esc(hint)}</span></li>`;
+  }).join("");
+  const it = st.iteration || 0;
+  const attempt = it ? `attempt ${it}${maxIt ? " of up to " + maxIt : ""}` : "repeats until tests and review pass";
+  return `<div data-viz="loop" role="img" aria-label="Where the agent is in its work: ${esc(phaseOf(phase).short)}">
+    <ol class="steps">${items}</ol>
+    <div class="loopback" aria-hidden="true"><span>${phase === "idle" ? "repeats until tests and review pass" : "loops back if a test or the review fails · " + esc(attempt)}</span></div></div>`;
+}
+
+function donut(pass, total) {
+  const r = 30, c = 2 * Math.PI * r, f = total ? pass / total : 0;
+  return `<svg class="donut" viewBox="0 0 76 76" data-viz="checks" role="img" aria-label="${pass} of ${total} tests pass">
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="${total ? "var(--fail)" : "var(--track)"}" stroke-width="10"/>
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--pass)" stroke-width="10" stroke-dasharray="${(f * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/>
+    <text x="38" y="44" text-anchor="middle">${pass}/${total}</text></svg>`;
+}
+
+function reviewBadge(kind) {
+  const col = kind === "pass" ? "var(--pass)" : kind === "fail" ? "var(--fail)" : "var(--track)";
+  const mark = kind === "pass" ? `<path d="M20 33l8 8 16-18" fill="none" stroke="var(--panel)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+    : kind === "fail" ? `<path d="M23 23l18 18M41 23l-18 18" stroke="var(--panel)" stroke-width="5" stroke-linecap="round"/>`
+    : `<circle cx="22" cy="32" r="3.5" fill="var(--muted)"/><circle cx="32" cy="32" r="3.5" fill="var(--muted)"/><circle cx="42" cy="32" r="3.5" fill="var(--muted)"/>`;
+  return `<svg class="badge" viewBox="0 0 64 64" data-viz="review" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="${col}"/>${mark}</svg>`;
+}
+
+function renderOverview(list) {
+  const groups = { bad: 0, ask: 0, busy: 0, ok: 0, idle: 0 };
+  list.forEach(p => groups[phaseOf(p.phase).tone]++);
+  const need = groups.bad + groups.ask;
+  const seg = (n, col) => n ? `<span style="flex:${n};background:${col}"></span>` : "";
+  $("#overview").innerHTML = `<div class="overview" data-overview-needs="${need}">
+    <div class="bar" role="img" aria-label="${need} need you, ${groups.busy} working, ${groups.ok} finished, ${groups.idle} not started">
+      ${seg(groups.bad, "var(--fail)")}${seg(groups.ask, "var(--accent)")}${seg(groups.busy, "var(--active)")}${seg(groups.ok, "var(--pass)")}${seg(groups.idle, "var(--rule)")}</div>
+    <div class="words">${need ? `<strong>${need} need${need === 1 ? "s" : ""} you</strong>` : "Nothing needs you"} · ${groups.busy} working · ${groups.ok} finished${groups.idle ? ` · ${groups.idle} not started` : ""}</div></div>`;
+}
+
+function renderRail(list) {
+  renderOverview(list);
+  const el = $("#projects");
+  const keepScroll = el.scrollLeft;
+  if (!list.length) { el.innerHTML = `<p class="empty" style="margin:0 8px">No projects yet.</p>`; return; }
+  const order = { ask: 0, bad: 0, busy: 1, ok: 2, idle: 3 };
+  const labels = ["Needs you", "Working", "Finished", "Not started"];
+  const sorted = list.slice().sort((a, b) => order[phaseOf(a.phase).tone] - order[phaseOf(b.phase).tone] || a.name.localeCompare(b.name));
+  let html = "", last = -1;
+  for (const p of sorted) {
+    const ph = phaseOf(p.phase), g = order[ph.tone];
+    if (g !== last) { html += `<div class="group-label">${labels[g]}</div>`; last = g; }
+    const extra = ph.tone === "bad" ? "" : p.drafts ? ` · ${plural(p.drafts, "fix", "fixes")}` : p.checks_total ? ` · ${p.checks_pass}/${p.checks_total} tests pass` : "";
+    html += `<button class="proj" type="button" data-p="${esc(p.name)}" aria-current="${p.name === current}">
+      <span class="dot ${ph.tone}"></span><span class="name">${esc(p.name)}</span>
+      <span class="meta">${esc(ph.short)}${esc(extra)}</span></button>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll(".proj").forEach(b => b.addEventListener("click", () => select(b.dataset.p)));
+  // On phones the list scrolls sideways. A refresh keeps where the user swiped to; only on first
+  // render or after picking a project is the open one brought into view, and only if it is hidden.
+  el.scrollLeft = keepScroll;
+  const cur = el.querySelector('.proj[aria-current="true"]');
+  if (cur && el.scrollWidth > el.clientWidth && (railFirst || el.dataset.shown !== current)) {
+    railFirst = false; el.dataset.shown = current;
+    const right = cur.offsetLeft - el.offsetLeft + cur.offsetWidth;
+    if (right > el.clientWidth) el.scrollLeft = right - el.clientWidth * 0.8;
+  }
+}
+
+function welcome() {
+  $("#main").innerHTML = `<div class="welcome">
+    <h2>No projects yet</h2>
+    <p>Open Claude Code in this folder and create one:</p>
+    <ol>
+      <li><code>/new-project my-model</code> to start from scratch, or</li>
+      <li><code>/onboard practical ~/path/to/code</code> to take over existing code.</li>
+    </ol>
+    <p>Then give it work with <code>/task my-model …</code>. This page updates as the agent runs.</p></div>`;
+}
+
+function copyRow(cmd) {
+  return `<div class="copy-row"><code>${esc(cmd)}</code><button type="button" data-copy="${esc(cmd)}">Copy</button></div>`;
+}
+
+function renderDetail(d) {
+  const st = d.status || {}, meta = d.meta || {}, ck = d.checks, rv = d.review;
+  const name = meta.name || current, phase = st.phase || "idle", ph = phaseOf(phase);
+  const drafts = d.drafts || [], hist = d.check_history || [], events = d.events || [];
+  const checks = ck && ck.checks ? ck.checks : [];
+  const nPass = checks.filter(c => c.passed).length;
+  const kept = new Set([...document.querySelectorAll("main details[open][data-keep]")].map(x => x.dataset.keep));
+  const open = key => `data-keep="${key}"${kept.has(key) ? " open" : ""}`;
+
+  // 1. At a glance: what it is doing, and whether it needs you.
+  const needsTone = phase === "stuck" ? "t-bad" : "t-ask";
+  const needs = needsYou(phase)
+    ? `<div class="needs ${needsTone}" data-needs="yes">${ICON.ask}<span>${phase === "stuck" ? "Needs you: it is stuck and waits for your input"
+        : drafts.length ? `Needs you: decide what happens to ${plural(drafts.length, "unfinished fix", "unfinished fixes")}` : "Needs you: it is waiting for your decision"}</span></div>`
+    : `<div class="needs" data-needs="no">${ICON.ok}<span>${phase === "done" ? "Nothing needs you. The task is finished"
+        : phase === "idle" ? "Nothing needs you. No task is running" : "Nothing needs you. It will keep going on its own"}</span></div>`;
+  const doing = phase === "idle" && !st.task && !events.some(e => e.kind === "check") ? "Waiting for its first task" : ph.doing;
+  const glance = `<section class="panel sec glance t-${ph.tone}" data-section="glance" aria-label="At a glance">
+      <div class="eyebrow"><span><span class="pname">${esc(name)}</span>${meta.description ? ` · ${esc(meta.description)}` : ""}</span><span>Updated ${esc(ago(st.updated))} · live</span></div>
+      ${needs}
+      <h2 class="doing" data-doing>${esc(doing)}</h2>
+      ${st.task ? `<p class="task-line"><span class="lbl">Task: </span>${esc(plain(st.task))}</p>` : `<p class="task-line"><span class="lbl">Give it a task in Claude Code to get started.</span></p>`}
+      ${st.note && st.note !== "Project created" ? `<p class="agent-note">Agent's latest note: “${esc(plain(st.note))}”</p>` : ""}
+      ${loopPicture(st, meta.max_iterations)}
+    </section>`;
+
+  // 2. What to do, only when something needs the human.
+  let action = "";
+  if (phase === "waiting" || phase === "stuck") {
+    const draftCards = drafts.map(x => `<div class="draft">
+        <div class="issue">${esc(x.issue)}</div>
+        <p>The agent tried to fix this ${plural(x.iterations, "time")}${x.rounds > 1 ? ` over ${x.rounds} rounds` : ""} and did not succeed: ${esc(x.summary)}.</p>
+        <span class="safe">${ICON.shield}Your project is safe: it was put back to the last version where every test passed.</span>
+        <div class="choices">
+          <div class="choice"><b>Let it keep trying</b><div class="why">Another round of attempts, starting from where it stopped.</div>${copyRow(`/draft ${name} continue ${x.id}`)}</div>
+          <div class="choice"><b>Drop it, keep a note</b><div class="why">Nothing changes; the problem stays on the list of known issues.</div>${copyRow(`/draft ${name} discard ${x.id}`)}</div>
+        </div>
+        ${x.notes ? `<details ${open("draft-" + x.id)}><summary>What the agent tried</summary><div class="md">${markdown(x.notes)}</div></details>` : ""}
+      </div>`).join("");
+    const failing = checks.filter(c => !c.passed).map(c => c.name);
+    action = phase === "stuck"
+      ? `<section class="panel sec action t-bad" data-section="action" aria-label="What to do">
+          <h3>The agent stopped and needs your help</h3>
+          <p class="lead">${meta.max_iterations && (st.iteration || 0) >= meta.max_iterations
+              ? `It used all ${meta.max_iterations} attempts it is allowed without getting every test to pass`
+              : `It stopped after ${plural(st.iteration || 0, "attempt")} because it kept running into the same problem`}${failing.length ? ` (still failing: ${esc(failing.join(", "))})` : ""}. ${st.note ? `In its words: “${esc(plain(st.note))}”.` : ""}</p>
+          <p>${failing.length ? "The failing test's output is under <em>Is the work sound?</em> below. " : ""}When you know how it should proceed, tell it in Claude Code, for example:</p>
+          ${copyRow(`/task ${name} <your guidance or a smaller goal>`)}
+          ${draftCards}
+        </section>`
+      : `<section class="panel sec action" data-section="action" aria-label="What to do">
+          <h3>${drafts.length ? `Decide on ${plural(drafts.length, "unfinished fix", "unfinished fixes")}` : "Waiting for your decision"}</h3>
+          <p class="lead">${drafts.length ? "The main task is complete. While tidying up, the agent could not finish the fix below, so it set it aside for you." : esc(plain(st.note || ""))}</p>
+          ${draftCards}
+          ${drafts.length ? `<p class="how">Copy one command and paste it into Claude Code.</p>` : ""}
+        </section>`;
+  }
+
+  // 3. Health: tests, independent review, attempts used.
+  const testsTile = checks.length ? `<div class="panel tile"><h4>Tests</h4>
+      <div class="tile-row">${donut(nPass, checks.length)}<div><p class="big">${nPass === checks.length ? "All tests pass" : `${checks.length - nPass} of ${checks.length} failing`}</p>
+      <p class="small">Last run ${esc(ago(ck.ran_at))}</p></div></div>
+      <ul class="tests">${checks.map(c => `<li>${c.passed ? ICON.pass : ICON.fail}<span>${esc(c.name)}</span></li>`).join("")}</ul>
+      <details ${open("test-output")}><summary>Show test output</summary>${checks.map(c => `<p class="small"><b>${esc(c.name)}</b> · ran <code>${esc(c.cmd)}</code></p><pre class="out">${esc(c.output || "(no output)")}</pre>`).join("")}</details></div>`
+    : `<div class="panel tile"><h4>Tests</h4><p class="empty">No tests have run yet. They run after the agent's first change.</p></div>`;
+  const rvKind = rv ? rv.verdict : "none";
+  const reviewTile = `<div class="panel tile"><h4>Independent review</h4>
+      <div class="tile-row">${reviewBadge(rvKind)}<div><p class="big">${rvKind === "pass" ? "Approved" : rvKind === "fail" ? "Not approved yet" : "Not reviewed yet"}</p>
+      <p class="small">${rv ? esc(rv.summary) + " · " + esc(ago(rv.at)) : "A second agent reviews the work once every test passes."}</p></div></div>
+      ${rv && rv.report ? `<details ${open("review-report")}><summary>Read the full review</summary><pre class="out">${esc(rv.report)}</pre></details>` : ""}</div>`;
+  const it = st.iteration || 0, maxIt = meta.max_iterations || 0;
+  const lastCls = phase === "done" ? " last-ok" : phase === "stuck" ? " last-bad" : phase === "waiting" ? " last-ask" : "";
+  const pipsN = Math.max(maxIt, it);
+  const attemptsTile = `<div class="panel tile"><h4>Attempts used</h4>
+      ${pipsN ? `<div class="pips" data-viz="attempts" role="img" aria-label="${it} of ${maxIt || it} attempts used">${Array.from({ length: pipsN }, (_, i) =>
+          `<span class="${i < it ? "used" + (i === it - 1 ? " last" + lastCls : "") : ""}"></span>`).join("")}</div>` : ""}
+      <p class="big" style="margin-top:10px">${it ? `${plural(it, "attempt")}${maxIt ? ` of up to ${maxIt}` : ""}` : "None yet"}</p>
+      <p class="small">An attempt is one change followed by a test run. ${maxIt ? "If it runs out, the agent stops and asks you." : ""}</p></div>`;
+  const health = !checks.length && !rv && !it
+    ? `<h3 class="sec-title">Is the work sound?</h3><section class="panel sec" data-section="health" aria-label="Health"><p class="empty">Nothing to judge yet. Once the agent starts, this shows its tests, the independent review and how many attempts it used.</p></section>`
+    : `<h3 class="sec-title">Is the work sound?</h3>
+    <section class="sec tiles" data-section="health" aria-label="Health">${testsTile}${reviewTile}${attemptsTile}</section>`;
+
+  // 4. Over time: one bar per test run.
+  const allGreen = hist.filter(h => h.passed).length;
+  const history = hist.length ? `<h3 class="sec-title">Test runs over time</h3>
+    <section class="panel sec" data-section="history" aria-label="Test runs over time">
+      <div class="history" data-viz="history" role="img" aria-label="${hist.length} test runs, ${allGreen} with every test passing">
+        <div class="axis"><span>all</span><span>half</span><span>none</span></div>
+        <div class="bars">${hist.map(h => `<span class="${h.passed ? "" : "f"}" style="height:${Math.max(4, Math.round(100 * (h.n_total ? h.n_pass / h.n_total : 0)))}%" title="${esc(clock(h.ran_at))}: ${h.n_pass} of ${h.n_total} tests passed"></span>`).join("")}</div>
+        <div class="cap"><span class="legend"><i style="background:var(--pass)"></i>every test passed</span><span class="legend"><i style="background:var(--fail)"></i>some failed</span>
+          Bar height = share of tests passing, oldest on the left · ${plural(hist.length, "run")}, ${allGreen} fully green</div>
+      </div></section>` : "";
+
+  // 5. Pictures the project produced.
+  const plots = d.plots.length ? `<h3 class="sec-title">Pictures from the project</h3>
+    <section class="panel sec" data-section="plots" aria-label="Plots"><div class="plots">${d.plots.map(p => `<figure class="plot">
+      <button type="button" data-file="${esc(p.file)}"><img loading="lazy" alt="${esc(p.file)}" src="/plot?project=${encodeURIComponent(name)}&file=${encodeURIComponent(p.file)}&t=${p.mtime}"></button>
+      <figcaption><span>${esc(p.file)}</span><span>${esc(ago(p.mtime))}</span></figcaption></figure>`).join("")}</div></section>` : "";
+
+  // 6. Detail on demand.
+  const dec = d.decisions || [];
+  const decisions = dec.length ? `<ol class="timeline">${dec.slice().reverse().map(x => `<li>
+      <div class="dt">${esc(x.date)}</div><div class="dtitle">${esc(x.title)}</div>${x.body ? `<div class="dbody">${esc(x.body)}</div>` : ""}</li>`).join("")}</ol>`
+    : `<p class="empty">No decisions recorded yet.</p>`;
+  const kindClass = e => e.kind === "check" ? (/passed:/.test(e.text) || /Checks passed/.test(e.text) ? "good" : "bad")
+    : e.kind === "review" ? (/PASS/.test(e.text) ? "good" : "bad")
+    : e.kind === "status" && /^Rolled back/.test(e.text) ? "draft" : e.kind === "status" && /^Stuck/.test(e.text) ? "bad" : e.kind === "status" && /^Done/.test(e.text) ? "good" : e.kind;
+  const activity = events.length ? `<ul class="activity">${events.slice().reverse().map(e => `<li>
+      <span class="t">${esc(clock(e.ts))}</span><span class="k ${esc(kindClass(e))}"></span><span>${esc(plain(e.text))}</span></li>`).join("")}</ul>`
+    : `<p class="empty">Nothing has happened yet.</p>`;
+  const summ = (title, teaser, n) => `<summary><span><span class="st">${title}</span><span class="teaser">${esc(teaser)}</span></span><span class="n">${n}</span><span class="chev"></span></summary>`;
+  const firstLine = (d.progress || "").split("\n").find(l => /^\s*[-*]\s+\S/.test(l) || (/\S/.test(l) && !/^#/.test(l))) || "";
+  const more = `<h3 class="sec-title">More detail</h3>
+    <section class="panel sec more" data-section="details" aria-label="More detail">
+      <details data-detail="decisions" ${open("decisions")}>${summ("Decisions the agent made", dec.length ? "Latest: " + dec[dec.length - 1].title : "None yet", dec.length || "")}<div class="body">${decisions}</div></details>
+      <details data-detail="progress" ${open("progress")}>${summ("The agent's notes", firstLine.replace(/^\s*[-*]\s+/, "").replace(/`/g, "") || "Where things stand and what comes next", "")}<div class="body md">${markdown(d.progress || "")}</div></details>
+      <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
+    </section>`;
+
+  $("#main").innerHTML = glance + action + health + history + plots + more;
+
+  $("#main").querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500); }
+    catch (e) { b.textContent = "Select and copy"; }
+  }));
+  $("#main").querySelectorAll(".plot button").forEach(b => b.addEventListener("click", () => {
+    const dlg = $("#lightbox"); $("img", dlg).src = $("img", b).src; $("p", dlg).textContent = b.dataset.file; dlg.showModal();
+  }));
+}
+$("#lightbox").addEventListener("click", e => e.currentTarget.close());
+
+function select(name) {
+  current = name; lastDetail = "";
+  try { localStorage.setItem("aaf.project", name); } catch (e) {}
+  history.replaceState(null, "", "#p=" + encodeURIComponent(name));
+  document.querySelectorAll(".proj").forEach(b => b.setAttribute("aria-current", b.dataset.p === name));
+  tick();
+}
+
+async function tick() {
+  try {
+    const list = await (await fetch("/api/projects")).json();
+    const sig = JSON.stringify(list);
+    if (sig !== lastProjects) { lastProjects = sig; if (!list.some(p => p.name === current)) current = list[0]?.name || null; renderRail(list); }
+    if (!current) { welcome(); return; }
+    const res = await fetch("/api/project?name=" + encodeURIComponent(current));
+    if (!res.ok) return;
+    const text = await res.text();
+    if (text !== lastDetail) { lastDetail = text; renderDetail(JSON.parse(text)); }
+  } catch (e) {
+    $("#main").innerHTML = `<div class="welcome"><h2>Dashboard server not reachable</h2><p>Start it from the workspace folder with <code>python3 dashboard/server.py</code>, then reload this page.</p></div>`;
+  }
+}
+tick(); setInterval(tick, 2500);
+</script>
+</body>
+</html>

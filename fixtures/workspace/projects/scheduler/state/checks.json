@@ -1,0 +1,14 @@
+{
+  "ran_at": "2026-10-14T14:44:35+02:00",
+  "passed": false,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "echo 3 failed; false",
+      "passed": false,
+      "exit_code": 1,
+      "duration_s": 0.0,
+      "output": "3 failed\n"
+    }
+  ]
+}

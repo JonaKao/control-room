@@ -1,0 +1,5 @@
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Project created"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Implementing (iteration 1): Move step counts into a config file"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "check", "text": "Checks passed: 2 of 2 passed"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "review", "text": "Review PASS: Config read correctly; thresholds unchanged"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Done (iteration 1): 2/2 checks pass; review passed"}

@@ -1,0 +1,12 @@
+{
+  "name": "scheduler",
+  "description": "Job scheduler simulation",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "echo 3 failed; false"
+    }
+  ]
+}

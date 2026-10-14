@@ -1,0 +1,30 @@
+{
+  "ran_at": "2026-10-14T14:44:35+02:00",
+  "passed": false,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    },
+    {
+      "name": "Accuracy above 0.85",
+      "cmd": "echo val_acc=0.81 below 0.85; false",
+      "passed": false,
+      "exit_code": 1,
+      "duration_s": 0.0,
+      "output": "val_acc=0.81 below 0.85\n"
+    },
+    {
+      "name": "No data leakage",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    }
+  ]
+}

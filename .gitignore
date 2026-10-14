@@ -1,0 +1,17 @@
+# Agentic AI Framework: local-only working state.
+# Progress, decisions and reviews are committed; the live dashboard status is not.
+state/snapshots/
+state/drafts/
+state/drafts_history.json
+state/drafts-notes.md
+state/status.json
+state/checks.json
+state/check_history.jsonl
+state/events.jsonl
+state/git.json
+*.tmp
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store

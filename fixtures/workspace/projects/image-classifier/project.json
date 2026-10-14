@@ -1,0 +1,20 @@
+{
+  "name": "image-classifier",
+  "description": "CNN for the practical's image dataset",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true"
+    },
+    {
+      "name": "Accuracy above 0.85",
+      "cmd": "echo val_acc=0.81 below 0.85; false"
+    },
+    {
+      "name": "No data leakage",
+      "cmd": "true"
+    }
+  ]
+}

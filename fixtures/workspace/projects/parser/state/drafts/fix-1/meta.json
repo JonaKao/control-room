@@ -1,0 +1,10 @@
+{
+  "id": "fix-1",
+  "issue": "Catastrophic regex backtracking on very long lines",
+  "summary": "Timeout approach failed on Windows line endings",
+  "notes": "1. Added a timeout around the regex.\n2. Timeout broke on Windows line endings.\n3. Same failure again, stopped.\n",
+  "iterations": 3,
+  "rounds": 1,
+  "created": "2026-10-14T14:44:35+02:00",
+  "status": "open"
+}

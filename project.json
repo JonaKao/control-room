@@ -1,0 +1,22 @@
+{
+  "name": "control-room",
+  "description": "The Agent Control Room dashboard: a live, visual view of every project's agent loop",
+  "max_iterations": 10,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Server API",
+      "cmd": "python3 -m unittest discover -s tests -q"
+    },
+    {
+      "name": "Page renders in every state",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/render.py; else python3 checks/render.py; fi",
+      "timeout": 180
+    },
+    {
+      "name": "Understandable at a glance",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/glance.py; else python3 checks/glance.py; fi",
+      "timeout": 180
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "brand-new",
+  "description": "Freshly created, nothing run yet",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": []
+}

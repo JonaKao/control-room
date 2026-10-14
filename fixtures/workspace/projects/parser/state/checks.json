@@ -1,0 +1,22 @@
+{
+  "ran_at": "2026-10-14T14:44:35+02:00",
+  "passed": true,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    },
+    {
+      "name": "Parses sample logs",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    }
+  ]
+}

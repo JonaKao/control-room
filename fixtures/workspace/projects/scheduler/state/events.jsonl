@@ -1,0 +1,4 @@
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Project created"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Implementing (iteration 8): Make the scheduler deterministic under a fixed seed"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "check", "text": "Checks failed: 0 of 1 passed"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Stuck (iteration 8): Same race condition in 3 attempts; needs a decision on the threading model"}

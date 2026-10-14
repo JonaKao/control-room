@@ -1,0 +1,8 @@
+{
+  "phase": "waiting",
+  "task": "Support multi-line stack traces",
+  "iteration": 3,
+  "note": "1 draft needs a decision; 1 of 2 minor findings fixed",
+  "updated": "2026-10-14T14:44:35+02:00",
+  "task_started": "2026-10-14T14:44:35+02:00"
+}

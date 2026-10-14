@@ -1,0 +1,16 @@
+{
+  "name": "example-done",
+  "description": "Finished task with plots and a passed review",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true"
+    },
+    {
+      "name": "Training converges",
+      "cmd": "true"
+    }
+  ]
+}

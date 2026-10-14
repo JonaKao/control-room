@@ -1,0 +1,16 @@
+{
+  "name": "parser",
+  "description": "Inherited log parser from last year's practical",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true"
+    },
+    {
+      "name": "Parses sample logs",
+      "cmd": "true"
+    }
+  ]
+}

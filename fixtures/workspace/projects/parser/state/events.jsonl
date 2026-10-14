@@ -1,0 +1,6 @@
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Project created"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Planning: Support multi-line stack traces"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "check", "text": "Checks passed: 2 of 2 passed"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "review", "text": "Review PASS: Multi-line traces parsed; two minor findings"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "draft", "text": "Draft saved: Catastrophic regex backtracking on very long lines (Timeout approach failed on Windows line endings)"}
+{"ts": "2026-10-14T14:44:35+02:00", "kind": "status", "text": "Waiting (iteration 3): 1 draft needs a decision; 1 of 2 minor findings fixed"}
