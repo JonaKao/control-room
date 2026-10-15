@@ -1,9 +1,12 @@
-VERDICT: PASS
-SUMMARY: Track record meets the task (per-project view, workspace view, reasons reviews failed, ROADMAP item 4 done); 8/8 checks pass; nothing weakened. Minor findings only.
+# Review: control-room README, follow-up fixes
 
-- [minor] aaf.py's `finished` includes stuck and waiting tasks; the page calls them "finished" ("0 of 1 finished tasks right the first time" for stuck scheduler; "A finished task usually takes 8 attempts").
-- [minor] workspace_record calls review_reasons without definition-of-done items, so the All projects view always shows generic advice even when a project's DONE.md already has the item.
-- [minor] One summary can count in several themes, so reason counts can add up to more than the rejections; documented in progress.md but not on the page.
-- [minor] recDetail ties rejections to a task by time window (documented).
-- [minor] .gitignore additions (state/plan.json, state/estimates.jsonl) are outside the task's scope.
-- [minor] test_workspace_record_endpoint is shallow; real coverage is in TrackRecordTest and checks/track_record.py.
+VERDICT: PASS (blockers: 0, majors: 0, minors: 2)
+
+SUMMARY: The three earlier minor findings are fixed (CLAUDE.md test list, plain words instead of folder names in "What it does", path test now reads paths inside commands and counts only files kept in Git). All 8 checks pass when run independently; tests.test_readme 13 OK.
+
+## Findings
+- [minor] tests/test_readme.py: named_paths only looks at backtick spans; Markdown link targets such as [Agentic AI Framework](../../README.md) are not checked for existence (ROADMAP.md has its own test).
+- [minor] README.md, Git section bullet: "Hidden when the workspace has no framework tool" — "framework tool" is unclear to a first-time reader.
+
+## DONE.md
+All items met: checks pass, nothing weakened, success covered by tests/test_readme.py, progress.md updated, screenshots regenerated and render-example-done-phone.png inspected (page code unchanged), server unchanged.

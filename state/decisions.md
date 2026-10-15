@@ -121,3 +121,7 @@ aaf.py's summary.finished counts every task that ended (done, stuck, waiting). W
 ## 2026-10-15: Fixed: All projects reasons know each definition of done; overlap noted
 
 review_reasons takes each project's DONE.md items (items_by_project) and reports covered_in: the All projects view says whose definition of done already covers a reason and gives the generic advice only for the rest. It also reports rejections; when one review named several reasons the page says the counts add up to more than the rejections (plural wording fixed after review). Tests: TrackRecordTest (two new), checks/track_record.py workspace wording and check_overlap on a temporary workspace. Reviewer PASS. Not covered: the mixed case (covered in some projects, not others) has no fixture.
+
+## 2026-10-15: README checked by tests/test_readme.py
+
+The task's success is a document, so a unit test in the Server API check guards it: template sections in order, both aaf generated marker pairs inside their sections, ROADMAP.md linked, each page part named by the title the page itself shows (and that title still present in index.html), the start command, the build parts, and every path named in backticks exists. Rejected: a separate check entry in project.json (one more process for a file read) and checking prose quality by keywords beyond the page titles (brittle).

@@ -49,8 +49,11 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
 ## How to check
 
 `python3 framework/aaf.py check control-room` runs:
-1. **Server API**: unit tests against the fixture workspace (`tests/test_api.py`) and the
-   Git endpoints against a temporary workspace with real repositories (`tests/test_git.py`)
+1. **Server API**: unit tests against the fixture workspace (`tests/test_api.py`), the
+   Git endpoints against a temporary workspace with real repositories (`tests/test_git.py`),
+   that each test file runs fully on its own (`tests/test_layout.py`), that built roadmap items
+   stay marked done (`tests/test_roadmap.py`) and that `README.md` follows the template, names
+   every part of the page and only points to files that exist (`tests/test_readme.py`)
 2. **Page renders in every state**: `checks/render.py` opens every fixture project in a
    headless browser (desktop light, desktop dark, phone), fails on JavaScript errors or
    sideways scrolling, and writes screenshots to `plots/render-*.png`.

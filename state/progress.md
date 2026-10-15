@@ -115,6 +115,16 @@
   detail behind closed blocks. It fails if a fixture folder is added without saying
   whether that situation needs the human.
 
+- **README (2026-10-15)**: `README.md` written from the workspace template for someone who has never
+  seen the project: what the control room is, every part of the page in the page's own order and
+  titles, how to start it (also on the fixtures), how it is built (server, page, fixtures, tests,
+  checks, ROADMAP.md linked) and how it fits the framework. The generated "How it is checked" and
+  "History" sections keep their markers. Guarded by `tests/test_readme.py` (in the Server API check):
+  template sections in order, markers in place, roadmap linked, each page title present in both the
+  README and index.html, no file names in "What it does", every path named in backticks (also inside
+  commands) is kept in Git, and CLAUDE.md names every test file. Review minor points fixed: CLAUDE.md
+  test list, folder names in plain words, stricter path test.
+
 ## Next
 
 All four roadmap items are done.
@@ -181,6 +191,9 @@ All four roadmap items are done.
 - Track record, All projects: the mixed case (a reason covered by one project's definition of done but not
   another's, "For X: <advice>") has no fixture or check; the overlap note has no screenshot; a covered reason
   names the project twice ("…of api-client already asks… Seen in api-client.").
+- README: `tests/test_readme.py` checks paths in backticks only, not Markdown link targets (the link to the
+  workspace README is unchecked; ROADMAP.md has its own test). The Git bullet says "hidden when the workspace
+  has no framework tool", which a newcomer may not follow (from the second README review, not yet fixed).
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).
 
 ## Roadmap
