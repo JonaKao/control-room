@@ -1,13 +1,9 @@
 VERDICT: PASS
-SUMMARY: The change map meets the task. All 7 checks pass, including the new "Change map" check; no existing check or test was weakened. Findings are minor robustness/readability issues seen with real data.
+SUMMARY: Track record meets the task (per-project view, workspace view, reasons reviews failed, ROADMAP item 4 done); 8/8 checks pass; nothing weakened. Minor findings only.
 
-FINDINGS
-- [minor] server.py git_files + index.html mapShell: if `aaf.py git files` fails or times out, the server returns {available: true, repo: false, error}; the page ignores error and says "This project is not saved with Git yet", which is false for a repository. Not covered by a test.
-- [minor] index.html mapLayout (floor = total * 0.004): every file below 0.4% of the total gets the same area; on the real control-room repo the fixtures/ group becomes a grid of identical tiles. Disclosed in decisions.md; the area test only looks at tiles >= 2500 px².
-- [minor] index.html renderMapSlot: with real data at phone width some tiles are very thin (6.8 px, 10 px), hard to tap; the check only requires 4 px.
-- [minor] index.html: grouping by top-level folder only, so deep files get long truncated labels; on the phone the "config/" label covers most of its only tile.
-- [minor] index.html mapStep: a file with 0 counted commits (older than aaf.py's 500-commit limit) gets class s0, which has no legend entry.
-- [minor] index.html: tapping a tile re-renders the whole map, so keyboard focus is lost after each tap.
-- [minor] Plain fixtures: the map shows "not available" while the Git section is hidden entirely (listed in progress.md).
-
-DONE.md: every item met (7/7 checks, nothing weakened, covered by checks/change_map.py and ChangeMapApiTest, progress.md updated, screenshots inspected, plain language, server read-only, traversal rejected).
+- [minor] aaf.py's `finished` includes stuck and waiting tasks; the page calls them "finished" ("0 of 1 finished tasks right the first time" for stuck scheduler; "A finished task usually takes 8 attempts").
+- [minor] workspace_record calls review_reasons without definition-of-done items, so the All projects view always shows generic advice even when a project's DONE.md already has the item.
+- [minor] One summary can count in several themes, so reason counts can add up to more than the rejections; documented in progress.md but not on the page.
+- [minor] recDetail ties rejections to a task by time window (documented).
+- [minor] .gitignore additions (state/plan.json, state/estimates.jsonl) are outside the task's scope.
+- [minor] test_workspace_record_endpoint is shallow; real coverage is in TrackRecordTest and checks/track_record.py.

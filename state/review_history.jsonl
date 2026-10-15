@@ -4,3 +4,5 @@
 {"at": "2026-10-14T23:21:18+02:00", "verdict": "pass", "summary": "Live activity feed works; 5/5 checks; minor follow-ups only"}
 {"at": "2026-10-15T00:01:39+02:00", "verdict": "pass", "summary": "Timeline meets the task; 6/6 checks pass; 7 minor findings"}
 {"at": "2026-10-15T01:27:30+02:00", "verdict": "pass", "summary": "Change map meets the task; 7/7 checks; 7 minor findings"}
+{"at": "2026-10-15T02:06:51+02:00", "verdict": "fail", "summary": "Feature sound, 8/8 checks; ROADMAP.md reset to 'Not started' for all items (blocker)"}
+{"at": "2026-10-15T02:13:50+02:00", "verdict": "pass", "summary": "Track record meets the task; 8/8 checks; minor findings only"}

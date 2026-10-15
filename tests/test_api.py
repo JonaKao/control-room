@@ -46,14 +46,21 @@ class ApiTest(unittest.TestCase):
 
     def test_lists_every_fixture_project(self):
         names = {p["name"] for p in json.loads(self.get("/api/projects")[2])}
-        self.assertEqual(names, {"brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"})
+        self.assertEqual(names, {"api-client", "brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"})
 
     def test_detail_has_all_sections(self):
-        for name in ("brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
+        for name in ("api-client", "brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
             d = json.loads(self.get("/api/project?name=" + name)[2])
             for key in ("summary", "meta", "status", "checks", "check_history", "review",
-                        "decisions", "progress", "events", "plots", "drafts", "activity"):
+                        "decisions", "progress", "events", "plots", "drafts", "activity", "record"):
                 self.assertIn(key, d, "%s missing %s" % (name, key))
+
+    def test_workspace_record_endpoint(self):
+        code, ctype, body = self.get("/api/record")
+        self.assertEqual(code, 200)
+        w = json.loads(body)
+        self.assertEqual(len(w["projects"]), 7)
+        self.assertEqual(w["reasons"][0]["key"], "progress")
 
     def test_waiting_project_exposes_its_draft(self):
         d = json.loads(self.get("/api/project?name=parser")[2])
@@ -171,7 +178,7 @@ class TimelineTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_same_as_aaf_stats(self):
-        for name in ("brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
+        for name in ("api-client", "brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
             d = server.detail(name)
             self.assertIn("tasks", d, name)
             want = self.aaf.task_stats(os.path.join(self.tmp, "projects", name))
@@ -231,6 +238,64 @@ class TimelineTest(unittest.TestCase):
             server.stats_aaf_path = real
         self.assertFalse(d["available"])
         self.assertEqual(d["tasks"], [])
+
+
+class TrackRecordTest(unittest.TestCase):
+    """Why reviews said no, grouped by theme; /api/project carries it per project, /api/record for all."""
+
+    def setUp(self):
+        self.old_root = server.ROOT
+        server.set_root(FIXTURES)
+
+    def tearDown(self):
+        server.set_root(self.old_root)
+
+    def test_groups_failed_reviews_most_common_first_other_last(self):
+        rows = [{"at": "1", "verdict": "fail", "summary": "Strange edge in the parser"},
+                {"at": "2", "verdict": "fail", "summary": "progress.md not updated"},
+                {"at": "3", "verdict": "pass", "summary": "progress.md not updated"},
+                {"at": "4", "verdict": "FAIL", "summary": "Bug: crash on empty input; progress note stale"},
+                {"at": "5", "verdict": "fail", "summary": ""}]
+        got = [(g["key"], g["count"]) for g in server.review_reasons(rows)]
+        self.assertEqual(got, [("progress", 2), ("bug", 1), ("other", 2)])
+        progress = server.review_reasons(rows)[0]
+        self.assertEqual([e["at"] for e in progress["examples"]], ["4", "2"])  # newest first
+
+    def test_matches_the_definition_of_done(self):
+        items = ["Every check passes", "`state/progress.md` says what changed"]
+        groups = {g["key"]: g for g in server.review_reasons(
+            [{"verdict": "fail", "summary": "progress note missing"}, {"verdict": "fail", "summary": "a race"}], items)}
+        self.assertEqual(groups["progress"]["done_item"], "`state/progress.md` says what changed")
+        self.assertIsNone(groups["bug"]["done_item"])
+        self.assertTrue(groups["bug"]["advice"])
+        self.assertIn("state/progress.md says what changed and what is next", server.done_items("api-client"))
+
+    def test_project_record(self):
+        rec = server.detail("api-client")["record"]
+        self.assertEqual(len(rec["reviews"]), 15)
+        self.assertEqual([(g["key"], g["count"]) for g in rec["reasons"]],
+                         [("progress", 3), ("weakened", 1), ("coverage", 1), ("bug", 1)])
+        self.assertEqual(server.record("brand-new"), {"reviews": [], "reasons": []})
+
+    def test_workspace_record(self):
+        w = server.workspace_record()
+        self.assertTrue(w["available"])
+        self.assertEqual([p["name"] for p in w["projects"]], server.project_names())
+        api = [p for p in w["projects"] if p["name"] == "api-client"][0]
+        self.assertEqual(api["summary"]["review_fails"], 6)
+        self.assertEqual(len(api["tasks"]), 9)
+        self.assertEqual(set(api["tasks"][0]), set(server.TASK_KEYS))
+        self.assertEqual([(g["key"], g["projects"]) for g in w["reasons"]][-1], ("other", ["parser"]))
+
+    def test_workspace_reasons_know_each_definition_of_done(self):
+        groups = {g["key"]: g for g in server.workspace_record()["reasons"]}
+        # api-client's DONE.md has an item for the progress note; nothing covers a bug.
+        self.assertEqual(groups["progress"]["covered_in"], ["api-client"])
+        self.assertEqual(groups["bug"]["covered_in"], [])
+
+    def test_overlapping_themes_are_counted_per_rejection(self):
+        rows = [{"verdict": "fail", "summary": "progress note missing and a crash"}, {"verdict": "fail", "summary": "a race"}]
+        self.assertEqual(server.review_reasons(rows)[0]["rejections"], 2)
 
 
 if __name__ == "__main__":

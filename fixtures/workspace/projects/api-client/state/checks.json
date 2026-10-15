@@ -1,0 +1,46 @@
+{
+  "ran_at": "2026-10-14T09:34:00+02:00",
+  "passed": true,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    },
+    {
+      "name": "Contract tests",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    },
+    {
+      "name": "Type check",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    },
+    {
+      "name": "Lint",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    },
+    {
+      "name": "Docs build",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 0.0,
+      "output": ""
+    }
+  ]
+}

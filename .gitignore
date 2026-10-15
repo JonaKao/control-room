@@ -18,3 +18,5 @@ __pycache__/
 
 # Added by the Agentic AI Framework
 state/activity.jsonl
+state/plan.json
+state/estimates.jsonl

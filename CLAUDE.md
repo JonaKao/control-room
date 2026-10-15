@@ -24,6 +24,10 @@ includes people who do not know the code behind it.
   (what `aaf.py stats <name>` prints), run in a subprocess on the project folder with the served
   workspace's aaf.py (or this workspace's, for a workspace without one, like the fixtures), cached
   until `state/events.jsonl` changes (a failed run is not cached), plus the events of the shown tasks for the segment details.
+  `/api/project` also carries `record`: `state/review_history.jsonl` and the failed reviews grouped by
+  theme (`REASONS` in server.py: keywords in the one-line summary), each matched to the project's
+  `DONE.md` item that covers it. `/api/record` is the workspace view ("All projects"): every project's
+  task_stats summary and tasks (from the same cache) and the reasons across all projects.
 - **Git is the one exception to read-only.** Push and Pull run
   `<workspace>/framework/aaf.py git push|pull <name>`, never `git` directly. Writes are
   accepted only from the page itself: the request must come from this machine, carry the
@@ -65,6 +69,11 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    `code_repo()` gives `scheduler` a small code tree with uneven change counts) and checks one tile
    per file grouped by folder, area from size, colour from change count, the bookkeeping toggle
    (remembered), the tile detail and the empty states; it saves `plots/render-map-*.png`.
+8. **Track record**: `checks/track_record.py` pins the clock and checks, per fixture, the four numbers
+   against `aaf.py stats`, one bar per task in proportion to its attempts, the marks for reviews, fixes
+   set aside and stuck episodes, the tap detail, the reasons the review said no (expected counts written
+   by hand) and their link to the definition of done; then the workspace view (totals, rows, reasons,
+   opening a project) and an empty workspace; it saves `plots/render-record-*.png`.
 
 The render check needs Playwright once, installed into a local `.venv` in this folder:
 
@@ -79,15 +88,16 @@ is actually clear.
 
 ## Fixtures
 
-`fixtures/workspace/projects/` holds six projects, one per situation the page must
-handle: `image-classifier` (running, failing a check), `parser` (waiting for a decision
+`fixtures/workspace/projects/` holds seven projects, one per situation the page must
+handle: `api-client` (finished, a long track record: nine tasks, six rejected reviews with repeated
+reasons, a fix set aside, one stuck episode), `image-classifier` (running, failing a check), `parser` (waiting for a decision
 on a draft), `example-done` (finished, with a plot and reviewer steps in its activity log),
 `scheduler` (stuck), `brand-new` (nothing run yet, no activity log) and `web-scraper`
 (mid-task, Claude Code waiting for permission). `state/activity.jsonl` in a fixture is
 the live feed's data; its timestamps are fixed, so `checks/activity.py` pins the clock.
 `state/events.jsonl` drives the task timeline: `example-done` has four tasks (finished first try,
 stuck, stuck then resumed and finished, finished with a polish step), `image-classifier` a finished
-and a running task, `parser` one that waits for a decision, `scheduler` one stuck after 8 attempts. If you add a new kind of state, add a fixture for it.
+and a running task, `parser` one that waits for a decision (its review history has one rejection that fits no theme, "Other"), `scheduler` one stuck after 8 attempts. If you add a new kind of state, add a fixture for it.
 
 Git data is never stored in the fixtures. `checks/git_workspace.py` copies the fixtures
 and `framework/aaf.py` into a temporary folder at test time, turns some projects into

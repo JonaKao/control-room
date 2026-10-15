@@ -196,6 +196,7 @@ def detail(name):
         "activity": read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), ACTIVITY_LAST),
         "plots": plots,
         "tasks": task_stats(name),
+        "record": record(name),
         "drafts": drafts(name),
         "discarded": read_jsonl(os.path.join(pdir, "state", "discarded_drafts.jsonl"), last=20),
     }
@@ -272,6 +273,99 @@ def task_stats(name):
     if data["available"]:  # a failed run is tried again on the next request
         _stats_cache[(ROOT, name)] = (sig, data)
     return data
+
+
+# Why a review rejected work, sorted into a few themes by the words in its one-line summary.
+# Each theme: key, plain label, words that point to it, words of a definition-of-done item that
+# covers it (None: no usual item), and what the human could sharpen when it keeps coming back.
+REASONS = [
+    ("progress", "The progress note was not updated",
+     r"progress(\.md| note)|what is next|what changed", r"progress",
+     "Say in the definition of done that the progress note must say what changed and what is next."),
+    ("weakened", "A test was weakened, skipped or removed",
+     r"weaken|skip|loosen|disabl|removed (a |the )?(test|check)|threshold", r"weaken|skipp",
+     "Repeat in the project instructions that tests and thresholds must never be loosened."),
+    ("coverage", "The task's success was not covered by a test",
+     r"not covered|no (test|check) (for|covers)|untested|by hand|manual", r"covered by a check|manual",
+     "Ask in the definition of done for a check that proves the task, written before the change."),
+    ("failing", "Tests failed or were not run",
+     r"\b(checks?|tests?) (fail|not run|red|broken)|failing (checks?|tests?)", r"check.*pass",
+     "Ask in the project instructions to run every test before asking for a review."),
+    ("bug", "A bug in the change",
+     r"\bbug|crash|\bwrong\b|incorrect|regress|\brace\b|leak|exception", None,
+     "Describe the tricky cases in the project instructions, or add a test for them."),
+    ("screens", "Screenshots or plots were not looked at",
+     r"screenshot|\bplots?\b|not (opened|inspected)", r"screenshot|plot",
+     "Ask in the definition of done to open and describe the screenshots or plots."),
+    ("wording", "Unclear wording or jargon",
+     r"jargon|plain (words|language)|wording|internal (terms?|names?)", r"plain language|wording",
+     "Give examples of the wording you want in the project instructions."),
+    ("layout", "Layout problems on small screens",
+     r"\bphone|mobile|sideways|overflow|layout", r"phone|sideways",
+     "Name the screen sizes that must work in the definition of done."),
+    ("scope", "Part of the task was left out",
+     r"missing|not implemented|incomplete|does not (do|meet)|not done", None,
+     "Write the task with a list of what must be there when it is done."),
+]
+OTHER = ("other", "Other reasons", "Read these summaries: if one keeps coming back, add it to the definition of done.")
+
+
+def done_items(name):
+    """The checklist items of a project's definition of done (DONE.md), as plain text."""
+    md = read_text(os.path.join(PROJECTS, name, "DONE.md"))
+    return [re.sub(r"`", "", m.group(1)).strip() for m in re.finditer(r"^\s*[-*]\s+\[[ xX]\]\s+(.+)$", md, flags=re.M)]
+
+
+def review_reasons(rows, items=None, items_by_project=None):
+    """Failed reviews grouped by theme, most common first ('other' last). `rows` are review history
+    entries (optionally with 'project'); `items` is the definition of done to match each theme to, or, across
+    projects, `items_by_project` gives each project's (then 'covered_in' names the projects whose
+    definition of done already covers the theme). 'rejections' is the number of failed reviews: one
+    summary can name several themes, so the counts may add up to more."""
+    groups, rejections = {}, 0
+    for r in rows:
+        if str(r.get("verdict", "")).lower() != "fail":
+            continue
+        rejections += 1
+        text = str(r.get("summary") or "")
+        keys = [k for k, _, words, *_ in REASONS if re.search(words, text, re.I)] or [OTHER[0]]
+        for k in keys:
+            groups.setdefault(k, []).append({key: r[key] for key in ("at", "summary", "project") if key in r})
+    out = []
+    for key, label, _, done_words, advice in REASONS + [(OTHER[0], OTHER[1], None, None, OTHER[2])]:
+        if key not in groups:
+            continue
+        ex = groups[key]
+        covers = lambda its: next((i for i in (its or []) if done_words and re.search(done_words, i, re.I)), None)
+        projects = sorted({e["project"] for e in ex if "project" in e})
+        out.append({"key": key, "label": label, "count": len(ex), "advice": advice, "done_item": covers(items),
+                    "covered_in": [p for p in projects if covers((items_by_project or {}).get(p))],
+                    "projects": projects, "rejections": rejections, "examples": ex[::-1]})
+    out.sort(key=lambda g: (g["key"] == OTHER[0], -g["count"]))
+    return out
+
+
+def record(name):
+    """The project's track record: its review history and why reviews rejected work.
+    The task numbers come with `tasks` (aaf.py task_stats)."""
+    rows = read_jsonl(os.path.join(PROJECTS, name, "state", "review_history.jsonl"))
+    return {"reviews": rows[-200:], "reasons": review_reasons(rows, done_items(name))}
+
+
+TASK_KEYS = ("task", "start", "end", "outcome", "attempts", "first_try", "reviews", "drafts", "times_stuck")
+
+
+def workspace_record():
+    """Every project's track record side by side, and the most common reasons across all of them."""
+    projects, rows, available = [], [], stats_aaf_path() is not None
+    for name in project_names():
+        st = task_stats(name)
+        hist = read_jsonl(os.path.join(PROJECTS, name, "state", "review_history.jsonl"))
+        rows += [dict(r, project=name) for r in hist]
+        projects.append({"name": name, "summary": st.get("summary") or {},
+                         "tasks": [{k: t.get(k) for k in TASK_KEYS} for t in st.get("tasks") or []]})
+    items = {p["name"]: done_items(p["name"]) for p in projects}
+    return {"available": available, "projects": projects, "reasons": review_reasons(rows, items_by_project=items)}
 
 
 def _when(ts):
@@ -383,6 +477,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, read_text(os.path.join(HERE, "index.html")), "text/html; charset=utf-8")
         if url.path == "/api/projects":
             return self.json([summary(n) for n in project_names()])
+        if url.path == "/api/record":
+            return self.json(workspace_record())
         if url.path == "/api/project":
             if name not in project_names():
                 return self.json({"error": "unknown project"}, 404)

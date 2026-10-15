@@ -62,6 +62,23 @@ def main():
                 page.screenshot(path=os.path.join(PLOTS, "render-%s-%s.png" % (name, label)),
                                 full_page=(label != "phone"))
                 page.close()
+        # The workspace view ("All projects": the track record across projects).
+        for label, w, h, scheme in VIEWS:
+            page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text)
+                    if m.type == "error" and not m.text.startswith("Failed to load resource") else None)
+            page.goto("%s/#p=*" % base)
+            page.wait_for_timeout(1200)
+            if not page.query_selector('[data-section="ws-summary"]'):
+                problems.append("workspace/%s: the track record across projects is not shown" % label)
+            if errors:
+                problems.append("workspace/%s: JavaScript errors: %s" % (label, "; ".join(errors[:3])))
+            if page.evaluate("document.documentElement.scrollWidth - window.innerWidth") > 1:
+                problems.append("workspace/%s: page scrolls sideways" % label)
+            page.screenshot(path=os.path.join(PLOTS, "render-workspace-%s.png" % label), full_page=(label != "phone"))
+            page.close()
         browser.close()
     httpd.shutdown()
     if problems:

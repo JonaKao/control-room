@@ -259,6 +259,79 @@ pre.out { margin: 8px 0 0; padding: 12px 14px; background: var(--code-bg); borde
 .map-legend i.s4 { background: color-mix(in srgb, var(--accent) 74%, var(--panel)); }
 .map-legend i.s5 { background: var(--accent); }
 
+/* Track record */
+.rec-intro { margin: 0 0 14px; font-size: 14px; color: var(--muted); max-width: 680px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--paper); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.kpi .kl { font-size: 13px; font-weight: 600; }
+.kpi .kv { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .kv small { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.kpi .kd { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.kpi .meter { height: 6px; border-radius: 3px; background: var(--track); margin-top: 8px; overflow: hidden; }
+.kpi .meter span { display: block; height: 100%; border-radius: 3px; }
+.rec-h { font-size: 14px; font-weight: 700; margin: 22px 0 10px; }
+.trend { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 8px; }
+.trend .axis { display: flex; flex-direction: column; justify-content: space-between; height: 110px; padding-top: 10px; margin-bottom: -7px; font-size: 11.5px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.trend .cols { display: flex; gap: 4px; align-items: flex-end; height: 110px; padding-top: 16px; border-bottom: 1px solid var(--rule); min-width: 0; }
+.trend .col { flex: 1 1 0; max-width: 40px; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;
+  border: 0; padding: 0; margin: 0; background: none; cursor: pointer; position: relative; }
+.trend .col .b { display: block; height: var(--h); border-radius: 4px 4px 0 0; background: var(--c); min-height: 3px; }
+.trend .col .n { position: absolute; left: 0; right: 0; bottom: calc(var(--h) + 1px); font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; line-height: 1.4; }
+.trend .col:hover .b { filter: brightness(1.08); }
+.trend .col[aria-pressed="true"] .b { outline: 2.5px solid var(--ink); outline-offset: 1px; }
+.trend .marks { grid-column: 2; display: flex; gap: 4px; min-width: 0; padding-top: 5px; }
+.trend .marks > span { flex: 1 1 0; max-width: 40px; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.trend .marks i { width: 7px; height: 7px; border-radius: 50%; background: var(--pass); }
+.trend .marks i.f { background: var(--fail); }
+.trend .marks i.dr { border-radius: 1px; background: var(--accent); }
+.trend .marks i.st { border-radius: 0; background: none; width: 0; height: 0; border: 4px solid transparent; border-bottom: 7px solid var(--fail); border-top: 0; }
+.rec-cap { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+.rec-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.rec-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.rec-legend i.dot-p { border-radius: 50%; background: var(--pass); width: 8px; height: 8px; }
+.rec-legend i.dot-f { border-radius: 50%; background: var(--fail); width: 8px; height: 8px; }
+.rec-legend i.dr { background: var(--accent); width: 8px; height: 8px; border-radius: 1px; }
+.rec-legend i.st { width: 0; height: 0; border-radius: 0; border: 4px solid transparent; border-bottom: 7px solid var(--fail); border-top: 0; }
+.rec-detail { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--paper); border-left: 4px solid var(--c, var(--rule)); font-size: 14px; }
+.rec-detail p { margin: 0; }
+.rec-detail .sub { color: var(--muted); font-size: 13px; }
+.rec-detail ul { margin: 6px 0 0; padding-left: 18px; }
+.reasons { list-style: none; margin: 0; padding: 0; }
+.reasons > li { border-top: 1px solid var(--rule); padding: 10px 0; }
+.reasons > li:first-child { border-top: 0; padding-top: 2px; }
+.reason-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(60px, 160px) 28px; gap: 12px; align-items: center; }
+.reason-top b { font-size: 14.5px; }
+.reason-bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.reason-bar span { display: block; height: 100%; background: var(--fail); border-radius: 4px; }
+.reason-top .rn { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.reason-hint { font-size: 13.5px; margin: 4px 0 0; }
+.reason-hint .in-done { color: var(--muted); }
+.reasons details { margin-top: 4px; font-size: 13.5px; }
+.reasons summary { color: var(--accent); }
+.reasons details ul { margin: 4px 0 0; padding-left: 18px; }
+.reasons details .when { color: var(--muted); font-size: 12.5px; }
+.ws-rows { display: grid; gap: 0; }
+.ws-row { display: grid; grid-template-columns: minmax(110px, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 6px 18px; align-items: center;
+  padding: 12px 0; border-top: 1px solid var(--rule); }
+.ws-row:first-child { border-top: 0; }
+.ws-row .wn { border: 0; background: none; padding: 0; text-align: left; font-weight: 700; font-size: 15px; color: var(--accent); cursor: pointer; overflow-wrap: anywhere; }
+.ws-row .wn small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.ws-cell { font-size: 13px; color: var(--muted); min-width: 0; }
+.ws-cell b { color: var(--ink); font-size: 14px; }
+.ws-cell .meter { height: 6px; border-radius: 3px; background: var(--track); margin-top: 5px; overflow: hidden; }
+.ws-cell .meter span { display: block; height: 100%; }
+.spark { display: flex; gap: 2px; align-items: flex-end; height: 30px; margin-top: 3px; }
+.spark span { flex: 1 1 0; max-width: 10px; min-height: 3px; border-radius: 2px 2px 0 0; background: var(--c); }
+.ws-none { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+.dot.ws { background: none; border: 2px solid var(--accent); border-radius: 3px; width: 10px; height: 10px; }
+@media (max-width: 860px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ws-row .wn { grid-column: 1 / -1; }
+  .reason-top { grid-template-columns: minmax(0, 1fr) 28px; gap: 4px 12px; }
+  .reason-top .reason-bar { grid-column: 1 / -1; grid-row: 2; }
+}
+
 /* 5. Plots */
 .plots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .plot { margin: 0; background: var(--paper); border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); }
@@ -544,6 +617,7 @@ function whoBadge(a) {
   return `<span class="who${rev ? " rev" : ""}">${rev ? ICON.shield : ""}${rev ? "Reviewer" : esc(String(a.subagent).replace(/[-_]/g, " "))}</span>`;
 }
 
+const WS = "*";  // the workspace view: not a project name (those start with a letter or digit)
 let current = null, lastProjects = "", lastDetail = "", railFirst = true;
 try { current = new URLSearchParams(location.hash.slice(1)).get("p") || localStorage.getItem("aaf.project"); } catch (e) {}
 try { const t = localStorage.getItem("aaf.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
@@ -667,7 +741,8 @@ function renderRail(list) {
   const order = { ask: 0, bad: 0, busy: 1, ok: 2, idle: 3 };
   const labels = ["Needs you", "Working", "Finished", "Not started"];
   const sorted = list.slice().sort((a, b) => order[toneOf(a)] - order[toneOf(b)] || a.name.localeCompare(b.name));
-  let html = "", last = -1;
+  let html = `<button class="proj" type="button" data-p="${WS}" data-workspace aria-current="${current === WS}">
+      <span class="dot ws"></span><span class="name">All projects</span><span class="meta">Track record across projects</span></button>`, last = -1;
   for (const p of sorted) {
     const ph = phaseOf(p.phase), tone = toneOf(p), g = order[tone], asks = tone !== ph.tone;
     if (g !== last) { html += `<div class="group-label">${labels[g]}</div>`; last = g; }
@@ -711,7 +786,7 @@ const WORKING = ["planning", "implementing", "checking", "reviewing", "fixing"];
 
 async function loadGit(fresh) {
   const name = current;
-  if (!name) return;
+  if (!name || name === WS) return;
   try {
     const res = await fetch("/api/git?name=" + encodeURIComponent(name) + (fresh ? "&fresh=1" : ""));
     if (!res.ok || name !== current) return;
@@ -1003,7 +1078,7 @@ try { mapShowAll = localStorage.getItem("aaf.mapAll") === "1"; } catch (e) {}
 
 async function loadMap() {
   const name = current;
-  if (!name) return;
+  if (!name || name === WS) return;
   try {
     const res = await fetch("/api/files?name=" + encodeURIComponent(name));
     if (!res.ok || name !== current) return;
@@ -1119,11 +1194,177 @@ function renderMapSlot(focusPath) {
 let mapResize = null;
 addEventListener("resize", () => { clearTimeout(mapResize); mapResize = setTimeout(() => renderMapSlot(), 150); });
 
+// ---- Track record: how well the agent does over time. Data: aaf.py task_stats (d.tasks) and the
+// review history with the server's grouping of why reviews said no (d.record); /api/record for all projects.
+const REC_COL = { done: "--pass", waiting: "--accent", stuck: "--fail", running: "--active" };
+const REC_SHOWN = 30;   // tasks drawn in the attempts chart; older ones are left out
+let recData = null, recPick = null, wsData = null;
+const times = n => n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
+const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+
+function kpi(key, label, value, of, desc, col) {
+  return `<div class="kpi" data-kpi="${key}"><div class="kl">${esc(label)}</div>
+    <div class="kv">${value}${of !== null ? `<small> of ${of}</small>` : ""}</div><div class="kd">${esc(desc)}</div>
+    ${of !== null ? `<div class="meter" aria-hidden="true"><span style="width:${pct(value, of)}%;background:var(${col})"></span></div>` : ""}</div>`;
+}
+// aaf.py's "finished" counts every task that ended: finished, stuck or waiting for a decision.
+const ended = s => (s.finished || 0) === (s.done || 0) ? "finished tasks" : "tasks that ended (finished, stuck or waiting for you)";
+function recKpis(s) {
+  return `<div class="kpis" data-rec-kpis>
+    ${kpi("first-try", "Right the first time", s.first_try || 0, s.finished || 0, s.finished ? `${ended(s)} where the first attempt passed the tests and the review` : "no task has ended yet", "--pass")}
+    ${kpi("rejected", "Review said no", s.review_fails || 0, s.reviews || 0, s.reviews ? "reviews that sent the work back for another attempt" : "no review has happened yet", "--fail")}
+    ${kpi("drafts", "Fixes set aside", s.drafts || 0, null, "small fixes the agent could not finish and left for you to decide", "")}
+    ${kpi("stuck", "Got stuck", s.times_stuck || 0, null, "times the agent stopped and needed your help", "")}</div>`;
+}
+
+function recTrend(tasks, pickable) {
+  const shown = tasks.slice(-REC_SHOWN), top = Math.max(3, ...shown.map(t => t.attempts || 0));
+  const cols = shown.map(t => {
+    const on = pickable && recPick === t.start, a = t.attempts || 0, out = TT_OUT[t.outcome] ? t.outcome : "running";
+    const label = `${plain(t.task)}: ${a ? plural(a, "attempt") : "no attempt yet"}, ${(TT_OUT[out] || TT_OUT.running)[0].toLowerCase()}`;
+    return `<button type="button" class="col" data-trend-col data-start="${esc(t.start)}" data-attempts="${a}" data-outcome="${esc(out)}"
+      style="--c:var(${REC_COL[out]});--h:${(100 * a / top).toFixed(1)}%" aria-pressed="${on}" aria-label="${esc(label)}" title="${esc(label)}"${pickable ? "" : " tabindex=\"-1\""}>
+      <span class="n">${a || "–"}</span><span class="b"></span></button>`;
+  }).join("");
+  const marks = shown.map(t => `<span>${(t.reviews || []).slice(0, 6).map(v => `<i class="${v === "fail" ? "f" : ""}" data-review-mark="${v === "fail" ? "fail" : "pass"}"></i>`).join("")}${
+    "<i class=\"dr\" data-draft-mark></i>".repeat(Math.min(3, t.drafts || 0))}${"<i class=\"st\" data-stuck-mark></i>".repeat(Math.min(3, t.times_stuck || 0))}</span>`).join("");
+  return `<div class="trend" data-viz="attempts-trend" role="group" aria-label="Attempts per task, oldest first">
+    <div class="axis" aria-hidden="true"><span>${top}</span><span>${top % 2 ? "" : top / 2}</span><span>0</span></div>
+    <div class="cols">${cols}</div><div class="marks" aria-hidden="true">${marks}</div></div>`;
+}
+
+function recLegend(tasks) {
+  const outs = [...new Set(tasks.map(t => TT_OUT[t.outcome] ? t.outcome : "running"))];
+  const any = k => tasks.some(t => k(t));
+  return `<div class="rec-legend" data-rec-legend>${outs.map(o => `<span><i style="background:var(${REC_COL[o]})"></i>${esc(TT_OUT[o][0])}</span>`).join("")}${
+    any(t => (t.reviews || []).includes("pass")) ? `<span><i class="dot-p"></i>review approved</span>` : ""}${
+    any(t => (t.reviews || []).includes("fail")) ? `<span><i class="dot-f"></i>review said no</span>` : ""}${
+    any(t => t.drafts) ? `<span><i class="dr"></i>fix set aside</span>` : ""}${any(t => t.times_stuck) ? `<span><i class="st"></i>got stuck</span>` : ""}</div>`;
+}
+
+function recDetail(t, reviews) {
+  const a = ttSec(t.start), b = t.end ? ttSec(t.end) : Date.now() / 1000;
+  const said = (reviews || []).filter(r => String(r.verdict).toLowerCase() === "fail" && ttSec(r.at) !== null && ttSec(r.at) >= a && ttSec(r.at) <= b + 1);
+  const rv = t.reviews || [], fails = rv.filter(v => v === "fail").length;
+  const lines = [];
+  lines.push(t.first_try ? "Right the first time: the first attempt passed the tests and the review."
+    : t.attempts ? `Needed ${plural(t.attempts, "attempt")}.` : "No attempt yet.");
+  if (rv.length) lines.push(fails ? `The review said no ${times(fails)}${rv[rv.length - 1] === "pass" ? ", then approved the work" : ""}.` : `The review approved the work${rv.length > 1 ? ` (${plural(rv.length, "review")})` : ""}.`);
+  if (t.drafts) lines.push(`Set aside ${plural(t.drafts, "unfinished fix", "unfinished fixes")} for you to decide on.`);
+  if (t.times_stuck) lines.push(`Got stuck ${times(t.times_stuck)} and needed your help.`);
+  return `<div class="rec-detail" data-trend-detail style="--c:var(${REC_COL[t.outcome] || "--active"})">
+    <p><b>${esc(plain(t.task))}</b></p><p class="sub">${esc((TT_OUT[t.outcome] || TT_OUT.running)[0])} · started ${esc(ttWhen(a))}</p>
+    <ul>${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
+    ${said.length ? `<p class="sub" style="margin-top:6px">Why the review said no:</p><ul>${said.map(r => `<li>${esc(plain(r.summary))}</li>`).join("")}</ul>` : ""}</div>`;
+}
+
+function reasonsHtml(reasons, across) {
+  if (!reasons.length) return `<p class="empty" data-reasons-empty>The review has not said no to any work yet, so there is nothing to sharpen here.</p>`;
+  const max = Math.max(...reasons.map(g => g.count));
+  return `<ol class="reasons" data-reasons>${reasons.map((g, i) => {
+    const covered = g.covered_in || [], rest = (g.projects || []).filter(p => !covered.includes(p));
+    const hint = g.done_item
+      ? `<span class="in-done">Your definition of done already asks for this (“${esc(plain(g.done_item))}”), yet the agent still missed it: make that item more specific, or back it with a test.</span>`
+      : across && covered.length
+      ? `<span class="in-done">The definition of done of ${esc(covered.join(", "))} already asks for this, yet the agent still missed it: make that item more specific, or back it with a test.</span>${
+          rest.length ? ` For ${esc(rest.join(", "))}: ${esc(g.advice)}` : ""}`
+      : esc(g.advice);
+    const where = across && g.projects.length ? ` <span class="in-done">Seen in ${esc(g.projects.join(", "))}.</span>` : "";
+    return `<li data-reason="${esc(g.key)}" data-count="${g.count}"><div class="reason-top"><b>${esc(g.label)}</b>
+        <span class="reason-bar" aria-hidden="true"><span style="width:${pct(g.count, max)}%"></span></span><span class="rn">${g.count}</span></div>
+      <p class="reason-hint">${hint}${where}</p>
+      <details ${`data-keep="reason-${across ? "ws-" : ""}${esc(g.key)}"`}${$(`[data-keep="reason-${across ? "ws-" : ""}${g.key}"][open]`) ? " open" : ""}><summary>What the review said (${g.examples.length})</summary>
+        <ul>${g.examples.slice(0, 8).map(e => `<li>${esc(plain(e.summary))} <span class="when">· ${across && e.project ? esc(e.project) + ", " : ""}${esc(clock(e.at))}</span></li>`).join("")}</ul></details></li>`;
+  }).join("")}</ol>${(() => {
+    const total = reasons.reduce((n, g) => n + g.count, 0), rej = reasons[0].rejections || total;
+    return total > rej ? `<p class="rec-cap" data-reasons-overlap>Some reviews named more than one reason, so these ${total} add up to more than the ${plural(rej, "time")} the review said no.</p>` : "";
+  })()}`;
+}
+
+function recordHtml() {
+  const head = `<h3 class="sec-title">Track record</h3><section class="panel sec" data-section="record" aria-label="Track record">`;
+  const st = recData && recData.stats, tasks = (st && st.tasks) || [];
+  if (!st || st.available === false)
+    return head + `<p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p></section>`;
+  if (!tasks.length)
+    return head + `<p class="empty" data-empty>No task has run yet. After a few tasks, this shows how often the agent gets it right the first time, how often the review says no and why, and whether it needs fewer attempts over time.</p></section>`;
+  const s = st.summary || {}, pick = tasks.find(t => t.start === recPick);
+  const older = tasks.length > REC_SHOWN ? ` The ${tasks.length - REC_SHOWN} oldest are left out.` : "";
+  return head + `<p class="rec-intro">How well the agent has done on this project so far. When the same problem keeps coming back, the project's instructions or its definition of done probably need to be sharper.</p>
+    ${recKpis(s)}
+    <h4 class="rec-h">Attempts per task</h4>
+    ${recTrend(tasks, true)}
+    <p class="rec-cap">One bar per task, oldest on the left; taller means more attempts.${s.median_attempts ? ` A task usually takes ${plural(s.median_attempts, "attempt")} before it ends.` : ""}${older} Tap a bar for the task.</p>
+    ${recLegend(tasks.slice(-REC_SHOWN))}
+    ${pick ? recDetail(pick, recData.reviews) : ""}
+    <h4 class="rec-h">Why the review said no</h4>
+    ${reasonsHtml(recData.reasons || [], false)}</section>`;
+}
+
+function renderRecordSlot() {
+  const slot = $("#rec-slot");
+  if (!slot) return;
+  slot.innerHTML = recordHtml();
+  slot.querySelectorAll("[data-trend-col]").forEach(b => b.addEventListener("click", () => {
+    recPick = recPick === b.dataset.start ? null : b.dataset.start; renderRecordSlot();
+    const again = $(`#rec-slot [data-trend-col][data-start="${CSS.escape(b.dataset.start)}"]`);
+    if (again) again.focus({ preventScroll: true });
+  }));
+}
+
+// The workspace view: every project's record side by side.
+function workspaceHtml(w) {
+  const ps = (w.projects || []), withTasks = ps.filter(p => (p.tasks || []).length), none = ps.filter(p => !(p.tasks || []).length);
+  const sum = k => withTasks.reduce((n, p) => n + ((p.summary || {})[k] || 0), 0);
+  const s = { finished: sum("finished"), done: sum("done"), first_try: sum("first_try"), reviews: sum("reviews"), review_fails: sum("review_fails"),
+              drafts: sum("drafts"), times_stuck: sum("times_stuck") };
+  const top = (w.reasons || []).find(g => g.key !== "other");
+  const lead = !withTasks.length ? "No project has run a task yet."
+    : top ? `The review most often says no because: ${top.label.toLowerCase()} (${times(top.count)}${top.projects.length ? `, in ${plural(top.projects.length, "project")}` : ""}). That is the first place to sharpen the instructions.`
+    : s.review_fails ? "The review has said no a few times, for varied reasons; see below." : "The review has not said no to any work yet.";
+  const trouble = p => ((p.summary || {}).review_fails || 0) + ((p.summary || {}).times_stuck || 0);
+  const rows = withTasks.slice().sort((a, b) => trouble(b) - trouble(a) || a.name.localeCompare(b.name)).map(p => {
+    const q = p.summary || {}, tasks = p.tasks.slice(-REC_SHOWN), hi = Math.max(3, ...tasks.map(t => t.attempts || 0));
+    const extra = [q.drafts ? plural(q.drafts, "fix", "fixes") + " set aside" : "", q.times_stuck ? `stuck ${times(q.times_stuck)}` : ""].filter(Boolean).join(" · ") || "never stuck, nothing set aside";
+    return `<div class="ws-row" data-ws-project="${esc(p.name)}" data-trouble="${trouble(p)}">
+      <button type="button" class="wn" data-open="${esc(p.name)}">${esc(p.name)}<small>${plural(q.tasks || p.tasks.length, "task")}${q.median_attempts ? ` · usually ${plural(q.median_attempts, "attempt")}` : ""}</small></button>
+      <div class="ws-cell" data-ws-first-try>${q.finished ? `<b>${q.first_try || 0} of ${q.finished}</b> right the first time` : "<b>No finished task yet</b>"}
+        <div class="meter" aria-hidden="true"><span style="width:${pct(q.first_try || 0, q.finished || 0)}%;background:var(--pass)"></span></div></div>
+      <div class="ws-cell" data-ws-rejected>${q.reviews ? `<b>${q.review_fails || 0} of ${q.reviews}</b> reviews said no` : "<b>No review yet</b>"}
+        <div class="meter" aria-hidden="true"><span style="width:${pct(q.review_fails || 0, q.reviews || 0)}%;background:var(--fail)"></span></div></div>
+      <div class="ws-cell">Attempts per task · ${esc(extra)}
+        <div class="spark" data-ws-spark role="img" aria-label="Attempts per task, oldest first: ${tasks.map(t => t.attempts || 0).join(", ")}">${tasks.map(t =>
+          `<span style="height:${Math.max(10, 100 * (t.attempts || 0) / hi).toFixed(0)}%;--c:var(${REC_COL[t.outcome] || "--active"})"></span>`).join("")}</div></div></div>`;
+  }).join("");
+  return `<section class="panel sec glance" data-section="ws-summary" aria-label="Track record across all projects">
+      <div class="eyebrow"><span class="pname">All projects</span><span>${plural(ps.length, "project")} · ${plural(withTasks.reduce((n, p) => n + p.tasks.length, 0), "task")}</span></div>
+      <h2 class="doing" style="margin-top:10px">Track record across all projects</h2>
+      <p class="task-line" data-ws-lead>${esc(lead)}</p>
+      <div style="margin-top:16px">${recKpis(s)}</div></section>
+    <h3 class="sec-title">Project by project</h3>
+    <section class="panel sec" data-section="ws-projects" aria-label="Project by project">${withTasks.length ? `<div class="ws-rows">${rows}</div>` : `<p class="empty">No project has run a task yet.</p>`}
+      ${none.length ? `<p class="ws-none" data-ws-none>No tasks yet: ${esc(none.map(p => p.name).join(", "))}.</p>` : ""}
+      ${withTasks.length ? `<p class="rec-cap">Projects with the most rejected reviews and stuck episodes first. Tap a name to open the project.</p>` : ""}</section>
+    <h3 class="sec-title">Why the review said no, across all projects</h3>
+    <section class="panel sec" data-section="ws-reasons" aria-label="Why the review said no">${reasonsHtml(w.reasons || [], true)}</section>`;
+}
+
+function renderWorkspace(w) {
+  wsData = w;
+  if (w.available === false) {
+    $("#main").innerHTML = `<section class="panel sec" data-section="ws-summary"><p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p></section>`;
+    return;
+  }
+  $("#main").innerHTML = workspaceHtml(w);
+  $("#main").querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => select(b.dataset.open)));
+}
+
 function renderDetail(d) {
   const st = d.status || {}, meta = d.meta || {}, ck = d.checks, rv = d.review;
   const name = meta.name || current, phase = st.phase || "idle", ph = phaseOf(phase);
   gitPhase = phase;
   ttData = d.tasks || null;
+  recData = { stats: d.tasks || null, reviews: (d.record || {}).reviews || [], reasons: (d.record || {}).reasons || [] };
   const drafts = d.drafts || [], hist = d.check_history || [], events = d.events || [];
   const steps = (d.activity || []).filter(a => a && typeof a === "object"), now = steps[steps.length - 1];
   const asks = waitingNeedsYou(now, phase), quiet = quietFor(now, phase);
@@ -1282,8 +1523,9 @@ function renderDetail(d) {
       <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
     </section>`;
 
-  $("#main").innerHTML = glance + action + live + health + `<div id="tt-slot"></div>` + history + `<div id="git-slot"></div><div id="map-slot"></div>` + plots + more;
+  $("#main").innerHTML = glance + action + live + health + `<div id="tt-slot"></div>` + history + `<div id="rec-slot"></div><div id="git-slot"></div><div id="map-slot"></div>` + plots + more;
   renderTimelineSlot();
+  renderRecordSlot();
   renderGitSlot();
   renderMapSlot();
 
@@ -1299,7 +1541,7 @@ $("#lightbox").addEventListener("click", e => e.currentTarget.close());
 
 function select(name) {
   current = name; lastDetail = "";
-  gitData = null; gitFor = null; gitPick = null; gitMsg = null; ttPick = null;
+  gitData = null; gitFor = null; gitPick = null; gitMsg = null; ttPick = null; recPick = null;
   mapData = null; mapFor = null; mapPick = null;
   try { localStorage.setItem("aaf.project", name); } catch (e) {}
   history.replaceState(null, "", "#p=" + encodeURIComponent(name));
@@ -1311,8 +1553,13 @@ async function tick() {
   try {
     const list = await (await fetch("/api/projects")).json();
     const sig = JSON.stringify(list);
-    if (sig !== lastProjects) { lastProjects = sig; if (!list.some(p => p.name === current)) current = list[0]?.name || null; renderRail(list); }
+    if (sig !== lastProjects) { lastProjects = sig; if ((current !== WS || !list.length) && !list.some(p => p.name === current)) current = list[0]?.name || null; renderRail(list); }
     if (!current) { welcome(); return; }
+    if (current === WS) {
+      const w = await (await fetch("/api/record")).text();
+      if (w !== lastDetail) { lastDetail = w; renderWorkspace(JSON.parse(w)); }
+      return;
+    }
     const res = await fetch("/api/project?name=" + encodeURIComponent(current));
     if (!res.ok) return;
     const text = await res.text();

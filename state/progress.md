@@ -66,6 +66,29 @@
   retries every minute, instead of claiming the project has no Git). Tapping a tile (or Enter) keeps keyboard focus on it without moving the page.
   Files with no counted change (older
   than the 500 commits read) are grey with their own legend entry. Redrawn on resize.
+- **Track record (roadmap 4, 2026-10-15)**: section "Track record" after "Test runs over time". Four numbers
+  (right the first time, of the tasks that ended; reviews that said no, fixes set aside, times stuck; from aaf.py stats
+  `summary`), an attempts-per-task bar chart (oldest left, colour = outcome, marks below for each review
+  approved/said no, fix set aside, stuck episode; tapping a bar shows the task and why the review said no during
+  it), and "Why the review said no": failed review summaries from `state/review_history.jsonl`, grouped by theme
+  in server.py (`REASONS`, keywords), most common first, "Other" last, each with what to sharpen; when the
+  project's definition of done already has a matching item, the page quotes it and says to make it more specific
+  or back it with a test. **Workspace view**: "All projects" at the top of the project list (`#p=*`): totals, a
+  sentence naming the most common reason, one row per project (most rejected reviews and stuck episodes first,
+  first-try and rejection meters, attempts sparkline; tap opens the project), projects without tasks named,
+  and the reasons across projects with where they were seen. Data: `/api/project` → `record`, `/api/record`.
+  New fixture `api-client` (nine tasks, six rejections); parser's review history now has its rejection.
+  Check: `checks/track_record.py`; API tests: `TrackRecordTest`; render check also renders the workspace view.
+  aaf.py's `finished` counts every task that ended (finished, stuck or waiting), so where some ended stuck or
+  waiting the page says "tasks that ended (finished, stuck or waiting for you)" instead of "finished tasks", and
+  the chart caption says how many attempts a task usually takes "before it ends"; `checks/track_record.py`
+  checks this per project and in the workspace view.
+  In "All projects" each reason says whose definition of done already covers it (`covered_in`, from each
+  project's DONE.md) and gives the generic advice only for the others; when one review named several reasons,
+  a note says the counts add up to more than the rejections (`rejections`). Checked in `checks/track_record.py`
+  (`check_overlap` uses a temporary workspace) and `TrackRecordTest`.
+  `tests/test_roadmap.py` fails if a built roadmap item is not marked done (ROADMAP.md was found reset to
+  "Not started" for all four items by something outside this task, during the first review; restored).
 - **Git section ("Saved versions")**, after the test history: a picture of this computer ⇄ GitHub
   (versions to send / to get, unsaved files with the list on demand), Push and Pull buttons, a link
   to the repo, and a commit timeline (oldest left; green = tests passed and review approved, amber
@@ -94,7 +117,7 @@
 
 ## Next
 
-- Roadmap 4: track record (see `ROADMAP.md`).
+All four roadmap items are done.
 
 - Show a Git summary (unsent versions, behind) in the project list.
 
@@ -150,6 +173,14 @@
   (data refresh, resize) do not keep keyboard focus, only a tap does.
 - Change map: check_keyboard's "page does not move" part uses a tile fully on screen, so it would not
   catch a missing preventScroll; a case with a partly visible tile would.
+- Track record: themes come from keywords in one-line review summaries, so a summary in other words lands
+  in "Other" (shown with its text); a summary naming two problems counts in both themes (the page says so). The review history
+  is not linked to tasks, so the tap detail matches rejections to a task by time.
+- Track record: the attempts chart shows the newest 30 tasks; the workspace view fetches `/api/record` every
+  2.5 s (cheap: task stats are cached per project, review histories are re-read).
+- Track record, All projects: the mixed case (a reason covered by one project's definition of done but not
+  another's, "For X: <advice>") has no fixture or check; the overlap note has no screenshot; a covered reason
+  names the project twice ("…of api-client already asks… Seen in api-client.").
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).
 
 ## Roadmap

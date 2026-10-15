@@ -1,0 +1,28 @@
+{
+  "name": "api-client",
+  "description": "Python client for the shop's REST API",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true"
+    },
+    {
+      "name": "Contract tests",
+      "cmd": "true"
+    },
+    {
+      "name": "Type check",
+      "cmd": "true"
+    },
+    {
+      "name": "Lint",
+      "cmd": "true"
+    },
+    {
+      "name": "Docs build",
+      "cmd": "true"
+    }
+  ]
+}
