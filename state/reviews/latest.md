@@ -1,12 +1,12 @@
-# Review: control-room README, follow-up fixes
+# Review: follow-up fixes to the redesign (second round)
 
-VERDICT: PASS (blockers: 0, majors: 0, minors: 2)
+VERDICT: PASS (blockers: 0, majors: 0, minors: 5)
 
-SUMMARY: The three earlier minor findings are fixed (CLAUDE.md test list, plain words instead of folder names in "What it does", path test now reads paths inside commands and counts only files kept in Git). All 8 checks pass when run independently; tests.test_readme 13 OK.
+SUMMARY: All three fixes do what their issues ask (layout check on real Git data, no empty reasons fold, plot colours as tokens) and all 9 checks pass when run independently. The first round failed only because state/progress.md had not been updated for the fixes; now it is.
 
 ## Findings
-- [minor] tests/test_readme.py: named_paths only looks at backtick spans; Markdown link targets such as [Agentic AI Framework](../../README.md) are not checked for existence (ROADMAP.md has its own test).
-- [minor] README.md, Git section bullet: "Hidden when the workspace has no framework tool" — "framework tool" is unclear to a first-time reader.
-
-## DONE.md
-All items met: checks pass, nothing weakened, success covered by tests/test_readme.py, progress.md updated, screenshots regenerated and render-example-done-phone.png inspected (page code unchanged), server unchanged.
+- [minor] tests/test_colours.py skips every rule whose selector starts with :root, not only the token blocks.
+- [minor] tests/test_colours.py does not see named colours or literals in inline styles built in JavaScript (none today).
+- [minor] --plot-bg, --plot-ink and --backdrop are not in design/DESIGN.md.
+- [minor] checks/track_record.py does not assert the separate "No review has happened yet." wording for zero reviews.
+- [minor] check_git covers three fixtures in dark only.

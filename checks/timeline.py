@@ -2,8 +2,8 @@
 
 The data comes from framework/aaf.py task_stats (what `aaf.py stats <project>` prints). For every
 fixture it checks, in a headless browser:
-- the section ([data-section=timeline]) follows "Is the work sound?", with an empty state when no
-  task has run;
+- the section ([data-section=timeline]) follows the track record, as in design/DESIGN.md, with an
+  empty state when no task has run;
 - one row per task ([data-task-row]), latest on top, each with its outcome ([data-outcome-mark]:
   finished, waiting for your decision, stuck, still running) and its working time beside the bar
   ([data-total]);
@@ -58,6 +58,8 @@ def secs(a, b):
 
 def open_page(browser, base, name, now=NOW, w=1440, h=900, scheme="light"):
     page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
+    if scheme == "light":  # dark is the page's default; light is the choice the theme switch stores
+        page.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: errors.append(m.text)
@@ -108,8 +110,8 @@ def check_project(browser, base, name, colours):
     if "timeline" not in order:
         page.close()
         return ["no timeline section"]
-    if "health" in order and order.index("timeline") != order.index("health") + 1:
-        bad.append("timeline does not follow 'Is the work sound?' (order %s)" % order)
+    if "record" in order and order.index("timeline") != order.index("record") + 1:
+        bad.append("timeline does not follow the track record (order %s)" % order)
     if not tasks:
         if not page.query_selector('[data-section="timeline"] [data-empty]'):
             bad.append("no empty state although no task has run")
@@ -248,7 +250,7 @@ def check_live(browser, base):
 def screenshots(browser, base):
     for label, w, h, scheme in [("desktop", 1440, 900, "light"), ("desktop-dark", 1440, 900, "dark"), ("phone", 390, 844, "light")]:
         page, _ = open_page(browser, base, "example-done", w=w, h=h, scheme=scheme)
-        page.eval_on_selector('[data-section="timeline"]', "s => s.previousElementSibling.scrollIntoView()")
+        page.eval_on_selector('[data-section="timeline"]', "s => s.scrollIntoView()")
         page.wait_for_timeout(200)
         page.screenshot(path=os.path.join(PLOTS, "render-timeline-%s.png" % label))
         page.close()

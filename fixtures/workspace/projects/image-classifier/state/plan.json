@@ -1,0 +1,11 @@
+{
+  "task": "Add data augmentation and reach 85% validation accuracy",
+  "created": "2026-10-14T13:05:00+02:00",
+  "steps": [
+    {"text": "Add flip and rotation augmentation", "done_at": "2026-10-14T13:40:00+02:00"},
+    {"text": "Lower the learning rate to 3e-4", "done_at": "2026-10-14T14:10:00+02:00"},
+    {"text": "Retrain and compare validation accuracy", "done_at": null},
+    {"text": "Check the split for leakage", "done_at": null},
+    {"text": "Update the progress note", "done_at": null}
+  ]
+}

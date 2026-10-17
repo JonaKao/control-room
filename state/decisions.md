@@ -125,3 +125,39 @@ review_reasons takes each project's DONE.md items (items_by_project) and reports
 ## 2026-10-15: README checked by tests/test_readme.py
 
 The task's success is a document, so a unit test in the Server API check guards it: template sections in order, both aaf generated marker pairs inside their sections, ROADMAP.md linked, each page part named by the title the page itself shows (and that title still present in index.html), the start command, the build parts, and every path named in backticks exists. Rejected: a separate check entry in project.json (one more process for a file read) and checking prose quality by keywords beyond the page titles (brittle).
+
+## 2026-10-17: Roadmap: redesign added as item 6, time estimate moved to 7
+
+The task calls the redesign 'Roadmap 6' and asks to mark item 6 done, but ROADMAP.md (edited by the human, not yet committed) lists item 6 as Time estimate, and DESIGN.md says the hero's right half is 'filled by the time-estimate roadmap item', i.e. later. Marking item 6 done as it stands would claim the estimate was built. So the redesign becomes row 6 (done), Time estimate becomes row 7 (its task text renumbered), and row 5 (README, built 2026-10-15) is marked done. tests/test_roadmap.py now also guards items 5 and 6. Rejected: marking the existing row 6 done (false), or leaving the redesign out of the roadmap.
+
+## 2026-10-17: README test skips the generated sections
+
+After the README commit, aaf.py filled the generated 'How it is checked' section with the check commands (.venv/bin/python checks/x.py; ...), and tests/test_readme.py read them as file references (checks/timeline.py; and the local .venv do not exist in Git), so the Server API check failed before this task began. The test already left out fenced code blocks as 'commands to copy, not references'; the generated sections are the same kind of text, written by aaf.py. Prose paths are still all checked; a new test pins the rule. Rejected: stripping punctuation from tokens (.venv/bin/python would still fail: it is ignored by Git on purpose).
+
+## 2026-10-17: Dark by default; checks pick the light theme explicitly
+
+DESIGN.md: dark is the default, light through the theme switch. The page now uses the stored choice or dark, and ignores the browser's colour-scheme preference. Checks that need the light theme (light screenshots, the change map's 'more changes is darker in light mode') now store the light choice before loading, as a person would with the switch, instead of relying on the browser preference. Each still runs in both themes where it did before. Rejected: following the OS preference (a Mac in light mode would never see the approved dark default).
+
+## 2026-10-17: Section order follows the approved design; three order assertions updated
+
+The design orders the first screen as hero, step by step, tests, track record, where the time went, where the agent works, then Git, pictures, more detail. Three checks asserted the old order: timeline right after the tests (timeline.py), track record after the timeline (track_record.py) and change map right after Git (change_map.py). They now assert the design's neighbours (record after tests, timeline after record, change map after timeline) and checks/layout.py asserts the whole order. The test history moves into the tests panel as its bar strip (still [data-viz=history]). Nothing else in those checks changes. Rejected: keeping the old order (contradicts the approved design).
+
+## 2026-10-17: When something needs you, the what-to-do card takes the hero's right half
+
+The hero's right half is reserved for the time estimate, which only matters while a task runs. When the human is needed (stuck, a decision, a permission wait) the what-to-do card is placed there on the desktop grid, as its own section right after the hero, so the five panels still fit on the first screen and the action is the second thing read. On phones it stays a full-width card under the hero. Rejected: a full-width card under the hero (pushes the panels below the first screen), nesting it inside the hero (breaks the 'what to do comes right after the summary' rule).
+
+## 2026-10-17: Change map colours use the 'making a change' blue
+
+DESIGN.md asks for one colour per phase used identically everywhere, including the map. The map shows how often files were changed, so its ramp is the --change blue in five steps (light to strong), which also keeps the existing rule that more changes look darker in light mode. The mockup's red ramp would reuse the failing colour for 'changed often', which reads as an error. Rejected: the mockup's red-to-grey tiles.
+
+## 2026-10-17: Fixed: first screen checked with real Git data
+
+checks/layout.py check_git repeats the first-screen check on a temporary workspace with real repositories (scheduler, example-done, parser). It showed the change map panel pushing row 3 below 900 px; the treemap now fills the height its row leaves (at least 70 px, redrawn when that height changes, one observer at a time), its toggle sits in the panel header, and the two what-to-do choices sit side by side on wide screens. Reviewer PASS (second round; the first failed only on a stale progress note).
+
+## 2026-10-17: Fixed: no empty 'Why the review said no' fold
+
+When the review never said no, the track record shows one line ('No review has happened yet' or 'has not said no') instead of a fold that opens onto nothing; checks/track_record.py asserts no fold and a visible line. Reviewer PASS.
+
+## 2026-10-17: Fixed: plot and viewer colours are tokens
+
+Plots are images drawn on white, so the plot background and the picture viewer stay white in both themes, now as tokens on :root (--plot-bg, --plot-ink, --backdrop) instead of literals; these three are not in DESIGN.md on purpose (they belong to the images, not the theme). tests/test_colours.py fails on any hex, rgb or hsl colour in the style block outside the :root blocks. Reviewer PASS.

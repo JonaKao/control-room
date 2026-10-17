@@ -42,6 +42,11 @@
       "name": "Track record",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/track_record.py; else python3 checks/track_record.py; fi",
       "timeout": 240
+    },
+    {
+      "name": "Instrument-panel layout",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/layout.py; else python3 checks/layout.py; fi",
+      "timeout": 240
     }
   ]
 }

@@ -1,0 +1,89 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- Design reference for the control room (2026-10-17). Static sample data. Change the body class to "light" for the light theme. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#E4E8EC;--panel:#F7F8F9;--panel2:#EEF1F4;--ink:#111A26;--muted:#5E6B7B;--rule:#CBD3DC;--grid:#DCE2E8;
+--plan:#8A97A8;--change:#2F62A8;--test:#C98510;--review:#7650B5;--polish:#C04E78;--pass:#18825F;--fail:#C33B2C;--accent:#2F62A8;--glow:transparent}
+.dark{--bg:#0C1320;--panel:#121C2C;--panel2:#18243A;--ink:#E6ECF4;--muted:#8796AB;--rule:#24324A;--grid:#1C2940;
+--plan:#6F7F96;--change:#5B93E6;--test:#F0A92E;--review:#A07CF0;--polish:#EC6E9B;--pass:#35C08E;--fail:#F0614E;--accent:#5B93E6;--glow:rgba(91,147,230,.18)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Inter Tight",system-ui,sans-serif;width:1440px;height:900px;overflow:hidden}
+.app{display:grid;grid-template-columns:264px 1fr;height:900px}
+.rail{border-right:1px solid var(--rule);padding:22px 16px;background:linear-gradient(var(--panel),var(--bg))}
+.brand{display:flex;align-items:center;gap:10px;margin:0 6px 18px}.logo{width:28px;height:28px;border-radius:7px;background:conic-gradient(var(--change) 0 30%,var(--test) 0 55%,var(--review) 0 75%,var(--pass) 0);position:relative}.logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--panel)}
+.brand b{font:700 15px "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;letter-spacing:.02em}.brand span{display:block;font-size:11.5px;color:var(--muted)}
+.fleet{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 6px 18px}.fleet div{background:var(--panel2);border-radius:8px;padding:7px 8px}.fleet b{font:700 20px "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;display:block;line-height:1}.fleet span{font-size:10.5px;color:var(--muted)}
+.grp{font:600 11px "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;color:var(--muted);letter-spacing:.06em;margin:14px 6px 6px}
+.p{display:grid;grid-template-columns:10px 1fr 64px;gap:2px 10px;align-items:center;padding:8px 8px;border-radius:8px}
+.p.on{background:var(--panel2);box-shadow:inset 3px 0 0 var(--accent),0 0 0 1px var(--rule)}
+.p .d{width:9px;height:9px;border-radius:50%}.p b{font-weight:600;font-size:13.5px}.p small{grid-column:2;color:var(--muted);font-size:11.5px}
+.p svg{grid-row:1/3;grid-column:3}
+main{padding:20px 26px;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:min-content;gap:14px;overflow:hidden}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:14px 16px;box-shadow:0 0 0 1px var(--glow)}
+.h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}.h b{font:600 12.5px "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;letter-spacing:.04em;color:var(--muted)}.h span{font-size:11.5px;color:var(--muted)}
+.hero{grid-column:1/13;display:grid;grid-template-columns:1.25fr 1fr;gap:22px;padding:18px 20px;position:relative;overflow:hidden}
+.hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--test)}
+.crumb{font-size:12px;color:var(--muted)}.crumb b{color:var(--ink)}
+.title{font:700 30px/1.1 "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;margin:6px 0 8px;letter-spacing:-.005em}
+.chip{display:inline-flex;gap:6px;align-items:center;font-size:12px;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--test) 16%,transparent);color:var(--test);font-weight:600}
+.now{margin-top:10px;font-size:13px;color:var(--muted)}.now b{color:var(--ink);font-weight:600}
+.loop{display:flex;align-items:center;gap:0;margin-top:16px}.st{flex:1;text-align:center;font-size:11.5px;color:var(--muted);position:relative}.st i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto 4px;border:2px solid var(--rule);background:var(--panel)}
+.st.done i{background:var(--pass);border-color:var(--pass)}.st.cur i{background:var(--test);border-color:var(--test);box-shadow:0 0 0 5px color-mix(in srgb,var(--test) 22%,transparent)}.st.cur{color:var(--ink);font-weight:600}
+.st:not(:last-child):after{content:"";position:absolute;top:8px;left:calc(50% + 12px);right:calc(-50% + 12px);height:2px;background:var(--rule)}.st.done:after{background:var(--pass)!important}
+.est .big{font:700 46px/1 "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;letter-spacing:-.02em}.est .big small{font-size:20px;color:var(--muted)}
+.bar{position:relative;height:12px;border-radius:6px;background:var(--panel2);margin:12px 0 6px;overflow:hidden}.bar .f{position:absolute;inset:0 62% 0 0;background:var(--test)}.bar .band{position:absolute;top:0;bottom:0;left:38%;right:44%;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--test) 45%,transparent) 0 4px,transparent 4px 8px)}
+.legend{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between}
+.steps{margin:12px 0 0;padding:0;list-style:none;font-size:12.5px}.steps li{display:flex;gap:8px;padding:3px 0;color:var(--muted)}.steps li.d{color:var(--ink)}.steps li b{font:500 11px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace;width:18px}
+.feed{grid-column:1/6}.f1{display:flex;gap:12px;align-items:center;padding:10px;border-radius:9px;background:var(--panel2);margin-bottom:8px}.ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font:600 12px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace;color:#fff}
+.row{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:5px 2px;font-size:12.5px;border-top:1px solid var(--grid)}.row i{width:18px;height:18px;border-radius:5px;display:block}.row span{color:var(--muted);font:11px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace}
+.tag{font-size:10.5px;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,var(--review) 18%,transparent);color:var(--review);margin-left:6px;font-weight:600}
+.tests{grid-column:6/9}.ring{display:flex;gap:14px;align-items:center}.ring b{font:700 26px "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif}
+.tl{list-style:none;padding:0;margin:10px 0 0;font-size:12.5px}.tl li{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--grid)}.tl li span{font:11px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace;color:var(--muted)}
+.ok{color:var(--pass)}.no{color:var(--fail)}
+.spark{display:flex;gap:2px;align-items:flex-end;height:26px;margin-top:10px}.spark i{flex:1;border-radius:1px}
+.rec{grid-column:9/13}.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kpi{background:var(--panel2);border-radius:8px;padding:8px 10px}.kpi b{font:700 22px "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif}.kpi small{color:var(--muted);font-size:11px;display:block;line-height:1.25}
+.time{grid-column:1/9}.lane{display:grid;grid-template-columns:150px 1fr 54px;gap:10px;align-items:center;font-size:12px;margin:6px 0}.lane .b{display:flex;height:14px;border-radius:3px;overflow:hidden;gap:1px}.lane .b i{display:block}.lane em{font-style:normal;text-align:right;font:500 11.5px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace;color:var(--muted)}
+.axis{display:grid;grid-template-columns:150px 1fr 54px;gap:10px;font:10.5px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace;color:var(--muted)}.axis div{display:flex;justify-content:space-between;border-top:1px solid var(--grid);padding-top:3px}
+.map{grid-column:9/13}.tm{display:grid;grid-template-columns:3fr 2fr 1.4fr;grid-template-rows:42px 30px 26px;gap:3px;height:104px}.tm i{border-radius:4px;display:block;font:10px "JetBrains Mono",ui-monospace,"DejaVu Sans Mono",monospace;color:#fff;padding:4px;font-style:normal;overflow:hidden}
+</style></head><body class="dark"><div class="app">
+<nav class="rail"><div class="brand"><div class="logo"></div><div><b>AGENT CONTROL ROOM</b><span>Jona's workspace · 7 projects</span></div></div>
+<div class="fleet"><div><b class="no">3</b><span>need you</span></div><div><b style="color:var(--test)">1</b><span>working</span></div><div><b class="ok">2</b><span>finished</span></div><div><b>81%</b><span>first try</span></div></div>
+<div class="grp">NEEDS YOU</div>
+<div class="p"><i class="d" style="background:var(--accent)"></i><b>parser</b><svg width="64" height="22"><polyline points="0,16 10,14 20,15 30,9 40,10 50,6 64,8" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg><small>Decide on 1 fix</small></div>
+<div class="p"><i class="d" style="background:var(--fail)"></i><b>scheduler</b><svg width="64" height="22"><polyline points="0,6 10,8 20,12 30,14 40,13 50,17 64,18" fill="none" stroke="var(--fail)" stroke-width="1.5"/></svg><small>Stuck after 8 attempts</small></div>
+<div class="p"><i class="d" style="background:var(--accent)"></i><b>web-scraper</b><svg width="64" height="22"><polyline points="0,14 16,12 32,12 48,8 64,9" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg><small>Permission in Claude Code</small></div>
+<div class="grp">WORKING</div>
+<div class="p on"><i class="d" style="background:var(--test)"></i><b>image-classifier</b><svg width="64" height="22"><rect x="0" y="9" width="64" height="5" rx="2.5" fill="var(--grid)"/><rect x="0" y="9" width="27" height="5" rx="2.5" fill="var(--test)"/></svg><small>Testing · step 3 of 5</small></div>
+<div class="grp">FINISHED</div>
+<div class="p"><i class="d" style="background:var(--pass)"></i><b>control-room</b><svg width="64" height="22"><polyline points="0,15 10,12 20,13 30,8 40,9 50,5 64,4" fill="none" stroke="var(--pass)" stroke-width="1.5"/></svg><small>6 tasks · all tests pass</small></div>
+<div class="p"><i class="d" style="background:var(--pass)"></i><b>api-client</b><svg width="64" height="22"><polyline points="0,12 16,10 32,9 48,7 64,6" fill="none" stroke="var(--pass)" stroke-width="1.5"/></svg><small>5/5 tests pass</small></div>
+</nav>
+<main>
+<section class="card hero"><div><div class="crumb"><b>image-classifier</b> · CNN for the practical's image dataset</div>
+<div class="title">Testing its latest change</div><span class="chip">● Attempt 3 of up to 8</span>
+<div class="now">Right now: <b>training the model for 3 epochs</b> · 40 s ago</div>
+<div class="loop"><div class="st done"><i></i>Plan</div><div class="st done"><i></i>Change</div><div class="st cur"><i></i>Test</div><div class="st"><i></i>Review</div><div class="st"><i></i>Finish</div></div></div>
+<div class="est"><div class="h"><b>HOW FAR ALONG</b><span>based on 6 past tasks · estimates held 8 of 10 times</span></div>
+<div class="big">38–56<small>%</small></div><div class="bar"><div class="f"></div><div class="band"></div></div><div class="legend"><span>started 41 min ago</span><span><b>about 25–60 min left</b></span></div>
+<ul class="steps"><li class="d"><b>1</b>✓ Add flip and rotation augmentation</li><li class="d"><b>2</b>✓ Lower learning rate to 3e-4</li><li><b>3</b>→ Retrain and compare validation accuracy</li></ul></div></section>
+<section class="card feed"><div class="h"><b>STEP BY STEP</b><span>live</span></div>
+<div class="f1"><div class="ic" style="background:var(--test)">▶</div><div><b>Training the model for 3 epochs</b><div style="font-size:12px;color:var(--muted)">python train.py --epochs 3 · 40 s ago</div></div></div>
+<div class="row"><i style="background:var(--test)"></i>Running the tests<span>11:36</span></div>
+<div class="row"><i style="background:var(--change)"></i>Editing train.py<span>11:35</span></div>
+<div class="row"><i style="background:var(--plan)"></i>Searching for learning_rate<span>11:34</span></div>
+<div class="row"><i style="background:var(--review)"></i>Checking the split <em class="tag">REVIEWER</em><span>11:31</span></div>
+<div class="row"><i style="background:var(--plan)"></i>Reading model.py<span>11:30</span></div></section>
+<section class="card tests"><div class="h"><b>TESTS</b><span>last run 2 min ago</span></div>
+<div class="ring"><svg width="62" height="62" viewBox="0 0 62 62"><circle cx="31" cy="31" r="25" fill="none" stroke="var(--grid)" stroke-width="7"/><circle cx="31" cy="31" r="25" fill="none" stroke="var(--pass)" stroke-width="7" stroke-dasharray="105 157" transform="rotate(-90 31 31)"/><circle cx="31" cy="31" r="25" fill="none" stroke="var(--fail)" stroke-width="7" stroke-dasharray="50 157" stroke-dashoffset="-107" transform="rotate(-90 31 31)"/></svg><div><b>2 / 3</b><div style="font-size:12px;color:var(--muted)">1 failing</div></div></div>
+<ul class="tl"><li>Unit tests<span class="ok">✓ 0.8s</span></li><li>Accuracy ≥ 0.85<span class="no">✗ 0.81</span></li><li>No data leakage<span class="ok">✓ 1.2s</span></li></ul>
+<div class="spark"><i style="height:40%;background:var(--fail)"></i><i style="height:66%;background:var(--fail)"></i><i style="height:66%;background:var(--fail)"></i><i style="height:100%;background:var(--pass)"></i><i style="height:100%;background:var(--pass)"></i><i style="height:66%;background:var(--fail)"></i><i style="height:66%;background:var(--fail)"></i><i style="height:100%;background:var(--pass)"></i><i style="height:66%;background:var(--fail)"></i></div></section>
+<section class="card rec"><div class="h"><b>TRACK RECORD</b><span>6 tasks</span></div><div class="kpis">
+<div class="kpi"><b class="ok">4/6</b><small>right the first time</small></div><div class="kpi"><b>3</b><small>median attempts per task</small></div>
+<div class="kpi"><b class="no">1</b><small>review sent back</small></div><div class="kpi"><b>80%</b><small>time estimates that held</small></div></div></section>
+<section class="card time"><div class="h"><b>WHERE THE TIME WENT</b><span><i style="color:var(--plan)">■</i> plan <i style="color:var(--change)">■</i> change <i style="color:var(--test)">■</i> test <i style="color:var(--review)">■</i> review <i style="color:var(--polish)">■</i> polish</span></div>
+<div class="lane"><span>Data augmentation</span><div class="b"><i style="width:6%;background:var(--plan)"></i><i style="width:14%;background:var(--change)"></i><i style="width:7%;background:var(--test)"></i><i style="width:11%;background:var(--change)"></i><i style="width:6%;background:var(--test)"></i></div><em>41m ▸</em></div>
+<div class="lane"><span>Baseline model</span><div class="b"><i style="width:7%;background:var(--plan)"></i><i style="width:30%;background:var(--change)"></i><i style="width:10%;background:var(--test)"></i><i style="width:12%;background:var(--review)"></i><i style="width:5%;background:var(--polish)"></i></div><em>57m ✓</em></div>
+<div class="lane"><span>Data loader</span><div class="b"><i style="width:5%;background:var(--plan)"></i><i style="width:20%;background:var(--change)"></i><i style="width:8%;background:var(--test)"></i><i style="width:9%;background:var(--review)"></i></div><em>38m ✓</em></div>
+<div class="axis"><span></span><div><span>0</span><span>30 min</span><span>60 min</span><span>90 min</span></div><span></span></div></section>
+<section class="card map"><div class="h"><b>WHERE THE AGENT WORKS</b><span>by changes</span></div>
+<div class="tm"><i style="background:var(--fail);grid-row:1/3">train.py · 9</i><i style="background:color-mix(in srgb,var(--fail) 60%,var(--plan))">model.py · 6</i><i style="background:var(--plan)">data.py</i><i style="background:color-mix(in srgb,var(--fail) 35%,var(--plan))">augment.py · 3</i><i style="background:var(--plan);grid-column:3;grid-row:2/4">tests/</i><i style="background:var(--plan);grid-column:1/3">config.json · 1</i></div></section>
+</main></div></body></html>

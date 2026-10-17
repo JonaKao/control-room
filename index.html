@@ -5,418 +5,441 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Control Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
+/* Tokens from design/DESIGN.md. Dark is the default; light through the theme switch. */
 :root {
-  --paper: #E8EDF1;
-  --panel: #F6F8FA;
-  --ink: #13233A;
-  --muted: #5B6A7F;
-  --rule: #CCD5DE;
-  --track: #DCE3EA;
-  --pass: #1D8A6B;
-  --fail: #C2412F;
-  --active: #C7870F;
-  --accent: #2E5A88;
-  --code-bg: #EDF1F5;
-  --ph-plan: #8C99AB; --ph-change: #3A6EA5; --ph-test: #C7870F; --ph-review: #7B5CB0; --ph-fix: #B5577F;
-  --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --bg: #0C1320; --panel: #121C2C; --panel2: #18243A;
+  --ink: #E6ECF4; --muted: #8796AB; --rule: #24324A; --grid: #1C2940;
+  --plan: #6F7F96; --change: #5B93E6; --test: #F0A92E; --review: #A07CF0; --polish: #EC6E9B;
+  --pass: #35C08E; --fail: #F0614E; --accent: #5B93E6; --glow: rgba(91, 147, 230, .14);
+  --cond: "IBM Plex Sans Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --sans: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+  color-scheme: dark;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #0F161E; --panel: #16202B; --ink: #E2E9F1; --muted: #8B99AC; --rule: #283544;
-    --track: #223040; --pass: #3BB48D; --fail: #E2634F; --active: #E3A83A; --accent: #79A5D6; --code-bg: #111A23;
-    --ph-plan: #6E7D91; --ph-change: #6D9DD4; --ph-test: #E3A83A; --ph-review: #A98BDB; --ph-fix: #DB86AB;
-  }
+:root[data-theme="light"] {
+  --bg: #E4E8EC; --panel: #F7F8F9; --panel2: #EEF1F4;
+  --ink: #111A26; --muted: #5E6B7B; --rule: #CBD3DC; --grid: #DCE2E8;
+  --plan: #8A97A8; --change: #2F62A8; --test: #C98510; --review: #7650B5; --polish: #C04E78;
+  --pass: #18825F; --fail: #C33B2C; --accent: #2F62A8; --glow: transparent;
+  color-scheme: light;
 }
-:root[data-theme="dark"] {
-  --paper: #0F161E; --panel: #16202B; --ink: #E2E9F1; --muted: #8B99AC; --rule: #283544;
-  --track: #223040; --pass: #3BB48D; --fail: #E2634F; --active: #E3A83A; --accent: #79A5D6; --code-bg: #111A23;
-    --ph-plan: #6E7D91; --ph-change: #6D9DD4; --ph-test: #E3A83A; --ph-review: #A98BDB; --ph-fix: #DB86AB;
-}
+/* Older names, kept so every part reads the same tokens. */
+:root { --paper: var(--bg); --track: var(--grid); --code-bg: var(--panel2); --active: var(--test); }
+/* Plots are images drawn on white, in both themes; the picture viewer keeps that white. */
+:root { --plot-bg: #FFFFFF; --plot-ink: #111A26; --backdrop: rgba(6, 10, 18, 0.75); }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body {
-  background: var(--paper); color: var(--ink); font-family: var(--sans);
-  font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
-}
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-code { font: 12.5px var(--mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+code { font: 12px var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+.num, .t, time { font-variant-numeric: tabular-nums; }
 
-.app { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; }
+.app { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; }
 
-/* Project rail */
-.rail { border-right: 1px solid var(--rule); padding: 24px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.rail-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 8px 4px; }
-.rail h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
-.rail .sub { font-size: 13px; color: var(--muted); margin: 0 8px 16px; }
-#theme { background: none; border: 1px solid var(--rule); border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 12px; color: var(--muted); }
-.overview { margin: 0 8px 18px; }
-.overview .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--track); gap: 2px; }
-.overview .bar span { display: block; height: 100%; }
-.overview .words { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
-.overview .words strong { color: var(--ink); }
-.proj {
-  display: grid; grid-template-columns: 12px 1fr; gap: 2px 10px; align-items: center;
-  width: 100%; text-align: left; background: none; border: 0; padding: 9px 8px; border-radius: 8px; cursor: pointer;
-}
-.proj:hover { background: var(--panel); }
-.proj[aria-current="true"] { background: var(--panel); box-shadow: inset 3px 0 0 var(--accent); }
-.proj .name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.proj .meta { grid-column: 2; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rule); flex: none; }
-.dot.busy { background: var(--active); }
+/* Left rail */
+.rail { border-right: 1px solid var(--rule); padding: 20px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  background: linear-gradient(var(--panel), var(--bg)); }
+.brand { display: flex; align-items: center; gap: 10px; margin: 0 4px 16px; }
+.logo { width: 28px; height: 28px; border-radius: 7px; flex: none; position: relative;
+  background: conic-gradient(var(--change) 0 30%, var(--test) 0 55%, var(--review) 0 75%, var(--pass) 0); }
+.logo::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--panel); }
+.brand .bt { min-width: 0; flex: 1; }
+.rail h1 { font: 700 15px/1.15 var(--cond); letter-spacing: .03em; text-transform: uppercase; margin: 0; }
+.rail .sub { display: block; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#theme { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 28px; height: 28px; padding: 0; cursor: pointer; color: var(--muted); flex: none; display: grid; place-items: center; }
+#theme svg { width: 15px; height: 15px; }
+#theme:hover { color: var(--ink); }
+.fleet { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 4px 6px; }
+.fleet > div { background: var(--panel2); border-radius: 8px; padding: 7px 7px; min-width: 0; }
+.fleet b { display: block; font: 700 20px/1 var(--cond); font-variant-numeric: tabular-nums; }
+.fleet span { display: block; font-size: 10.5px; color: var(--muted); line-height: 1.25; margin-top: 3px; }
+.fleet .f-need b { color: var(--fail); } .fleet .f-need.calm b { color: var(--ink); }
+.fleet .f-work b { color: var(--test); } .fleet .f-done b { color: var(--pass); }
+.fleet-words { font-size: 11.5px; color: var(--muted); margin: 0 4px 6px; }
+.proj { display: grid; grid-template-columns: 10px minmax(0, 1fr) 64px; gap: 2px 10px; align-items: center;
+  width: 100%; text-align: left; background: none; border: 0; padding: 8px; border-radius: 8px; cursor: pointer; }
+.proj:hover { background: var(--panel2); }
+.proj[aria-current="true"] { background: var(--panel2); box-shadow: inset 3px 0 0 var(--accent), 0 0 0 1px var(--rule); }
+.proj .name { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj .meta { grid-column: 2; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj .mini { grid-column: 3; grid-row: 1 / 3; display: block; width: 64px; height: 22px; }
+.proj.ws { grid-template-columns: 10px minmax(0, 1fr); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); flex: none; }
+.dot.busy { background: var(--test); }
 .dot.ask { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 .dot.ok { background: var(--pass); }
 .dot.bad { background: var(--fail); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fail) 25%, transparent); }
-.group-label { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 8px 4px; }
+.dot.ws { background: none; border: 2px solid var(--accent); border-radius: 3px; }
+.group-label { font: 600 11px var(--cond); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 14px 8px 4px; }
 
-/* Main */
-main { padding: 28px 40px 64px; max-width: 1180px; min-width: 0; }
-.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 22px; min-width: 0; }
-.sec { margin-bottom: 20px; }
-.sec-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 28px 2px 10px; }
-.empty { color: var(--muted); font-size: 14px; margin: 0; }
+/* Main: a 12-column grid of panels */
+main { padding: 18px 24px 48px; min-width: 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: min-content; gap: 12px; align-content: start; }
+main > * { grid-column: 1 / -1; min-width: 0; }
+.slot { display: flex; flex-direction: column; }
+.slot > .card { flex: 1 1 auto; }
+.slot:empty { display: none; }
+.card, .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 13px 15px; min-width: 0;
+  box-shadow: 0 0 0 1px var(--glow); }
+.ph { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 0 9px; min-width: 0; }
+.ph h3 { font: 600 12.5px var(--cond); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; white-space: nowrap; }
+.ph .pm { font-size: 11.5px; color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.empty { color: var(--muted); font-size: 13px; margin: 0; }
+summary { cursor: pointer; }
+.more-link > summary, .card details > summary { color: var(--accent); font-size: 12.5px; }
 
-/* 1. At a glance */
-.glance { padding: 22px 24px 20px; border-left: 6px solid var(--rule); }
-.glance.t-ok { border-left-color: var(--pass); }
-.glance.t-busy { border-left-color: var(--active); }
-.glance.t-ask { border-left-color: var(--accent); }
-.glance.t-bad { border-left-color: var(--fail); }
-.eyebrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 13px; color: var(--muted); }
-.eyebrow .pname { font-weight: 600; color: var(--ink); }
-.needs { display: inline-flex; align-items: center; gap: 10px; margin: 14px 0 10px; padding: 7px 14px 7px 10px; border-radius: 999px; font-weight: 600; font-size: 14.5px; }
-.needs svg { width: 20px; height: 20px; flex: none; }
-.needs[data-needs="no"] { background: color-mix(in srgb, var(--pass) 13%, transparent); color: var(--pass); }
-.needs.t-ask { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
-.needs.t-bad { background: color-mix(in srgb, var(--fail) 14%, transparent); color: var(--fail); }
-.doing { font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 6px; }
-.task-line { margin: 0; font-size: 15.5px; }
+@media (min-width: 1200px) {
+  .c12 { grid-column: span 12; } .c8 { grid-column: span 8; } .c7 { grid-column: span 7; } .c6 { grid-column: span 6; }
+  /* The four numbers alone in the panel; what each means is in its tooltip and on phones. */
+  [data-section="record"] .kpi .kd { display: none; }
+  .c5 { grid-column: span 5; } .c4 { grid-column: span 4; } .c3 { grid-column: span 3; }
+}
+
+/* Hero: the summary at a glance */
+.hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; padding: 16px 20px 14px 22px; }
+.hero::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tone, var(--rule)); }
+.hero.with-action { grid-template-columns: minmax(0, 1fr); }
+.hero.with-action .hero-side { display: none; }
+.crumb { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 12px; color: var(--muted); }
+.crumb .pname { font-weight: 600; color: var(--ink); }
+.title { font: 700 29px/1.1 var(--cond); letter-spacing: -.005em; margin: 6px 0 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px;
+  color: var(--tone, var(--muted)); background: color-mix(in srgb, var(--tone, var(--muted)) 16%, transparent); white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.needs { display: inline-flex; align-items: center; gap: 7px; padding: 3px 11px 3px 7px; border-radius: 99px; font-weight: 600; font-size: 12.5px; }
+.needs svg { width: 16px; height: 16px; flex: none; }
+.needs[data-needs="no"] { background: color-mix(in srgb, var(--pass) 14%, transparent); color: var(--pass); }
+.needs.t-ask { background: color-mix(in srgb, var(--accent) 17%, transparent); color: var(--accent); }
+.needs.t-bad { background: color-mix(in srgb, var(--fail) 16%, transparent); color: var(--fail); }
+.task-line { margin: 9px 0 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-line .lbl { color: var(--muted); }
-.agent-note { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.now-line { margin: 4px 0 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-line b { color: var(--ink); font-weight: 600; }
+.now-line svg { width: 14px; height: 14px; margin-right: 5px; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.now-line.ask, .now-line.ask b { color: var(--accent); }
+.now-line .q { margin-left: 8px; color: var(--test); font-weight: 600; }
+.hero-side { min-width: 0; border-left: 1px solid var(--grid); padding-left: 20px; }
+.hero-side .agent-note { margin: 0 0 8px; font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.plan-steps { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+.plan-steps li { display: grid; grid-template-columns: 18px 14px minmax(0, 1fr); gap: 4px; padding: 2px 0; color: var(--muted); }
+.plan-steps li span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-steps li.d { color: var(--ink); }
+.plan-steps li.cur { color: var(--ink); font-weight: 600; }
+.plan-steps b { font: 500 11px var(--mono); color: var(--muted); }
+.plan-bar { height: 8px; border-radius: 4px; background: var(--panel2); overflow: hidden; margin: 2px 0 8px; }
+.plan-bar span { display: block; height: 100%; background: var(--tone, var(--test)); border-radius: 4px; }
+.est-wait { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 
-/* Loop picture */
-.steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
-.steps li { position: relative; text-align: center; font-size: 13px; color: var(--muted); padding-top: 30px; }
-.steps li::before { /* connector to the previous step */
-  content: ""; position: absolute; top: 10px; right: 50%; width: 100%; height: 3px; background: var(--track); }
+/* Loop stepper */
+.steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); }
+.steps li { position: relative; text-align: center; font-size: 11.5px; color: var(--muted); padding-top: 21px; line-height: 1.3; }
+.steps li::before { content: ""; position: absolute; top: 7px; right: calc(50% + 11px); width: calc(100% - 22px); height: 2px; background: var(--rule); }
 .steps li:first-child::before { display: none; }
-.steps li.past::before, .steps li.now::before { background: color-mix(in srgb, var(--pass) 55%, var(--track)); }
-.steps .node { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 23px; height: 23px; border-radius: 50%;
-  background: var(--panel); border: 3px solid var(--track); z-index: 1; }
-.steps li.past .node { background: color-mix(in srgb, var(--pass) 55%, var(--panel)); border-color: color-mix(in srgb, var(--pass) 55%, var(--panel)); }
-.steps li.now .node { background: var(--active); border-color: var(--active); box-shadow: 0 0 0 5px color-mix(in srgb, var(--active) 22%, transparent); animation: pulse 1.8s ease-in-out infinite; }
+.steps li.past::before, .steps li.now::before { background: var(--pass); }
+.steps .node { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--rule); z-index: 1; }
+.steps li.past .node { background: var(--pass); border-color: var(--pass); }
+.steps li.now .node { background: var(--tone, var(--test)); border-color: var(--tone, var(--test));
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone, var(--test)) 22%, transparent); animation: pulse 1.8s ease-in-out infinite; }
 .steps li.now { color: var(--ink); font-weight: 600; }
-.steps li.tried::before { background: color-mix(in srgb, var(--muted) 40%, var(--track)); }
+.steps li.tried::before { background: color-mix(in srgb, var(--muted) 45%, var(--rule)); }
 .steps li.tried .node { background: color-mix(in srgb, var(--muted) 45%, var(--panel)); border-color: color-mix(in srgb, var(--muted) 45%, var(--panel)); }
 .steps li.end-ok .node { background: var(--pass); border-color: var(--pass); animation: none; box-shadow: none; }
-.steps li.end-ask .node { background: var(--accent); border-color: var(--accent); animation: none; box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }
-.steps li.end-bad::before { background: var(--track); }
-.steps li.end-bad .node { background: var(--fail); border-color: var(--fail); animation: none; box-shadow: 0 0 0 5px color-mix(in srgb, var(--fail) 22%, transparent); }
-.steps .hint { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
-@keyframes pulse { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--active) 8%, transparent); } }
-@media (prefers-reduced-motion: reduce) { .steps li.now .node { animation: none; } }
-.loopback { position: relative; margin: 6px 10% 0 30%; height: 22px; border: 2px dashed var(--rule); border-top: 0; border-radius: 0 0 12px 12px; width: 40%; }
-.loopback span { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); background: var(--panel); padding: 0 8px; font-size: 12px; color: var(--muted); white-space: nowrap; }
-.loopback::after { content: ""; position: absolute; left: -6px; top: -4px; border: 5px solid transparent; border-bottom: 7px solid var(--rule); border-top: 0; }
+.steps li.end-ask .node { background: var(--accent); border-color: var(--accent); animation: none; }
+.steps li.end-bad::before { background: var(--rule); }
+.steps li.end-bad .node { background: var(--fail); border-color: var(--fail); animation: none; }
+.steps .hint { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
+.loop-cap { margin: 6px 0 0; font-size: 11px; color: var(--muted); text-align: center; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--tone, var(--test)) 8%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .steps li.now .node, .tt-end.o-running span { animation: none !important; } }
 
-/* 2. What to do */
-.action { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
-.action.t-bad { border-color: var(--fail); background: color-mix(in srgb, var(--fail) 5%, var(--panel)); }
-.action h3 { margin: 0 0 4px; font-size: 18px; }
-.action .lead { margin: 0 0 14px; color: var(--muted); }
-.draft { border-top: 1px solid var(--rule); padding: 14px 0 6px; }
-.draft:first-of-type { border-top: 0; padding-top: 4px; }
-.draft .issue { font-weight: 700; font-size: 16px; }
-.draft p { margin: 2px 0 6px; }
-.safe { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--pass); font-weight: 600; }
-.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 12px 0 6px; }
-.choice { border: 1px solid var(--rule); background: var(--panel); border-radius: 10px; padding: 12px 14px; min-width: 0; }
-.choice b { display: block; }
-.choice .why { font-size: 13.5px; color: var(--muted); margin: 2px 0 8px; }
-.copy-row { display: flex; gap: 8px; align-items: center; }
+/* What to do */
+.action { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); padding: 13px 16px; }
+.action.t-bad { border-color: var(--fail); background: color-mix(in srgb, var(--fail) 6%, var(--panel)); }
+.action h3 { margin: 0 0 2px; font: 700 17px/1.2 var(--cond); }
+.action .lead, .action p { margin: 0 0 5px; font-size: 12.5px; line-height: 1.4; }
+.action .lead { color: var(--muted); }
+.draft { border-top: 1px solid var(--rule); padding: 6px 0 0; }
+.draft:first-of-type { border-top: 0; padding-top: 2px; }
+.draft .issue { font-weight: 700; font-size: 14px; }
+.safe { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--pass); font-weight: 600; }
+.choices { display: grid; gap: 6px; margin: 5px 0 2px; }
+.choice { min-width: 0; }
+.choice b { font-size: 12.5px; }
+.choice .why { display: inline; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.copy-row { display: flex; gap: 8px; align-items: center; margin-top: 3px; }
 .copy-row code { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.copy-row button { border: 0; border-radius: 6px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--accent); color: var(--panel); flex: none; }
-.how { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.copy-row button { border: 0; border-radius: 6px; padding: 4px 11px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--accent); color: var(--panel); flex: none; }
+.how { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+.wait-card h3 { margin: 0 0 4px; }
+.action .wait-card + .wait-card, .action .wait-card + h3 { margin-top: 12px; }
+.action details { font-size: 12.5px; }
 
-/* 3. Health tiles */
-.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.tile h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; }
-.tile .big { font-size: 15px; font-weight: 600; margin: 0; }
-.tile .small { font-size: 13.5px; color: var(--muted); margin: 4px 0 0; }
-.tile-row { display: flex; gap: 16px; align-items: center; }
-.donut { width: 76px; height: 76px; flex: none; }
-.donut text { font: 700 17px var(--sans); fill: var(--ink); }
-.tests { list-style: none; margin: 14px 0 0; padding: 0; font-size: 14px; }
-.tests li { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
-.tests li .mk { width: 16px; height: 16px; flex: none; }
-.badge { width: 64px; height: 64px; flex: none; }
-.pips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
-.pips span { width: 18px; height: 18px; border-radius: 5px; background: var(--track); }
-.pips span.used { background: color-mix(in srgb, var(--muted) 55%, var(--track)); }
-.pips span.used.last { background: var(--active); }
+/* Step by step */
+.kicon { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; flex: none; background: var(--panel2); color: var(--muted); }
+.kicon svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.kicon.k-read, .kicon.k-search, .kicon.k-plan, .kicon.k-web { background: var(--plan); color: var(--panel); }
+.kicon.k-edit { background: var(--change); color: var(--panel); }
+.kicon.k-test, .kicon.k-command { background: var(--test); color: var(--panel); }
+.kicon.k-agent { background: var(--review); color: var(--panel); }
+.kicon.k-waiting { background: var(--accent); color: var(--panel); }
+[data-subagent="reviewer"] > .kicon { background: var(--review); color: var(--panel); }
+.live .current { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 11px; align-items: center; padding: 9px 10px; border-radius: 9px; background: var(--panel2); }
+.live .current .kicon { width: 30px; height: 30px; border-radius: 8px; }
+.live .current .kicon svg { width: 16px; height: 16px; }
+.live .current .lbl { font-size: 11.5px; color: var(--muted); }
+.live .current .ctext { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; line-height: 1.3; }
+.live .current[data-attention="yes"] { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel2)); }
+.live .current[data-attention="yes"] .lbl { color: var(--accent); font-weight: 600; }
+.live .cmd { margin-top: 3px; font-size: 12px; }
+.live .cmd summary { color: var(--muted); }
+.live .cmd code { display: inline-block; margin-top: 3px; overflow-wrap: anywhere; white-space: normal; }
+.live .quiet { margin: 8px 0 0; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; background: color-mix(in srgb, var(--test) 15%, transparent); }
+.step-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.step-list li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 3px 2px; border-top: 1px solid var(--grid); font-size: 12.5px; }
+.step-list .stext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-list .t { color: var(--muted); font: 11px var(--mono); }
+.live details[data-detail="steps"] > summary { color: var(--muted); font-size: 12px; padding: 4px 0 0; }
+.who { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  white-space: nowrap; vertical-align: 1px; color: var(--muted); background: var(--panel2); }
+.who.rev { color: var(--review); background: color-mix(in srgb, var(--review) 18%, transparent); }
+.who svg { width: 11px; height: 11px; }
+
+/* Tests */
+.ring { display: flex; gap: 12px; align-items: center; }
+.donut { width: 52px; height: 52px; flex: none; }
+.ring .big { font: 700 24px/1 var(--cond); font-variant-numeric: tabular-nums; }
+.ring .small { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.tests { list-style: none; margin: 8px 0 0; padding: 0; font-size: 12.5px; }
+.tests li { display: flex; gap: 7px; align-items: center; padding: 2px 0; border-top: 1px solid var(--grid); min-width: 0; }
+.tests li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tests li .mk, .mk { width: 14px; height: 14px; flex: none; }
+.tests-more > summary { font-size: 12px; padding: 3px 0; }
+.history .bars { display: flex; gap: 2px; align-items: flex-end; height: 22px; margin-top: 7px; }
+.history .bars span { flex: 1 1 0; max-width: 18px; min-height: 3px; border-radius: 1px; background: var(--pass); }
+.history .bars span.f { background: var(--fail); }
+.history .cap { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.facts2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--grid); }
+.facts2 .fl { font: 600 10.5px var(--cond); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.facts2 .fv { font-size: 12.5px; font-weight: 600; display: flex; gap: 5px; align-items: center; margin-top: 2px; }
+.facts2 .fs { font-size: 11px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { width: 16px; height: 16px; flex: none; }
+.pips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.pips span { width: 10px; height: 10px; border-radius: 3px; background: var(--grid); }
+.pips span.used { background: color-mix(in srgb, var(--muted) 60%, var(--grid)); }
+.pips span.used.last { background: var(--test); }
 .pips span.used.last-ok { background: var(--pass); }
 .pips span.used.last-bad { background: var(--fail); }
 .pips span.used.last-ask { background: var(--accent); }
-.tile details { margin-top: 12px; }
-summary { cursor: pointer; }
-.tile summary, .more summary { color: var(--accent); font-size: 14px; }
-pre.out { margin: 8px 0 0; padding: 12px 14px; background: var(--code-bg); border-radius: 8px;
-  font: 12.5px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; }
+.health details { margin-top: 6px; }
+pre.out { margin: 6px 0 0; padding: 10px 12px; background: var(--panel2); border-radius: 8px;
+  font: 11.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; }
+.health .small { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
 
-/* 4. Over time */
-.history { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; }
-.history .axis { display: flex; flex-direction: column; justify-content: space-between; font-size: 11.5px; color: var(--muted); height: 90px; text-align: right; }
-.history .bars { display: flex; gap: 3px; align-items: flex-end; height: 90px; border-bottom: 1px solid var(--rule); border-top: 1px dashed var(--rule); }
-.history .bars span { flex: 1 1 0; max-width: 22px; min-height: 4px; border-radius: 3px 3px 0 0; background: var(--pass); }
-.history .bars span.f { background: var(--fail); }
-.history .cap { grid-column: 2; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
-.legend { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
-.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-
-/* 4b. Task timeline */
-.tt-list { display: grid; gap: 4px; }
-.tt-row { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 2px 12px; align-items: center; padding: 8px 0 4px; min-width: 0; }
-.tt-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
-.tt-head .tt-name { font-weight: 600; font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.tt-head .tt-when { font-size: 12.5px; color: var(--muted); }
-.tt-out { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; padding: 1px 9px 1px 6px; border-radius: 999px; }
-.tt-out svg { width: 14px; height: 14px; }
-.tt-out.o-done { color: var(--pass); background: color-mix(in srgb, var(--pass) 12%, transparent); }
-.tt-out.o-waiting { color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
-.tt-out.o-stuck { color: var(--fail); background: color-mix(in srgb, var(--fail) 12%, transparent); }
-.tt-out.o-running { color: var(--active); background: color-mix(in srgb, var(--active) 14%, transparent); }
-.tt-track { position: relative; display: flex; align-items: center; height: 40px; padding-top: 14px; min-width: 0; }
-.tt-bar { display: flex; height: 22px; flex: none; }
+/* Where the time went */
+.tt-list { display: grid; }
+.tt-row { display: grid; grid-template-columns: 168px minmax(0, 1fr) 76px; gap: 0 10px; align-items: center; padding: 2px 0; min-width: 0; }
+.tt-head { min-width: 0; line-height: 1.25; }
+.tt-head .tt-name { display: block; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-head .tt-sub { display: block; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-out { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; vertical-align: -2px; }
+.tt-out svg { width: 11px; height: 11px; }
+.tt-out.o-done { color: var(--pass); } .tt-out.o-waiting { color: var(--accent); } .tt-out.o-stuck { color: var(--fail); } .tt-out.o-running { color: var(--test); }
+.tt-track { position: relative; display: flex; align-items: center; height: 30px; padding-top: 10px; min-width: 0; }
+.tt-bar { display: flex; height: 14px; flex: none; gap: 0; }
 .tt-seg { flex: var(--d) 1 0; min-width: 2px; height: 100%; border: 0; padding: 0; margin: 0; cursor: pointer; position: relative;
   background: var(--c); box-shadow: inset -1px 0 0 var(--panel); }
-.tt-seg:first-child { border-radius: 5px 0 0 5px; }
-.tt-seg:last-child { border-radius: 0 5px 5px 0; box-shadow: none; }
-.tt-seg:only-child { border-radius: 5px; }
-.tt-seg:hover { filter: brightness(1.08); }
-.tt-seg[aria-pressed="true"] { outline: 2.5px solid var(--ink); outline-offset: 1px; z-index: 2; }
-.tt-seg.att::before { content: ""; position: absolute; left: -1px; top: -6px; bottom: -3px; width: 2px; background: var(--ink); border-radius: 1px; }
-.tt-seg [data-attempt-mark] { position: absolute; left: -4px; top: -19px; font-size: 10.5px; line-height: 1; font-weight: 600; color: var(--muted); }
-.tt-gap { flex: 0 0 14px; height: 22px; border: 0; padding: 0; margin: 0 2px; cursor: pointer; border-radius: 3px;
-  background: repeating-linear-gradient(135deg, var(--rule) 0 3px, transparent 3px 6px); }
-.tt-gap[aria-pressed="true"] { outline: 2.5px solid var(--ink); outline-offset: 1px; }
-.tt-end { flex: none; width: 18px; height: 18px; margin-left: 4px; display: inline-flex; }
-.tt-end svg { width: 18px; height: 18px; }
+.tt-seg:first-child { border-radius: 3px 0 0 3px; }
+.tt-seg:last-child { border-radius: 0 3px 3px 0; box-shadow: none; }
+.tt-seg:only-child { border-radius: 3px; }
+.tt-seg:hover { filter: brightness(1.1); }
+.tt-seg[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 1px; z-index: 2; }
+.tt-seg.att::before { content: ""; position: absolute; left: -1px; top: -4px; bottom: -2px; width: 2px; background: var(--ink); border-radius: 1px; }
+.tt-seg [data-attempt-mark] { position: absolute; left: -3px; top: -14px; font: 600 9.5px/1 var(--mono); color: var(--muted); }
+.tt-gap { flex: 0 0 14px; height: 14px; border: 0; padding: 0; margin: 0 2px; cursor: pointer; border-radius: 2px;
+  background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px); opacity: .7; }
+.tt-gap[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 1px; }
+.tt-end { flex: none; width: 14px; height: 14px; margin-left: 4px; display: inline-flex; }
+.tt-end svg { width: 14px; height: 14px; }
 .tt-end.o-done { color: var(--pass); } .tt-end.o-waiting { color: var(--accent); } .tt-end.o-stuck { color: var(--fail); }
-.tt-end.o-running span { width: 10px; height: 10px; margin: 4px; border-radius: 50%; background: var(--active);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--active) 22%, transparent); animation: pulse 1.8s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .tt-end.o-running span { animation: none; } }
-.tt-total { font-size: 14px; font-weight: 600; text-align: right; padding-top: 14px; white-space: nowrap; }
-.tt-detail { grid-column: 1 / -1; margin: 6px 0 4px; padding: 10px 14px; border-radius: 10px; background: var(--paper); border-left: 4px solid var(--c, var(--rule)); font-size: 14px; }
+.tt-end.o-running span { width: 8px; height: 8px; margin: 3px; border-radius: 50%; background: var(--test);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--test) 25%, transparent); animation: pulse 1.8s ease-in-out infinite; }
+.tt-total { font: 500 11.5px var(--mono); color: var(--muted); text-align: right; padding-top: 10px; white-space: nowrap; }
+.tt-detail { grid-column: 1 / -1; margin: 4px 0 6px; padding: 8px 12px; border-radius: 9px; background: var(--panel2); border-left: 4px solid var(--c, var(--rule)); font-size: 13px; }
 .tt-detail p { margin: 0; }
-.tt-detail .tt-dt { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
-.tt-detail ul { margin: 6px 0 0; padding-left: 18px; }
-.tt-axis { position: relative; height: 22px; margin-right: 88px; border-top: 1px solid var(--rule); margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.tt-detail .tt-dt { color: var(--muted); font-size: 12px; margin-bottom: 3px; }
+.tt-detail ul { margin: 4px 0 0; padding-left: 18px; }
+.tt-axis { position: relative; height: 18px; margin: 4px 86px 0 178px; border-top: 1px solid var(--grid); font: 10.5px var(--mono); color: var(--muted); }
 .tt-axis span { position: absolute; top: 3px; transform: translateX(-50%); white-space: nowrap; }
 .tt-axis span:first-child { transform: none; }
-.tt-axis span::before { content: ""; position: absolute; left: 50%; top: -7px; height: 5px; border-left: 1px solid var(--rule); }
-.tt-axis span:first-child::before { left: 0; }
-.tt-cap { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
-.tt-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
-.tt-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.tt-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 14px; margin-top: 4px; }
+.tt-cap { font-size: 11px; color: var(--muted); margin: 0; }
+.tt-legend { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; color: var(--muted); }
+.tt-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
 .tt-legend .k-gap i { background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); }
 .tt-legend .k-att i { width: 2px; background: var(--ink); border-radius: 1px; }
-.tt-older summary { color: var(--accent); font-size: 14px; margin-top: 8px; }
+.tt-older > summary { font-size: 12px; padding: 2px 0; }
 
-/* Change map */
-.map-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px 20px; margin-bottom: 12px; }
-.map-intro { margin: 0; font-size: 14px; color: var(--muted); max-width: 640px; }
-.map-toggle { border: 1px solid var(--rule); background: var(--panel); color: var(--accent); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; cursor: pointer; flex: none; }
-.map-toggle[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
-.map { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: var(--paper); }
-.map-group { position: absolute; border-radius: 6px; background: var(--paper); }
-.map-gl { position: absolute; left: 4px; top: 3px; z-index: 2; pointer-events: none; font-size: 11.5px; font-weight: 700; color: var(--ink);
-  background: color-mix(in srgb, var(--panel) 82%, transparent); padding: 0 6px; border-radius: 4px; max-width: calc(100% - 8px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.map-tile { position: absolute; border: 0; margin: 0; padding: 0; border-radius: 3px; cursor: pointer; overflow: hidden; text-align: left;
-  background: var(--track); color: var(--ink); }
-.map-tile.s1 { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
-.map-tile.s2 { background: color-mix(in srgb, var(--accent) 32%, var(--panel)); }
-.map-tile.s3 { background: color-mix(in srgb, var(--accent) 52%, var(--panel)); }
-.map-tile.s4 { background: color-mix(in srgb, var(--accent) 74%, var(--panel)); color: var(--panel); }
-.map-tile.s5 { background: var(--accent); color: var(--panel); }
-.map-tile:hover { filter: brightness(1.06); }
-.map-tile[aria-pressed="true"] { outline: 2.5px solid var(--ink); outline-offset: -2.5px; z-index: 3; }
-.map-tile .mn { position: absolute; left: 6px; right: 6px; bottom: 4px; font-size: 12px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.map-tile .ms { display: block; font-weight: 400; font-size: 11px; opacity: .8; }
-.map-detail { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--paper); border-left: 4px solid var(--accent); font-size: 14px; }
+/* Where the agent works */
+.map-top { margin-bottom: 6px; }
+@media (min-width: 1200px) {
+  .map-card { display: flex; flex-direction: column; }
+  .map-card .map { flex: 1 1 auto; min-height: 70px; }
+  .action .choices { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .action .choice .why { display: block; margin: 1px 0 0; }
+}
+.map-intro { margin: 0; font-size: 11.5px; color: var(--muted); }
+.map-toggle { border: 1px solid var(--rule); background: transparent; color: var(--accent); border-radius: 99px; padding: 1px 9px; font-size: 11.5px; font-weight: 600; cursor: pointer; flex: none; }
+.map-toggle[aria-pressed="false"] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.map { position: relative; width: 100%; border-radius: 6px; overflow: hidden; background: var(--bg); }
+.map-group { position: absolute; border-radius: 4px; background: var(--bg); }
+.map-gl { position: absolute; left: 3px; top: 2px; z-index: 2; pointer-events: none; font: 600 10px var(--mono); color: var(--ink);
+  background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 0 4px; border-radius: 3px; max-width: calc(100% - 6px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-tile { position: absolute; border: 0; margin: 0; padding: 0; border-radius: 3px; cursor: pointer; overflow: hidden; text-align: left; background: var(--grid); color: var(--ink); }
+.map-tile.s1 { background: color-mix(in srgb, var(--change) 16%, var(--panel)); }
+.map-tile.s2 { background: color-mix(in srgb, var(--change) 34%, var(--panel)); }
+.map-tile.s3 { background: color-mix(in srgb, var(--change) 54%, var(--panel)); }
+.map-tile.s4 { background: color-mix(in srgb, var(--change) 76%, var(--panel)); color: var(--panel); }
+.map-tile.s5 { background: var(--change); color: var(--panel); }
+:root:not([data-theme="light"]) .map-tile.s4, :root:not([data-theme="light"]) .map-tile.s5 { color: var(--bg); }
+.map-tile:hover { filter: brightness(1.08); }
+.map-tile[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 3; }
+.map-tile .mn { position: absolute; left: 4px; right: 4px; bottom: 2px; font: 500 10px/1.25 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-tile .ms { display: block; opacity: .8; }
+.map-detail { margin-top: 8px; padding: 8px 12px; border-radius: 9px; background: var(--panel2); border-left: 4px solid var(--change); font-size: 12.5px; }
 .map-detail p { margin: 0; }
-.map-detail .path { font: 600 13px var(--mono); overflow-wrap: anywhere; }
-.map-detail .sub { color: var(--muted); font-size: 13px; }
-.map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
-.map-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
-.map-legend i.s0 { background: var(--track); }
-.map-legend i.s1 { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
-.map-legend i.s2 { background: color-mix(in srgb, var(--accent) 32%, var(--panel)); }
-.map-legend i.s3 { background: color-mix(in srgb, var(--accent) 52%, var(--panel)); }
-.map-legend i.s4 { background: color-mix(in srgb, var(--accent) 74%, var(--panel)); }
-.map-legend i.s5 { background: var(--accent); }
+.map-detail .path { font: 600 12px var(--mono); overflow-wrap: anywhere; }
+.map-detail .sub { color: var(--muted); font-size: 12px; }
+.map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 11px; color: var(--muted); margin-top: 6px; }
+.map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 3px; vertical-align: -1px; }
+.map-legend i.s0 { background: var(--grid); }
+.map-legend i.s1 { background: color-mix(in srgb, var(--change) 16%, var(--panel)); }
+.map-legend i.s2 { background: color-mix(in srgb, var(--change) 34%, var(--panel)); }
+.map-legend i.s3 { background: color-mix(in srgb, var(--change) 54%, var(--panel)); }
+.map-legend i.s4 { background: color-mix(in srgb, var(--change) 76%, var(--panel)); }
+.map-legend i.s5 { background: var(--change); }
 
 /* Track record */
-.rec-intro { margin: 0 0 14px; font-size: 14px; color: var(--muted); max-width: 680px; }
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.kpi { background: var(--paper); border-radius: 10px; padding: 12px 14px; min-width: 0; }
-.kpi .kl { font-size: 13px; font-weight: 600; }
-.kpi .kv { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.kpi .kv small { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
-.kpi .kd { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-.kpi .meter { height: 6px; border-radius: 3px; background: var(--track); margin-top: 8px; overflow: hidden; }
-.kpi .meter span { display: block; height: 100%; border-radius: 3px; }
-.rec-h { font-size: 14px; font-weight: 700; margin: 22px 0 10px; }
-.trend { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 8px; }
-.trend .axis { display: flex; flex-direction: column; justify-content: space-between; height: 110px; padding-top: 10px; margin-bottom: -7px; font-size: 11.5px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-.trend .cols { display: flex; gap: 4px; align-items: flex-end; height: 110px; padding-top: 16px; border-bottom: 1px solid var(--rule); min-width: 0; }
-.trend .col { flex: 1 1 0; max-width: 40px; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;
+.rec-intro { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.kpi { background: var(--panel2); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.kpi .kv { font: 700 22px/1.05 var(--cond); font-variant-numeric: tabular-nums; }
+.kpi .kv small { font: 500 13px var(--sans); color: var(--muted); }
+.kpi[data-kpi="first-try"] .kv { color: var(--pass); }
+.kpi[data-kpi="rejected"] .kv, .kpi[data-kpi="stuck"] .kv { color: var(--fail); }
+.kpi.zero .kv { color: var(--ink); }
+.kpi .kl { font-size: 11.5px; font-weight: 600; line-height: 1.25; margin-top: 2px; }
+.kpi .kd { font-size: 10.5px; color: var(--muted); line-height: 1.25; margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kpi .meter { height: 3px; border-radius: 2px; background: var(--grid); margin-top: 5px; overflow: hidden; }
+.kpi .meter span { display: block; height: 100%; border-radius: 2px; }
+.rec-h { font: 600 11px var(--cond); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 4px; }
+.trend { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 6px; }
+.trend .axis { display: flex; flex-direction: column; justify-content: space-between; height: 56px; padding-top: 10px; margin-bottom: -6px; font: 10px var(--mono); color: var(--muted); text-align: right; }
+.trend .cols { display: flex; gap: 3px; align-items: flex-end; height: 56px; padding-top: 12px; border-bottom: 1px solid var(--grid); min-width: 0; }
+.trend .col { flex: 1 1 0; max-width: 28px; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;
   border: 0; padding: 0; margin: 0; background: none; cursor: pointer; position: relative; }
-.trend .col .b { display: block; height: var(--h); border-radius: 4px 4px 0 0; background: var(--c); min-height: 3px; }
-.trend .col .n { position: absolute; left: 0; right: 0; bottom: calc(var(--h) + 1px); font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; line-height: 1.4; }
-.trend .col:hover .b { filter: brightness(1.08); }
-.trend .col[aria-pressed="true"] .b { outline: 2.5px solid var(--ink); outline-offset: 1px; }
-.trend .marks { grid-column: 2; display: flex; gap: 4px; min-width: 0; padding-top: 5px; }
-.trend .marks > span { flex: 1 1 0; max-width: 40px; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
-.trend .marks i { width: 7px; height: 7px; border-radius: 50%; background: var(--pass); }
+.trend .col .b { display: block; height: var(--h); border-radius: 2px 2px 0 0; background: var(--c); min-height: 2px; }
+.trend .col .n { position: absolute; left: 0; right: 0; bottom: calc(var(--h) + 1px); font: 600 9.5px/1.3 var(--mono); color: var(--muted); text-align: center; }
+.trend .col:hover .b { filter: brightness(1.1); }
+.trend .col[aria-pressed="true"] .b { outline: 2px solid var(--ink); outline-offset: 1px; }
+.trend .marks { grid-column: 2; display: flex; gap: 3px; min-width: 0; padding-top: 3px; }
+.trend .marks > span { flex: 1 1 0; max-width: 28px; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 1px; }
+.trend .marks i { width: 5px; height: 5px; border-radius: 50%; background: var(--pass); }
 .trend .marks i.f { background: var(--fail); }
 .trend .marks i.dr { border-radius: 1px; background: var(--accent); }
-.trend .marks i.st { border-radius: 0; background: none; width: 0; height: 0; border: 4px solid transparent; border-bottom: 7px solid var(--fail); border-top: 0; }
-.rec-cap { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
-.rec-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
-.rec-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.rec-legend i.dot-p { border-radius: 50%; background: var(--pass); width: 8px; height: 8px; }
-.rec-legend i.dot-f { border-radius: 50%; background: var(--fail); width: 8px; height: 8px; }
-.rec-legend i.dr { background: var(--accent); width: 8px; height: 8px; border-radius: 1px; }
-.rec-legend i.st { width: 0; height: 0; border-radius: 0; border: 4px solid transparent; border-bottom: 7px solid var(--fail); border-top: 0; }
-.rec-detail { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--paper); border-left: 4px solid var(--c, var(--rule)); font-size: 14px; }
+.trend .marks i.st { border-radius: 0; background: none; width: 0; height: 0; border: 3px solid transparent; border-bottom: 5px solid var(--fail); border-top: 0; }
+.rec-cap { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+.rec-legend { display: flex; flex-wrap: wrap; gap: 1px 9px; font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+.rec-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+.rec-legend i.dot-p { border-radius: 50%; background: var(--pass); width: 6px; height: 6px; }
+.rec-legend i.dot-f { border-radius: 50%; background: var(--fail); width: 6px; height: 6px; }
+.rec-legend i.dr { background: var(--accent); width: 6px; height: 6px; border-radius: 1px; }
+.rec-legend i.st { width: 0; height: 0; border-radius: 0; border: 3px solid transparent; border-bottom: 5px solid var(--fail); border-top: 0; }
+.rec-detail { margin-top: 8px; padding: 8px 12px; border-radius: 9px; background: var(--panel2); border-left: 4px solid var(--c, var(--rule)); font-size: 12.5px; }
 .rec-detail p { margin: 0; }
-.rec-detail .sub { color: var(--muted); font-size: 13px; }
-.rec-detail ul { margin: 6px 0 0; padding-left: 18px; }
-.reasons { list-style: none; margin: 0; padding: 0; }
-.reasons > li { border-top: 1px solid var(--rule); padding: 10px 0; }
+.rec-detail .sub { color: var(--muted); font-size: 12px; }
+.rec-detail ul { margin: 4px 0 0; padding-left: 18px; }
+.rec-why { margin-top: 8px; }
+.rec-why > summary { font-size: 12px; }
+.rec-why > .empty { font-size: 12px; }
+.reasons { list-style: none; margin: 6px 0 0; padding: 0; }
+.reasons > li { border-top: 1px solid var(--grid); padding: 8px 0; }
 .reasons > li:first-child { border-top: 0; padding-top: 2px; }
-.reason-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(60px, 160px) 28px; gap: 12px; align-items: center; }
-.reason-top b { font-size: 14.5px; }
-.reason-bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
-.reason-bar span { display: block; height: 100%; background: var(--fail); border-radius: 4px; }
-.reason-top .rn { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-.reason-hint { font-size: 13.5px; margin: 4px 0 0; }
+.reason-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(50px, 160px) 24px; gap: 10px; align-items: center; }
+.reason-top b { font-size: 13px; }
+.reason-bar { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.reason-bar span { display: block; height: 100%; background: var(--fail); border-radius: 3px; }
+.reason-top .rn { font: 700 14px var(--cond); text-align: right; font-variant-numeric: tabular-nums; }
+.reason-hint { font-size: 12.5px; margin: 3px 0 0; }
 .reason-hint .in-done { color: var(--muted); }
-.reasons details { margin-top: 4px; font-size: 13.5px; }
-.reasons summary { color: var(--accent); }
-.reasons details ul { margin: 4px 0 0; padding-left: 18px; }
-.reasons details .when { color: var(--muted); font-size: 12.5px; }
-.ws-rows { display: grid; gap: 0; }
-.ws-row { display: grid; grid-template-columns: minmax(110px, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 6px 18px; align-items: center;
-  padding: 12px 0; border-top: 1px solid var(--rule); }
+.reasons details { margin-top: 3px; font-size: 12.5px; }
+.reasons details ul { margin: 3px 0 0; padding-left: 18px; }
+.reasons details .when { color: var(--muted); font-size: 11.5px; }
+.ws-rows { display: grid; }
+.ws-row { display: grid; grid-template-columns: minmax(110px, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 6px 18px; align-items: center; padding: 10px 0; border-top: 1px solid var(--grid); }
 .ws-row:first-child { border-top: 0; }
-.ws-row .wn { border: 0; background: none; padding: 0; text-align: left; font-weight: 700; font-size: 15px; color: var(--accent); cursor: pointer; overflow-wrap: anywhere; }
-.ws-row .wn small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); }
-.ws-cell { font-size: 13px; color: var(--muted); min-width: 0; }
-.ws-cell b { color: var(--ink); font-size: 14px; }
-.ws-cell .meter { height: 6px; border-radius: 3px; background: var(--track); margin-top: 5px; overflow: hidden; }
+.ws-row .wn { border: 0; background: none; padding: 0; text-align: left; font-weight: 700; font-size: 14px; color: var(--accent); cursor: pointer; overflow-wrap: anywhere; }
+.ws-row .wn small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.ws-cell { font-size: 12.5px; color: var(--muted); min-width: 0; }
+.ws-cell b { color: var(--ink); font-size: 13.5px; }
+.ws-cell .meter { height: 4px; border-radius: 2px; background: var(--grid); margin-top: 5px; overflow: hidden; }
 .ws-cell .meter span { display: block; height: 100%; }
-.spark { display: flex; gap: 2px; align-items: flex-end; height: 30px; margin-top: 3px; }
-.spark span { flex: 1 1 0; max-width: 10px; min-height: 3px; border-radius: 2px 2px 0 0; background: var(--c); }
-.ws-none { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
-.dot.ws { background: none; border: 2px solid var(--accent); border-radius: 3px; width: 10px; height: 10px; }
-@media (max-width: 860px) {
-  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ws-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .ws-row .wn { grid-column: 1 / -1; }
-  .reason-top { grid-template-columns: minmax(0, 1fr) 28px; gap: 4px 12px; }
-  .reason-top .reason-bar { grid-column: 1 / -1; grid-row: 2; }
-}
+.spark { display: flex; gap: 2px; align-items: flex-end; height: 26px; margin-top: 3px; }
+.spark span { flex: 1 1 0; max-width: 10px; min-height: 3px; border-radius: 1px 1px 0 0; background: var(--c); }
+.ws-none { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+.ws-hero .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; }
+.ws-lead { margin: 0; font-size: 14px; }
 
-/* 5. Plots */
-.plots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.plot { margin: 0; background: var(--paper); border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); }
-.plot button { display: block; width: 100%; padding: 0; border: 0; background: #fff; cursor: zoom-in; }
+/* Pictures */
+.plots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.plot { margin: 0; background: var(--panel2); border-radius: 9px; overflow: hidden; border: 1px solid var(--rule); }
+.plot button { display: block; width: 100%; padding: 0; border: 0; background: var(--plot-bg); cursor: zoom-in; }
 .plot img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; }
-.plot figcaption { padding: 8px 12px; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
-.plot figcaption span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plot figcaption { padding: 6px 10px; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+.plot figcaption span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11px; }
 .plot figcaption span:last-child { color: var(--muted); white-space: nowrap; }
-dialog { border: 0; padding: 0; border-radius: 12px; max-width: 92vw; max-height: 92vh; background: #fff; }
-dialog::backdrop { background: rgba(10, 20, 32, 0.7); }
+dialog { border: 0; padding: 0; border-radius: 12px; max-width: 92vw; max-height: 92vh; background: var(--plot-bg); }
+dialog::backdrop { background: var(--backdrop); }
 dialog img { display: block; max-width: 92vw; max-height: 86vh; }
-dialog p { margin: 0; padding: 8px 14px; font-size: 13px; color: #13233A; }
+dialog p { margin: 0; padding: 8px 14px; font-size: 13px; color: var(--plot-ink); }
 
-/* 6. More detail */
+/* More detail */
 .more { padding: 0; }
-.more > details { border-top: 1px solid var(--rule); }
-.more > details:first-child { border-top: 0; }
-.more > details > summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; gap: 12px; align-items: center; padding: 14px 22px; color: var(--ink); }
+.more > .ph { padding: 13px 15px 0; }
+.more > details { border-top: 1px solid var(--grid); }
+.more > details > summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; gap: 12px; align-items: center; padding: 11px 15px; color: var(--ink); }
 .more > details > summary > span:first-child { min-width: 0; }
 .more > details > summary::-webkit-details-marker { display: none; }
-.more summary .st { font-weight: 600; font-size: 15px; }
-.more summary .teaser { display: block; font-weight: 400; font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.more summary .n { font-size: 13px; color: var(--muted); }
+.more summary .st { font-weight: 600; font-size: 14px; }
+.more summary .teaser { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more summary .n { font-size: 12px; color: var(--muted); }
 .chev { width: 8px; height: 8px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; }
 details[open] > summary .chev { transform: rotate(45deg); }
-.more .body { padding: 0 22px 18px; }
-
+@media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+.more .body { padding: 0 15px 14px; }
 .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
 .timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--rule); }
-.timeline li { position: relative; padding: 0 0 14px 26px; }
+.timeline li { position: relative; padding: 0 0 12px 24px; }
 .timeline li::before { content: ""; position: absolute; left: 0; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
-.timeline .dt { font-size: 12.5px; color: var(--muted); }
+.timeline .dt { font: 11px var(--mono); color: var(--muted); }
 .timeline .dtitle { font-weight: 600; }
-.timeline .dbody { font-size: 14px; color: var(--muted); margin-top: 2px; }
-
-.md { font-size: 14.5px; max-width: 72ch; }
-.md h1 { font-size: 17px; margin: 0 0 8px; }
-.md h2 { font-size: 15px; margin: 14px 0 6px; }
-.md h3 { font-size: 14px; margin: 12px 0 4px; }
+.timeline .dbody { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.md { font-size: 13.5px; max-width: 80ch; }
+.md h1 { font: 700 17px var(--cond); margin: 0 0 8px; }
+.md h2 { font: 600 15px var(--cond); margin: 14px 0 6px; }
+.md h3 { font-size: 13.5px; margin: 12px 0 4px; }
 .md p { margin: 0 0 8px; }
 .md ul, .md ol { margin: 0 0 8px; padding-left: 20px; }
 .md li.task-item { list-style: none; margin-left: -20px; }
-.md pre { background: var(--code-bg); padding: 10px 12px; border-radius: 8px; overflow: auto; font: 12.5px var(--mono); }
-
-.now-line { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
-.now-line svg { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.now-line .q { margin-left: 8px; white-space: nowrap; }
-.now-line.ask { color: var(--accent); font-weight: 600; }
-.now-line .q { color: var(--active); font-weight: 600; display: inline-block; }
-.kicon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex: none;
-  background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
-.kicon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.kicon.k-edit { background: color-mix(in srgb, var(--active) 16%, transparent); color: var(--active); }
-.kicon.k-test { background: color-mix(in srgb, var(--pass) 15%, transparent); color: var(--pass); }
-.kicon.k-agent, .kicon.k-waiting { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
-.live .current { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: center; }
-.live .current .kicon { width: 44px; height: 44px; border-radius: 12px; }
-.live .current .kicon svg { width: 22px; height: 22px; }
-.live .current .lbl { font-size: 12.5px; color: var(--muted); }
-.live .current .ctext { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
-.live .current[data-attention="yes"] { padding: 14px 16px; border-radius: 12px; border: 2px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.live .current[data-attention="yes"] .kicon { background: var(--accent); color: var(--panel); }
-.live .current[data-attention="yes"] .lbl { color: var(--accent); font-weight: 600; }
-.live .cmd { margin-top: 6px; font-size: 13px; }
-.live .cmd summary { cursor: pointer; color: var(--muted); }
-.live .cmd code { display: inline-block; margin-top: 4px; overflow-wrap: anywhere; white-space: normal; }
-.live .quiet { margin: 14px 0 0; padding: 10px 14px; border-radius: 10px; font-size: 14px;
-  background: color-mix(in srgb, var(--active) 14%, transparent); }
-.step-list { list-style: none; margin: 16px 0 0; padding: 0; }
-.step-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
-.step-list .stext { overflow-wrap: anywhere; }
-.step-list .t { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.live details[data-detail="steps"] { margin-top: 8px; }
-.live details[data-detail="steps"] > summary { cursor: pointer; color: var(--muted); font-size: 13.5px; padding: 6px 0; }
-.who { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
-  white-space: nowrap; vertical-align: 1px; color: var(--muted); border: 1px solid var(--rule); }
-.who.rev { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.who svg { width: 12px; height: 12px; }
-.wait-card h3 { margin: 0 0 6px; }
-.action .wait-card + .wait-card, .action .wait-card + h3 { margin-top: 18px; }
+.md pre { background: var(--panel2); padding: 10px 12px; border-radius: 8px; overflow: auto; font: 12px var(--mono); }
 .activity { list-style: none; margin: 0; padding: 0; }
-.activity li { display: grid; grid-template-columns: 70px 10px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.activity li { display: grid; grid-template-columns: 70px 10px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 5px 0; border-top: 1px solid var(--grid); font-size: 13px; }
 .activity li:first-child { border-top: 0; }
-.activity .t { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.activity .t { color: var(--muted); font: 11px var(--mono); }
 .activity .k { width: 8px; height: 8px; border-radius: 2px; background: var(--muted); transform: translateY(-1px); }
 .activity .k.decision { background: var(--ink); }
 .activity .k.draft { background: var(--accent); }
@@ -424,14 +447,13 @@ details[open] > summary .chev { transform: rotate(45deg); }
 .activity .k.good { background: var(--pass); }
 .activity span:last-child { overflow-wrap: anywhere; }
 
-
 /* Git: saved versions */
-.git-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; align-items: start; }
+.git-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 24px; align-items: start; }
 .sync { display: grid; grid-template-columns: auto minmax(90px, 1fr) auto; align-items: center; gap: 10px; }
-.place { border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 12px; text-align: center; font-size: 13px; font-weight: 600; background: var(--paper); }
-.place small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
-.place.dirty { border-color: var(--active); }
-.lanes { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); text-align: center; }
+.place { border: 1px solid var(--rule); border-radius: 9px; padding: 7px 12px; text-align: center; font-size: 12.5px; font-weight: 600; background: var(--panel2); }
+.place small { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+.place.dirty { border-color: var(--test); }
+.lanes { display: grid; gap: 6px; font-size: 12px; color: var(--muted); text-align: center; }
 .lane { position: relative; padding-bottom: 6px; }
 .lane::after { content: ""; position: absolute; left: 0; right: 8px; bottom: 0; height: 2px; background: var(--rule); }
 .lane::before { content: ""; position: absolute; right: 0; bottom: -4px; border: 5px solid transparent; border-left: 8px solid var(--rule); border-right: 0; }
@@ -441,83 +463,90 @@ details[open] > summary .chev { transform: rotate(45deg); }
 .lane.on::after { background: var(--accent); }
 .lane.on::before { border-left-color: var(--accent); }
 .lane.back.on::before { border-right-color: var(--accent); border-left-color: transparent; }
-.sync-words { margin: 12px 0 0; font-size: 14.5px; }
+.sync-words { margin: 10px 0 0; font-size: 13.5px; }
 .git-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-.git-actions button { border: 1px solid var(--accent); background: var(--accent); color: var(--panel); border-radius: 8px; padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.git-actions button { border: 1px solid var(--accent); background: var(--accent); color: var(--panel); border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 13px; cursor: pointer; }
 .git-actions button.secondary { background: transparent; color: var(--accent); }
 .git-actions button:disabled { opacity: .45; cursor: not-allowed; }
-.git-why { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; text-align: right; }
-.git-link { font-size: 14px; color: var(--accent); }
-.git-msg { margin: 12px 0 0; padding: 8px 12px; border-radius: 8px; font-size: 14px; background: color-mix(in srgb, var(--pass) 12%, transparent); }
-.git-msg.bad { background: color-mix(in srgb, var(--fail) 12%, transparent); }
-.git-files ul { margin: 6px 0 0; padding-left: 20px; font: 12.5px var(--mono); }
-.git-files summary { color: var(--accent); font-size: 14px; margin-top: 12px; }
-.tl-wrap { overflow-x: auto; margin-top: 18px; padding: 4px 2px 2px; }
-.tl { display: inline-flex; align-items: center; gap: 0; position: relative; height: 44px; }
+.git-why { font-size: 12px; color: var(--muted); margin: 6px 0 0; text-align: right; }
+.git-link { font-size: 13px; color: var(--accent); }
+.git-msg { margin: 10px 0 0; padding: 7px 12px; border-radius: 8px; font-size: 13px; background: color-mix(in srgb, var(--pass) 14%, transparent); }
+.git-msg.bad { background: color-mix(in srgb, var(--fail) 14%, transparent); }
+.git-files ul { margin: 6px 0 0; padding-left: 20px; font: 12px var(--mono); }
+.git-files summary { color: var(--accent); font-size: 13px; margin-top: 10px; }
+.tl-wrap { overflow-x: auto; margin-top: 14px; padding: 4px 2px 2px; }
+.tl { display: inline-flex; align-items: center; gap: 0; position: relative; height: 40px; }
 .tl::before { content: ""; position: absolute; left: 12px; right: 12px; top: 50%; height: 2px; background: var(--rule); }
-.tl button { position: relative; width: 30px; height: 30px; flex: none; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; }
-.tl button + button { margin-left: 14px; }
-.tl .pt { width: 16px; height: 16px; border-radius: 50%; background: var(--rule); border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--rule); }
+.tl button { position: relative; width: 28px; height: 28px; flex: none; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.tl button + button { margin-left: 12px; }
+.tl .pt { width: 14px; height: 14px; border-radius: 50%; background: var(--rule); border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--rule); }
 .tl [data-state="ok"] .pt { background: var(--pass); box-shadow: 0 0 0 1px var(--pass); }
-.tl [data-state="tested"] .pt { background: var(--active); box-shadow: 0 0 0 1px var(--active); }
+.tl [data-state="tested"] .pt { background: var(--test); box-shadow: 0 0 0 1px var(--test); }
 .tl [data-state="bad"] .pt { background: var(--fail); box-shadow: 0 0 0 1px var(--fail); }
 .tl [data-pushed="no"] .pt { outline: 2px dashed var(--accent); outline-offset: 3px; }
 .tl button[aria-pressed="true"] .pt { transform: scale(1.35); }
-.tl-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 2px; }
-.tl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
-.tl-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
-.commit-detail { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 12px; }
-.commit-detail .subj { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
-.commit-detail .meta { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
-.commit-detail .facts .mk { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
-.commit-detail .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; margin-bottom: 8px; }
-.commit-detail ul { margin: 4px 0 0; padding-left: 20px; font-size: 14px; }
-.commit-detail .why { color: var(--muted); font-size: 13.5px; }
-.hint-pick { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
-@media (max-width: 860px) {
-  .git-top { grid-template-columns: minmax(0, 1fr); }
-  .git-actions { justify-content: flex-start; }
-  .git-why { text-align: left; }
-}
+.tl-ends { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); margin-top: 2px; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.tl-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.commit-detail { margin-top: 12px; border-top: 1px solid var(--grid); padding-top: 10px; }
+.commit-detail .subj { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.commit-detail .meta { font-size: 12.5px; color: var(--muted); margin: 2px 0 8px; }
+.commit-detail .facts .mk { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
+.commit-detail .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin-bottom: 8px; }
+.commit-detail ul { margin: 4px 0 0; padding-left: 20px; font-size: 13px; }
+.commit-detail .why { color: var(--muted); font-size: 12.5px; }
+.hint-pick { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
 
-.welcome { max-width: 60ch; padding-top: 10vh; }
-.welcome h2 { font-size: 30px; margin: 0 0 12px; }
+.welcome { grid-column: 1 / -1; max-width: 60ch; padding-top: 10vh; }
+.welcome h2 { font: 700 30px var(--cond); margin: 0 0 12px; }
 .welcome ol { padding-left: 20px; }
 
-@media (max-width: 1100px) {
-  .tiles { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1199px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .hero-side { border-left: 0; padding-left: 0; border-top: 1px solid var(--grid); padding-top: 10px; }
 }
 @media (max-width: 860px) {
   .app { grid-template-columns: minmax(0, 1fr); }
-  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 14px 16px 12px; }
-  .rail .sub, .group-label, .proj .meta { display: none; }
-  .overview { margin: 8px 0 10px; }
-  .rail-top { margin: 0; }
+  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 12px 16px 10px; }
+  .brand { margin: 0 0 8px; }
+  .rail .sub, .group-label, .proj .meta, .proj .mini, .fleet-words { display: none; }
+  .fleet { margin: 0 0 8px; gap: 5px; }
+  .fleet > div { padding: 5px 7px; display: flex; align-items: baseline; gap: 5px; }
+  .fleet b { font-size: 16px; }
+  .fleet span { margin: 0; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* One row that scrolls on its own, so a long list never pushes the summary down. */
   #projects { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px;
     -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
   #projects::-webkit-scrollbar { display: none; }
-  .proj { flex: none; width: auto; display: inline-flex; gap: 6px; padding: 5px 10px; border: 1px solid var(--rule); border-radius: 999px; }
+  .proj, .proj.ws { flex: none; width: auto; display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 999px; }
   .proj[aria-current="true"] { box-shadow: none; border-color: var(--accent); }
-  .proj .name { font-size: 13px; }
-  main { padding: 16px 16px 48px; }
-  .tiles { grid-template-columns: minmax(0, 1fr); }
-  .glance { padding: 16px 16px 16px 14px; }
-  .doing { font-size: 22px; }
-  .steps li { font-size: 11.5px; }
-  .steps .hint { display: none; }
-  .loopback { margin-left: 30%; }
-  .more > details > summary { padding: 12px 16px; }
-  .more .body { padding: 0 16px 14px; }
-  .panel { padding: 16px; }
+  .proj .name { font-size: 12.5px; }
+  main { padding: 12px 16px 40px; gap: 10px; }
+  .hero { padding: 13px 14px 12px 16px; }
+  .title { font-size: 22px; }
+  .steps li { font-size: 11px; }
+  .steps .hint, .loop-cap { display: none; }
+  .tt-row { grid-template-columns: minmax(0, 1fr) 76px; }
+  .tt-head { grid-column: 1 / -1; }
+  .tt-axis { margin: 4px 86px 0 0; }
+  .git-top { grid-template-columns: minmax(0, 1fr); }
+  .git-actions { justify-content: flex-start; }
+  .git-why { text-align: left; }
+  .ws-hero .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ws-row .wn { grid-column: 1 / -1; }
+  .reason-top { grid-template-columns: minmax(0, 1fr) 24px; gap: 4px 10px; }
+  .reason-top .reason-bar { grid-column: 1 / -1; grid-row: 2; }
+  .more > details > summary { padding: 10px 14px; }
+  .more .body { padding: 0 14px 12px; }
 }
 </style>
 </head>
 <body>
 <div class="app">
   <nav class="rail" aria-label="Projects">
-    <div class="rail-top"><h1>Agent Control Room</h1><button id="theme" type="button" aria-label="Switch between light and dark">Theme</button></div>
-    <p class="sub">What each project's agent is doing, live</p>
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div class="bt"><h1>Agent Control Room</h1><span class="sub" id="rail-sub">What each project's agent is doing, live</span></div>
+      <button id="theme" type="button" aria-label="Switch between light and dark" title="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4z" fill="currentColor"/></svg></button></div>
     <div id="overview"></div>
     <div id="projects"></div>
   </nav>
@@ -565,6 +594,10 @@ function plain(t) {
     .replace(/\bphase\b/gi, m => m[0] === "P" ? "Stage" : "stage");
 }
 const needsYou = p => p === "waiting" || p === "stuck";
+// One colour per phase (DESIGN.md), the same in the loop, the live steps, the timeline and the rail.
+const PHASE_VAR = { planning: "--plan", implementing: "--change", checking: "--test", reviewing: "--review", fixing: "--polish" };
+const TONE_VAR = { ask: "--accent", bad: "--fail", ok: "--pass", idle: "--rule" };
+const toneVar = (phase, tone) => tone === "busy" ? (PHASE_VAR[phase] || "--test") : TONE_VAR[tone] || "--rule";
 
 // Live activity feed (state/activity.jsonl, one line per step the agent takes in Claude Code).
 const ACTIVE = new Set(["planning", "implementing", "checking", "reviewing", "fixing"]);
@@ -620,14 +653,16 @@ function whoBadge(a) {
 const WS = "*";  // the workspace view: not a project name (those start with a letter or digit)
 let current = null, lastProjects = "", lastDetail = "", railFirst = true;
 try { current = new URLSearchParams(location.hash.slice(1)).get("p") || localStorage.getItem("aaf.project"); } catch (e) {}
-try { const t = localStorage.getItem("aaf.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+// Dark is the default (design/DESIGN.md); light is a choice the switch remembers.
+let theme = "dark";
+try { if (localStorage.getItem("aaf.theme") === "light") theme = "light"; } catch (e) {}
+document.documentElement.dataset.theme = theme;
 
 $("#theme").addEventListener("click", () => {
-  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
-  const next = cur === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  try { localStorage.setItem("aaf.theme", next); } catch (e) {}
+  theme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem("aaf.theme", theme); } catch (e) {}
+  if (current && current !== WS) renderMapSlot();
 });
 
 function ago(iso) {
@@ -699,41 +734,81 @@ function loopPicture(st, maxIt) {
     if (i === 4 && end) cls = "now " + end[1];
     return `<li class="${cls}"${cls.includes("now") ? ' aria-current="step"' : ""}><span class="node"></span>${esc(name)}<span class="hint">${esc(hint)}</span></li>`;
   }).join("");
-  const it = st.iteration || 0;
-  const attempt = it ? `attempt ${it}${maxIt ? " of up to " + maxIt : ""}` : "repeats until tests and review pass";
   return `<div data-viz="loop" role="img" aria-label="Where the agent is in its work: ${esc(phaseOf(phase).short)}">
     <ol class="steps">${items}</ol>
-    <div class="loopback" aria-hidden="true"><span>${phase === "idle" ? "repeats until tests and review pass" : "loops back if a test or the review fails · " + esc(attempt)}</span></div></div>`;
+    <p class="loop-cap" aria-hidden="true">${phase === "idle" ? "It repeats these steps until the tests and the review pass" : "It goes round again if a test or the review fails"}</p></div>`;
 }
 
 function donut(pass, total) {
   const r = 30, c = 2 * Math.PI * r, f = total ? pass / total : 0;
   return `<svg class="donut" viewBox="0 0 76 76" data-viz="checks" role="img" aria-label="${pass} of ${total} tests pass">
-    <circle cx="38" cy="38" r="${r}" fill="none" stroke="${total ? "var(--fail)" : "var(--track)"}" stroke-width="10"/>
-    <circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--pass)" stroke-width="10" stroke-dasharray="${(f * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/>
-    <text x="38" y="44" text-anchor="middle">${pass}/${total}</text></svg>`;
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="${total ? "var(--fail)" : "var(--grid)"}" stroke-width="10"/>
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--pass)" stroke-width="10" stroke-dasharray="${(f * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/></svg>`;
 }
 
 function reviewBadge(kind) {
-  const col = kind === "pass" ? "var(--pass)" : kind === "fail" ? "var(--fail)" : "var(--track)";
+  const col = kind === "pass" ? "var(--pass)" : kind === "fail" ? "var(--fail)" : "var(--grid)";
   const mark = kind === "pass" ? `<path d="M20 33l8 8 16-18" fill="none" stroke="var(--panel)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
     : kind === "fail" ? `<path d="M23 23l18 18M41 23l-18 18" stroke="var(--panel)" stroke-width="5" stroke-linecap="round"/>`
     : `<circle cx="22" cy="32" r="3.5" fill="var(--muted)"/><circle cx="32" cy="32" r="3.5" fill="var(--muted)"/><circle cx="42" cy="32" r="3.5" fill="var(--muted)"/>`;
   return `<svg class="badge" viewBox="0 0 64 64" data-viz="review" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="${col}"/>${mark}</svg>`;
 }
 
+// Workspace headline numbers. "First try" comes from every project's task history (/api/record).
+let fleetRecord = null, lastList = [];
+async function loadFleet() {
+  try {
+    const res = await fetch("/api/record");
+    if (!res.ok) return;
+    fleetFrom(await res.json());
+  } catch (e) {}
+}
+function fleetFrom(w) {
+  const ps = (w && w.projects) || [];
+  const sum = k => ps.reduce((n, p) => n + ((p.summary || {})[k] || 0), 0);
+  const next = w && w.available !== false ? { first: sum("first_try"), ended: sum("finished") } : null;
+  if (JSON.stringify(next) === JSON.stringify(fleetRecord)) return;
+  fleetRecord = next;
+  if (lastList.length) renderOverview(lastList);
+}
+
 function renderOverview(list) {
   const groups = { bad: 0, ask: 0, busy: 0, ok: 0, idle: 0 };
   list.forEach(p => groups[toneOf(p)]++);
   const need = groups.bad + groups.ask;
-  const seg = (n, col) => n ? `<span style="flex:${n};background:${col}"></span>` : "";
-  $("#overview").innerHTML = `<div class="overview" data-overview-needs="${need}">
-    <div class="bar" role="img" aria-label="${need} need you, ${groups.busy} working, ${groups.ok} finished, ${groups.idle} not started">
-      ${seg(groups.bad, "var(--fail)")}${seg(groups.ask, "var(--accent)")}${seg(groups.busy, "var(--active)")}${seg(groups.ok, "var(--pass)")}${seg(groups.idle, "var(--rule)")}</div>
-    <div class="words">${need ? `<strong>${need} need${need === 1 ? "s" : ""} you</strong>` : "Nothing needs you"} · ${groups.busy} working · ${groups.ok} finished${groups.idle ? ` · ${groups.idle} not started` : ""}</div></div>`;
+  const ft = fleetRecord && fleetRecord.ended ? `${pct(fleetRecord.first, fleetRecord.ended)}%` : "–";
+  const ftWords = fleetRecord && fleetRecord.ended ? `${fleetRecord.first} of ${fleetRecord.ended} tasks that ended were right the first time` : "no task has ended yet";
+  $("#rail-sub").textContent = `${plural(list.length, "project")} in this workspace`;
+  $("#overview").innerHTML = `<div class="fleet" data-fleet data-overview-needs="${need}" role="group"
+      aria-label="${need} need you, ${groups.busy} working, ${groups.ok} finished, ${groups.idle} not started; first try: ${esc(ftWords)}">
+      <div class="f-need${need ? "" : " calm"}" data-fleet-num="need"><b>${need}</b><span>need you</span></div>
+      <div class="f-work" data-fleet-num="working"><b>${groups.busy}</b><span>working</span></div>
+      <div class="f-done" data-fleet-num="finished"><b>${groups.ok}</b><span>finished</span></div>
+      <div class="f-first" data-fleet-num="first-try" title="${esc(ftWords)}"><b>${ft}</b><span>first try</span></div></div>
+    ${groups.idle ? `<p class="fleet-words">${groups.idle} not started</p>` : ""}`;
+}
+
+// A tiny picture per project: progress while it works, otherwise its recent test runs.
+const LOOP_POS = { planning: 1, implementing: 2, checking: 3, reviewing: 4, fixing: 4.5 };
+function mini(p, tone) {
+  const col = `var(${toneVar(p.phase, tone)})`;
+  if (tone === "busy") {
+    const plan = p.plan && p.plan.total ? p.plan : null;
+    const f = plan ? plan.done / plan.total : (LOOP_POS[p.phase] || 0) / 5;
+    const words = plan ? `step ${Math.min(plan.done + 1, plan.total)} of ${plan.total} of its plan` : `${phaseOf(p.phase).short.toLowerCase()}, stage ${Math.ceil(LOOP_POS[p.phase] || 1)} of 5 of its loop`;
+    return `<svg class="mini" data-mini viewBox="0 0 64 22" role="img" aria-label="Working: ${esc(words)}">
+      <rect x="0" y="9" width="64" height="5" rx="2.5" fill="var(--grid)"/><rect x="0" y="9" width="${Math.max(4, 64 * f).toFixed(1)}" height="5" rx="2.5" fill="${col}"/></svg>`;
+  }
+  const t = (p.trend || []).filter(v => typeof v === "number");
+  if (!t.length)
+    return `<svg class="mini" data-mini viewBox="0 0 64 22" role="img" aria-label="No test runs yet"><line x1="0" y1="11" x2="64" y2="11" stroke="var(--rule)" stroke-width="1.5" stroke-dasharray="3 3"/></svg>`;
+  const pts = (t.length === 1 ? [t[0], t[0]] : t).map((v, i, a) => `${(64 * i / (a.length - 1)).toFixed(1)},${(19 - 16 * v).toFixed(1)}`).join(" ");
+  return `<svg class="mini" data-mini viewBox="0 0 64 22" role="img" aria-label="Share of tests passing in the last ${plural(t.length, "test run")}, oldest first">
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
 function renderRail(list) {
+  lastList = list;
   renderOverview(list);
   const el = $("#projects");
   const keepScroll = el.scrollLeft;
@@ -741,14 +816,15 @@ function renderRail(list) {
   const order = { ask: 0, bad: 0, busy: 1, ok: 2, idle: 3 };
   const labels = ["Needs you", "Working", "Finished", "Not started"];
   const sorted = list.slice().sort((a, b) => order[toneOf(a)] - order[toneOf(b)] || a.name.localeCompare(b.name));
-  let html = `<button class="proj" type="button" data-p="${WS}" data-workspace aria-current="${current === WS}">
+  let html = `<button class="proj ws" type="button" data-p="${WS}" data-workspace aria-current="${current === WS}">
       <span class="dot ws"></span><span class="name">All projects</span><span class="meta">Track record across projects</span></button>`, last = -1;
   for (const p of sorted) {
     const ph = phaseOf(p.phase), tone = toneOf(p), g = order[tone], asks = tone !== ph.tone;
     if (g !== last) { html += `<div class="group-label">${labels[g]}</div>`; last = g; }
-    const extra = asks || ph.tone === "bad" ? "" : p.drafts ? ` · ${plural(p.drafts, "fix", "fixes")}` : p.checks_total ? ` · ${p.checks_pass}/${p.checks_total} tests pass` : "";
+    const plan = tone === "busy" && p.plan && p.plan.total ? ` · step ${Math.min(p.plan.done + 1, p.plan.total)} of ${p.plan.total}` : "";
+    const extra = asks || ph.tone === "bad" ? "" : plan || (p.drafts ? ` · ${plural(p.drafts, "fix", "fixes")}` : p.checks_total ? ` · ${p.checks_pass}/${p.checks_total} tests pass` : "");
     html += `<button class="proj" type="button" data-p="${esc(p.name)}" aria-current="${p.name === current}">
-      <span class="dot ${tone}"></span><span class="name">${esc(p.name)}</span>
+      <span class="dot ${tone}"></span><span class="name">${esc(p.name)}</span>${mini(p, tone)}
       <span class="meta">${asks ? "Waiting for you in Claude Code" : esc(ph.short)}${esc(extra)}</span></button>`;
   }
   el.innerHTML = html;
@@ -832,15 +908,15 @@ function commitDetail(c, web) {
   </div>`;
 }
 
+const gitHead = meta => `<div class="ph"><h3>Saved versions (Git)</h3><span class="pm">${esc(meta)}</span></div>`;
 function gitHtml() {
   if (!gitData || gitFor !== current) {
-    return `<h3 class="sec-title">Saved versions (Git)</h3><section class="panel sec" data-section="git" aria-label="Saved versions"><p class="empty">Checking GitHub…</p></section>`;
+    return `<section class="card sec" data-section="git" aria-label="Saved versions">${gitHead("")}<p class="empty">Checking GitHub…</p></section>`;
   }
   const g = gitData;
   if (g.available === false) return "";
-  const head = `<h3 class="sec-title">Saved versions (Git)</h3>`;
   if (!g.repo) {
-    return head + `<section class="panel sec" data-section="git" aria-label="Saved versions"><p class="empty" data-git-ready>This project is not saved with Git yet, so there is no version history or GitHub copy.${g.error ? " (" + esc(g.error) + ")" : ""}</p></section>`;
+    return `<section class="card sec" data-section="git" aria-label="Saved versions">${gitHead("")}<p class="empty" data-git-ready>This project is not saved with Git yet, so there is no version history or GitHub copy.${g.error ? " (" + esc(g.error) + ")" : ""}</p></section>`;
   }
   const ahead = g.ahead, behind = g.behind, changed = g.n_changed || 0, remote = !!g.remote;
   const working = WORKING.includes(gitPhase);
@@ -885,7 +961,7 @@ function gitHtml() {
         <span><i style="background:transparent;outline:2px dashed var(--accent);outline-offset:1px"></i>not on GitHub yet</span></div>
       ${picked ? commitDetail(picked, g.web) : `<p class="hint-pick">Pick a point to see what changed and why.</p>`}`
     : `<p class="empty">No saved versions yet.</p>`;
-  return head + `<section class="panel sec" data-section="git" aria-label="Saved versions">
+  return `<section class="card sec" data-section="git" aria-label="Saved versions">${gitHead(n ? plural(n, "saved version") : "")}
       <div class="git-top" data-git-ready>${sync}${actions}</div>${msg}${files}${timeline}</section>`;
 }
 
@@ -922,11 +998,11 @@ async function gitDo(action) {
 }
 
 // ---- Task timeline: where the time went. Data: aaf.py task_stats, sent with /api/project as "tasks".
-const TT_VAR = { planning: "--ph-plan", implementing: "--ph-change", checking: "--ph-test", reviewing: "--ph-review", fixing: "--ph-fix" };
+const TT_VAR = PHASE_VAR;
 const TT_DOES = { planning: "Reading the task and deciding how to tackle it.", implementing: "Changing the code.",
   checking: "Running the tests on the latest change.", reviewing: "A second, independent agent reviewed the work.",
   fixing: "Fixing a small point the reviewer raised." };
-const TT_SHOWN = 6, TT_GAP = 14, TT_END = 24;  // rows shown before "earlier tasks"; px of a pause break; px kept for the end mark
+const TT_SHOWN = 3, TT_GAP = 14, TT_END = 22;  // rows shown before "earlier tasks"; px of a pause break; px kept for the end mark
 const TT_X = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="var(--panel)" stroke-width="2.2" stroke-linecap="round"/></svg>`;
 const TT_OK = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M5.8 10.4l2.9 2.9 5.6-6.4" fill="none" stroke="var(--panel)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const TT_OUT = { done: ["Finished", TT_OK], waiting: ["Waits for your decision", ICON.ask], stuck: ["Stuck", TT_X], running: ["Still running", ""] };
@@ -1010,8 +1086,9 @@ function ttDetail(m, x) {
 }
 
 function timelineHtml() {
-  const head = `<h3 class="sec-title">Where the time went</h3><section class="panel sec" data-section="timeline" aria-label="Where the time went">`;
-  const d = ttData;
+  const d = ttData, n = d && d.tasks ? d.tasks.length : 0;
+  const head = `<section class="card sec" data-section="timeline" aria-label="Where the time went">
+    <div class="ph"><h3>Where the time went</h3><span class="pm">${n ? plural(n, "task") + ", latest on top · tap a bar for detail" : ""}</span></div>`;
   if (!d || d.available === false)
     return head + `<p class="empty" data-empty>The task history cannot be read here: the framework tool that keeps it was not found.</p></section>`;
   const tasks = (d.tasks || []).slice().reverse();
@@ -1034,9 +1111,10 @@ function timelineHtml() {
     }).join("");
     const width = `calc((100% - ${fixed}px) * ${(m.work / maxWork).toFixed(5)} + ${m.gaps * (TT_GAP + 4)}px)`;
     const facts = [`started ${ttWhen(ttSec(t.start))}`, t.attempts ? plural(t.attempts, "attempt") : "", m.paused ? `paused ${durWords(m.paused)}` : ""].filter(Boolean).join(" · ");
+    const sub = [t.attempts ? plural(t.attempts, "attempt") : "", m.paused ? `paused ${durWords(m.paused)}` : ""].filter(Boolean).join(" · ");
     return `<div class="tt-row" data-task-row data-start="${esc(t.start)}" data-outcome="${esc(t.outcome)}"${running ? " data-running" : ""}>
-      <div class="tt-head" data-task-head><span class="tt-name" title="${esc(plain(t.task))}">${esc(plain(t.task))}</span>
-        <span class="tt-out o-${esc(t.outcome)}" data-outcome-mark>${icon}${words}</span><span class="tt-when">${esc(facts)}</span></div>
+      <div class="tt-head" data-task-head title="${esc(plain(t.task))} · ${esc(facts)}"><span class="tt-name">${esc(plain(t.task))}</span>
+        <span class="tt-sub"><span class="tt-out o-${esc(t.outcome)}" data-outcome-mark>${icon}${words}</span>${sub ? ` · ${esc(sub)}` : ""}</span></div>
       <div class="tt-track"><div class="tt-bar" data-bar style="width:${width}">${items}</div>
         <span class="tt-end o-${esc(t.outcome)}"${running ? " data-running-mark" : ""} aria-hidden="true">${running ? "<span></span>" : icon}</span></div>
       <div class="tt-total" data-total>${esc(durWords(m.work))}</div>
@@ -1052,9 +1130,9 @@ function timelineHtml() {
   const anyGap = models.some(m => m.gaps), anyAtt = models.some(m => m.items.some(x => x.att));
   return head + `<div class="tt-list">${rows.slice(0, TT_SHOWN).join("")}</div>${older}
     <div class="tt-axis" data-axis aria-hidden="true">${ticks.join("")}</div>
-    <p class="tt-cap">Working time since each task started, latest task on top. Tap a part of a bar to see what happened in it.</p>
-    <div class="tt-legend" data-legend>${used.map(p => `<span data-legend-phase="${p}"><i style="background:var(${TT_VAR[p]})"></i>${esc(phaseOf(p).short)}</span>`).join("")}${
-      anyAtt ? `<span class="k-att"><i></i>a new attempt starts</span>` : ""}${anyGap ? `<span class="k-gap"><i></i>paused (stopped, then resumed; not to scale)</span>` : ""}</div></section>`;
+    <div class="tt-foot"><div class="tt-legend" data-legend><span>Working time:</span>${used.map(p => `<span data-legend-phase="${p}"><i style="background:var(${TT_VAR[p]})"></i>${esc(phaseOf(p).short)}</span>`).join("")}${
+      anyAtt ? `<span class="k-att"><i></i>new attempt</span>` : ""}${anyGap ? `<span class="k-gap"><i></i>paused (not to scale)</span>` : ""}</div>
+      </div></section>`;
 }
 
 function renderTimelineSlot() {
@@ -1074,6 +1152,8 @@ const MAP_STEPS = ["1", "2", "3–4", "5–8", "9+"];
 const mapStep = n => n >= 9 ? 5 : n >= 5 ? 4 : n >= 3 ? 3 : n >= 2 ? 2 : n >= 1 ? 1 : 0;
 const sizeWords = b => b < 1024 ? plural(b, "byte") : `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB`;
 let mapData = null, mapFor = null, mapPick = null, mapLoading = false, mapShowAll = false;
+const WIDE = matchMedia("(min-width: 1200px)");  // the 12-column panel grid
+let mapWatch = null;
 try { mapShowAll = localStorage.getItem("aaf.mapAll") === "1"; } catch (e) {}
 
 async function loadMap() {
@@ -1115,7 +1195,8 @@ function squarify(items, r) {
 
 function mapLayout(files, W, H) {
   const total = files.reduce((s, f) => s + (f.bytes || 0), 0) || 1;
-  const floor = total * 0.004;  // tiny files still get a tile you can tap
+  // Tiny files still get a tile you can tap: at least about 30 x 30 px, or 0.4% of the map.
+  const floor = total * Math.max(0.004, 900 / Math.max(1, W * H));
   const groups = new Map();
   for (const f of files) {
     const i = f.path.indexOf("/"), folder = i > 0 ? f.path.slice(0, i) : "";
@@ -1134,27 +1215,27 @@ function mapLayout(files, W, H) {
 }
 
 function mapShell() {
-  const head = `<h3 class="sec-title">Where the agent works</h3><section class="panel sec" data-section="changes" aria-label="Where the agent works">`;
   const d = mapFor === current ? mapData : null;
-  if (!d) return head + `<p class="empty">Reading the change history…</p></section>`;
+  const head = (tg = "") => `<section class="card sec map-card" data-section="changes" aria-label="Where the agent works">
+    <div class="ph"><h3>Where the agent works</h3>${tg || `<span class="pm">by how often files changed</span>`}</div>`;
+  if (!d) return head() + `<p class="empty">Reading the change history…</p></section>`;
   if (d.available === false)
-    return head + `<p class="empty" data-empty data-map-ready>The change map is not available here: it needs the framework tool, which this workspace does not have.</p></section>`;
+    return head() + `<p class="empty" data-empty data-map-ready>The change map is not available here: it needs the framework tool, which this workspace does not have.</p></section>`;
   if (d.error)
-    return head + `<p class="empty" data-empty data-map-ready>The change history could not be read just now (${esc(d.error)}). The page tries again every minute.</p></section>`;
+    return head() + `<p class="empty" data-empty data-map-ready>The change history could not be read just now (${esc(d.error)}). The page tries again every minute.</p></section>`;
   if (!d.repo)
-    return head + `<p class="empty" data-empty data-map-ready>This project is not saved with Git yet, so there is no history of changes to map. Once the agent saves its first version, every file appears here as a tile.</p></section>`;
+    return head() + `<p class="empty" data-empty data-map-ready>This project is not saved with Git yet, so there is no history of changes to map. Once the agent saves its first version, every file appears here as a tile.</p></section>`;
   const all = d.files || [], shown = mapShowAll ? all : all.filter(f => !MAP_HIDE.some(p => f.path.startsWith(p)));
   const hidden = all.length - shown.length;
   const toggle = hidden || mapShowAll ? `<button type="button" class="map-toggle" data-map-toggle aria-pressed="${!mapShowAll}">${
-    mapShowAll ? "Hide the agent's own records" : `Show the agent's own records too (${hidden})`}</button>` : "";
+    mapShowAll ? "Hide its own records" : `Show its own records (${hidden})`}</button>` : "";
   const pick = shown.find(f => f.path === mapPick);
   const detail = pick ? `<div class="map-detail" data-file-detail>
       <p class="path">${esc(pick.path)}</p><p class="sub">${esc(sizeWords(pick.bytes || 0))}</p>
       <p>Changed in ${plural(pick.commits || 0, "saved version")}${pick.lines_changed ? `, ${pick.lines_changed} lines added or removed in total` : ""}.</p>
       ${pick.last_changed ? `<p>Last change: “${esc(pick.last_subject || "")}” · ${esc(clock(pick.last_changed))} (${esc(ago(pick.last_changed))})</p>` : ""}</div>` : "";
   const bytes = shown.reduce((s, f) => s + (f.bytes || 0), 0);
-  return head + `<div class="map-top"><p class="map-intro" data-map-intro>Each tile is a file of the project, grouped by folder and sized by how big the file is.
-      The stronger the blue, the more saved versions changed the file. Tap a tile to see its last change.${!mapShowAll && hidden ? " The agent's own records (notes, test results, screenshots) are hidden so the code stands out." : ""}</p>${toggle}</div>
+  return head(toggle) + `<div class="map-top"><p class="map-intro" data-map-intro title="Each tile is a file of the project, grouped by folder and sized by how big the file is. The stronger the blue, the more saved versions changed the file.${!mapShowAll && hidden ? " The agent's own records (notes, test results, screenshots) are hidden so the code stands out." : ""}">Tiles are files, sized by how big they are. Tap one for its last change.</p></div>
     ${shown.length ? `<div class="map" data-map data-map-ready role="group" aria-label="Files of the project"></div>`
       : `<p class="empty" data-empty data-map-ready>So far there are only the agent's own records, no code.</p>`}
     ${detail}
@@ -1167,8 +1248,17 @@ function renderMapSlot(focusPath) {
   slot.innerHTML = mapShell();
   const box = $("[data-map]", slot);
   if (box) {
-    const W = box.clientWidth, H = Math.round(W < 600 ? Math.min(520, Math.max(300, W * 1.15)) : Math.min(460, Math.max(280, W * 0.45)));
-    box.style.height = H + "px";
+    // In the panel grid the map is a preview that fits the first screen; on its own it gets more room.
+    const W = box.clientWidth, H = WIDE.matches ? Math.max(70, box.clientHeight) : Math.round(W < 600 ? Math.min(520, Math.max(300, W * 1.15)) : Math.min(460, Math.max(280, W * 0.45)));
+    if (!WIDE.matches) box.style.height = H + "px";
+    box.dataset.drawnH = H;
+    if (mapWatch) mapWatch.disconnect();
+    mapWatch = null;
+    if (WIDE.matches && window.ResizeObserver) {
+      // Redraw when the row's height changes (e.g. a timeline detail opens), not for the map's own drawing.
+      mapWatch = new ResizeObserver(() => { if (box.isConnected && Math.abs(Math.max(70, box.clientHeight) - +box.dataset.drawnH) > 4) renderMapSlot(); });
+      mapWatch.observe(box);
+    }
     const all = mapData.files || [], shown = mapShowAll ? all : all.filter(f => !MAP_HIDE.some(p => f.path.startsWith(p)));
     box.innerHTML = mapLayout(shown, W, H).map(g => `<div class="map-group" data-group data-folder="${esc(g.folder)}"
         style="left:${g.r.x}px;top:${g.r.y}px;width:${g.r.w}px;height:${g.r.h}px">${g.r.w > 40 && g.r.h > 20 ? `<span class="map-gl">${esc(g.folder ? g.folder + "/" : "top level")}</span>` : ""}${
@@ -1203,8 +1293,8 @@ const times = n => n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
 const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
 
 function kpi(key, label, value, of, desc, col) {
-  return `<div class="kpi" data-kpi="${key}"><div class="kl">${esc(label)}</div>
-    <div class="kv">${value}${of !== null ? `<small> of ${of}</small>` : ""}</div><div class="kd">${esc(desc)}</div>
+  return `<div class="kpi${value ? "" : " zero"}" data-kpi="${key}" title="${esc(desc)}">
+    <div class="kv">${value}${of !== null ? `<small> of ${of}</small>` : ""}</div><div class="kl">${esc(label)}</div><div class="kd">${esc(desc)}</div>
     ${of !== null ? `<div class="meter" aria-hidden="true"><span style="width:${pct(value, of)}%;background:var(${col})"></span></div>` : ""}</div>`;
 }
 // aaf.py's "finished" counts every task that ended: finished, stuck or waiting for a decision.
@@ -1258,8 +1348,8 @@ function recDetail(t, reviews) {
     ${said.length ? `<p class="sub" style="margin-top:6px">Why the review said no:</p><ul>${said.map(r => `<li>${esc(plain(r.summary))}</li>`).join("")}</ul>` : ""}</div>`;
 }
 
-function reasonsHtml(reasons, across) {
-  if (!reasons.length) return `<p class="empty" data-reasons-empty>The review has not said no to any work yet, so there is nothing to sharpen here.</p>`;
+function reasonsHtml(reasons, across, reviews) {
+  if (!reasons.length) return `<p class="empty" data-reasons-empty>${reviews === 0 ? "No review has happened yet." : "The review has not said no to any work yet, so there is nothing to sharpen here."}</p>`;
   const max = Math.max(...reasons.map(g => g.count));
   return `<ol class="reasons" data-reasons>${reasons.map((g, i) => {
     const covered = g.covered_in || [], rest = (g.projects || []).filter(p => !covered.includes(p));
@@ -1282,23 +1372,25 @@ function reasonsHtml(reasons, across) {
 }
 
 function recordHtml() {
-  const head = `<h3 class="sec-title">Track record</h3><section class="panel sec" data-section="record" aria-label="Track record">`;
   const st = recData && recData.stats, tasks = (st && st.tasks) || [];
+  const head = `<section class="card sec" data-section="record" aria-label="Track record">
+    <div class="ph"><h3>Track record</h3><span class="pm">${tasks.length ? plural(tasks.length, "task") : ""}</span></div>`;
   if (!st || st.available === false)
     return head + `<p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p></section>`;
   if (!tasks.length)
     return head + `<p class="empty" data-empty>No task has run yet. After a few tasks, this shows how often the agent gets it right the first time, how often the review says no and why, and whether it needs fewer attempts over time.</p></section>`;
   const s = st.summary || {}, pick = tasks.find(t => t.start === recPick);
   const older = tasks.length > REC_SHOWN ? ` The ${tasks.length - REC_SHOWN} oldest are left out.` : "";
-  return head + `<p class="rec-intro">How well the agent has done on this project so far. When the same problem keeps coming back, the project's instructions or its definition of done probably need to be sharper.</p>
-    ${recKpis(s)}
+  const reasons = recData.reasons || [];
+  return head + `${recKpis(s)}
     <h4 class="rec-h">Attempts per task</h4>
     ${recTrend(tasks, true)}
-    <p class="rec-cap">One bar per task, oldest on the left; taller means more attempts.${s.median_attempts ? ` A task usually takes ${plural(s.median_attempts, "attempt")} before it ends.` : ""}${older} Tap a bar for the task.</p>
+    <p class="rec-cap">One bar per task, oldest on the left.${s.median_attempts ? ` A task usually takes ${plural(s.median_attempts, "attempt")} before it ends.` : ""}${older} Tap a bar for the task.</p>
     ${recLegend(tasks.slice(-REC_SHOWN))}
     ${pick ? recDetail(pick, recData.reviews) : ""}
-    <h4 class="rec-h">Why the review said no</h4>
-    ${reasonsHtml(recData.reasons || [], false)}</section>`;
+    ${reasons.length ? `<details class="rec-why" data-reasons-fold data-keep="rec-why"${$('[data-keep="rec-why"][open]') ? " open" : ""}><summary>Why the review said no (${plural(reasons.length, "reason")})</summary>
+      <p class="rec-intro">When the same problem keeps coming back, the project's instructions or its definition of done probably need to be sharper.</p>
+      ${reasonsHtml(reasons, false)}</details>` : `<div class="rec-why">${reasonsHtml(reasons, false, s.reviews || 0)}</div>`}</section>`;
 }
 
 function renderRecordSlot() {
@@ -1336,23 +1428,22 @@ function workspaceHtml(w) {
         <div class="spark" data-ws-spark role="img" aria-label="Attempts per task, oldest first: ${tasks.map(t => t.attempts || 0).join(", ")}">${tasks.map(t =>
           `<span style="height:${Math.max(10, 100 * (t.attempts || 0) / hi).toFixed(0)}%;--c:var(${REC_COL[t.outcome] || "--active"})"></span>`).join("")}</div></div></div>`;
   }).join("");
-  return `<section class="panel sec glance" data-section="ws-summary" aria-label="Track record across all projects">
-      <div class="eyebrow"><span class="pname">All projects</span><span>${plural(ps.length, "project")} · ${plural(withTasks.reduce((n, p) => n + p.tasks.length, 0), "task")}</span></div>
-      <h2 class="doing" style="margin-top:10px">Track record across all projects</h2>
-      <p class="task-line" data-ws-lead>${esc(lead)}</p>
-      <div style="margin-top:16px">${recKpis(s)}</div></section>
-    <h3 class="sec-title">Project by project</h3>
-    <section class="panel sec" data-section="ws-projects" aria-label="Project by project">${withTasks.length ? `<div class="ws-rows">${rows}</div>` : `<p class="empty">No project has run a task yet.</p>`}
+  return `<section class="card sec ws-hero" data-section="ws-summary" aria-label="Track record across all projects">
+      <div class="crumb"><span class="pname">All projects</span><span>${plural(ps.length, "project")} · ${plural(withTasks.reduce((n, p) => n + p.tasks.length, 0), "task")}</span></div>
+      <h2 class="title">Track record across all projects</h2>
+      <p class="ws-lead" data-ws-lead>${esc(lead)}</p>
+      ${recKpis(s)}</section>
+    <section class="card sec" data-section="ws-projects" aria-label="Project by project"><div class="ph"><h3>Project by project</h3></div>${withTasks.length ? `<div class="ws-rows">${rows}</div>` : `<p class="empty">No project has run a task yet.</p>`}
       ${none.length ? `<p class="ws-none" data-ws-none>No tasks yet: ${esc(none.map(p => p.name).join(", "))}.</p>` : ""}
       ${withTasks.length ? `<p class="rec-cap">Projects with the most rejected reviews and stuck episodes first. Tap a name to open the project.</p>` : ""}</section>
-    <h3 class="sec-title">Why the review said no, across all projects</h3>
-    <section class="panel sec" data-section="ws-reasons" aria-label="Why the review said no">${reasonsHtml(w.reasons || [], true)}</section>`;
+    <section class="card sec" data-section="ws-reasons" aria-label="Why the review said no"><div class="ph"><h3>Why the review said no, across all projects</h3></div>${reasonsHtml(w.reasons || [], true)}</section>`;
 }
 
 function renderWorkspace(w) {
   wsData = w;
+  fleetFrom(w);
   if (w.available === false) {
-    $("#main").innerHTML = `<section class="panel sec" data-section="ws-summary"><p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p></section>`;
+    $("#main").innerHTML = `<section class="card sec" data-section="ws-summary"><p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p></section>`;
     return;
   }
   $("#main").innerHTML = workspaceHtml(w);
@@ -1374,7 +1465,8 @@ function renderDetail(d) {
   const kept = new Set([...document.querySelectorAll("main details[open][data-keep]")].map(x => x.dataset.keep));
   const open = key => `data-keep="${key}"${kept.has(key) ? " open" : ""}`;
 
-  // 1. At a glance: what it is doing, and whether it needs you.
+  // Hero: what it is doing, and whether it needs you. Its right half says how far along the task is.
+  const tone = asks && ph.tone !== "bad" ? "ask" : ph.tone;
   const needsTone = phase === "stuck" ? "t-bad" : "t-ask";
   const inCode = asks ? ` · Claude Code is waiting for ${asksFor}` : "";
   const needs = needsYou(phase)
@@ -1386,20 +1478,35 @@ function renderDetail(d) {
         : phase === "idle" ? "Nothing needs you. No task is running"
         : quiet !== null ? `Probably nothing needs you, but it has been quiet for ${minutes(quiet)}` : "Nothing needs you. It will keep going on its own"}</span></div>`;
   const doing = phase === "idle" && !st.task && !events.some(e => e.kind === "check") ? "Waiting for its first task" : ph.doing;
-  const nowLine = now ? `<p class="now-line k-${kindOf(now)}${asks ? " ask" : ""}" data-now>${kindIcon(kindOf(now))}<span>Right now: ${esc(
-      now.kind === "waiting" && !asks ? "Idle in Claude Code, ready for a new task" : KIND_WORDS[kindOf(now)])}${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</span>${
+  const nowLine = now ? `<p class="now-line k-${kindOf(now)}${asks ? " ask" : ""}" data-now>${kindIcon(kindOf(now))}<span>Right now: <b>${esc(
+      now.kind === "waiting" && !asks ? "Idle in Claude Code, ready for a new task" : KIND_WORDS[kindOf(now)])}</b>${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</span>${
       quiet !== null ? `<span class="q">no new step for ${esc(minutes(quiet))}</span>` : ""}</p>` : "";
-  const glance = `<section class="panel sec glance t-${asks && ph.tone !== "bad" ? "ask" : ph.tone}" data-section="glance" aria-label="At a glance">
-      <div class="eyebrow"><span><span class="pname">${esc(name)}</span>${meta.description ? ` · ${esc(meta.description)}` : ""}</span><span>Updated ${esc(ago(st.updated))} · live</span></div>
-      ${needs}
-      <h2 class="doing" data-doing>${esc(doing)}</h2>
-      ${nowLine}
-      ${st.task ? `<p class="task-line"><span class="lbl">Task: </span>${esc(plain(st.task))}</p>` : `<p class="task-line"><span class="lbl">Give it a task in Claude Code to get started.</span></p>`}
+  const it = st.iteration || 0, maxIt = meta.max_iterations || 0;
+  const chip = it ? `<span class="chip" title="An attempt is one change followed by a test run">Attempt ${it}${maxIt ? ` of up to ${maxIt}` : ""}</span>` : "";
+  const plan = (d.summary || {}).plan, planOn = plan && plan.total && (!plan.task || !st.task || plan.task === st.task);
+  const planSteps = planOn ? (() => {
+    // The plan as written by the agent, a window of five steps around the current one.
+    const names = plan.steps || [];
+    const cur = Math.min(plan.done, plan.total - 1), from = Math.max(0, Math.min(cur - 2, plan.total - 5));
+    const rows = [];
+    for (let i = from; i < Math.min(plan.total, from + 5); i++) {
+      const txt = names[i] ? names[i].text : i === plan.done ? plan.current : "";
+      const state = i < plan.done ? "d" : i === plan.done ? "cur" : "";
+      rows.push(`<li class="${state}"><b>${i + 1}</b><span aria-hidden="true">${state === "d" ? "✓" : state === "cur" ? "→" : ""}</span><span>${esc(plain(txt || (state === "d" ? "Done" : "Still to do")))}</span></li>`);
+    }
+    return `<div class="plan-bar" role="img" aria-label="${plan.done} of ${plan.total} plan steps done"><span style="width:${pct(plan.done, plan.total)}%"></span></div>
+      <ol class="plan-steps" data-plan>${rows.join("")}</ol>`;
+  })() : "";
+  const sideMeta = ACTIVE.has(phase) && st.task_started ? `started ${ago(st.task_started)}` : planOn ? `step ${Math.min(plan.done + 1, plan.total)} of ${plan.total}` : "";
+  const sideWords = phase === "done" ? "The task is finished. A new task's plan and progress will show here."
+    : phase === "idle" ? "No task is running. Once one starts, its plan and progress show here."
+    : "The agent has not written down a plan for this task yet, so there is nothing to measure its progress against.";
+  const side = `<div class="hero-side" data-slot="estimate">
+      <div class="ph"><h3>How far along</h3><span class="pm">${esc(planOn ? `step ${Math.min(plan.done + 1, plan.total)} of ${plan.total}${sideMeta && ACTIVE.has(phase) ? " · " + sideMeta : ""}` : sideMeta)}</span></div>
       ${st.note && st.note !== "Project created" ? `<p class="agent-note">Agent's latest note: “${esc(plain(st.note))}”</p>` : ""}
-      ${loopPicture(st, meta.max_iterations)}
-    </section>`;
+      ${planSteps || `<p class="est-wait">${esc(sideWords)}</p>`}</div>`;
 
-  // 2. What to do, only when something needs the human.
+  // What to do, only when something needs the human. On the panel grid it takes the hero's right half.
   let action = "";
   if (phase === "waiting" || phase === "stuck") {
     const draftCards = drafts.map(x => `<div class="draft">
@@ -1407,30 +1514,28 @@ function renderDetail(d) {
         <p>The agent tried to fix this ${plural(x.iterations, "time")}${x.rounds > 1 ? ` over ${x.rounds} rounds` : ""} and did not succeed: ${esc(x.summary)}.</p>
         <span class="safe">${ICON.shield}Your project is safe: it was put back to the last version where every test passed.</span>
         <div class="choices">
-          <div class="choice"><b>Let it keep trying</b><div class="why">Another round of attempts, starting from where it stopped.</div>${copyRow(`/draft ${name} continue ${x.id}`)}</div>
-          <div class="choice"><b>Drop it, keep a note</b><div class="why">Nothing changes; the problem stays on the list of known issues.</div>${copyRow(`/draft ${name} discard ${x.id}`)}</div>
+          <div class="choice"><b>Let it keep trying</b><span class="why">Another round of attempts, starting from where it stopped.</span>${copyRow(`/draft ${name} continue ${x.id}`)}</div>
+          <div class="choice"><b>Drop it, keep a note</b><span class="why">Nothing changes; the problem stays on the list of known issues.</span>${copyRow(`/draft ${name} discard ${x.id}`)}</div>
         </div>
         ${x.notes ? `<details ${open("draft-" + x.id)}><summary>What the agent tried</summary><div class="md">${markdown(x.notes)}</div></details>` : ""}
       </div>`).join("");
     const failing = checks.filter(c => !c.passed).map(c => c.name);
     action = phase === "stuck"
-      ? `<section class="panel sec action t-bad" data-section="action" aria-label="What to do">
+      ? `<section class="card sec action t-bad c6" data-section="action" aria-label="What to do">
           <h3>The agent stopped and needs your help</h3>
           <p class="lead">${meta.max_iterations && (st.iteration || 0) >= meta.max_iterations
               ? `It used all ${meta.max_iterations} attempts it is allowed without getting every test to pass`
               : `It stopped after ${plural(st.iteration || 0, "attempt")} because it kept running into the same problem`}${failing.length ? ` (still failing: ${esc(failing.join(", "))})` : ""}. ${st.note ? `In its words: “${esc(plain(st.note))}”.` : ""}</p>
-          <p>${failing.length ? "The failing test's output is under <em>Is the work sound?</em> below. " : ""}When you know how it should proceed, tell it in Claude Code, for example:</p>
+          <p>${failing.length ? "The failing test's output is in the <em>Tests</em> panel. " : ""}When you know how it should proceed, tell it in Claude Code, for example:</p>
           ${copyRow(`/task ${name} <your guidance or a smaller goal>`)}
           ${draftCards}
         </section>`
-      : `<section class="panel sec action" data-section="action" aria-label="What to do">
+      : `<section class="card sec action c6" data-section="action" aria-label="What to do">
           <h3>${drafts.length ? `Decide on ${plural(drafts.length, "unfinished fix", "unfinished fixes")}` : "Waiting for your decision"}</h3>
-          <p class="lead">${drafts.length ? "The main task is complete. While tidying up, the agent could not finish the fix below, so it set it aside for you." : esc(plain(st.note || ""))}</p>
+          <p class="lead">${drafts.length ? "The main task is complete. While tidying up, the agent could not finish the fix below, so it set it aside for you. Copy one of the two commands into Claude Code." : esc(plain(st.note || ""))}</p>
           ${draftCards}
-          ${drafts.length ? `<p class="how">Copy one command and paste it into Claude Code.</p>` : ""}
         </section>`;
   }
-
   if (asks) {
     const card = `<div class="wait-card" data-wait-card>
         <h3>Claude Code is waiting for ${esc(asksFor)}</h3>
@@ -1438,72 +1543,80 @@ function renderDetail(d) {
           The agent cannot go on until you answer.</p>
         <p class="how">Switch to Claude Code and answer there. This page only shows what is happening; it cannot answer for you.</p></div>`;
     action = action ? action.replace(/(aria-label="What to do">)/, `$1${card}`)
-      : `<section class="panel sec action" data-section="action" aria-label="What to do">${card}</section>`;
+      : `<section class="card sec action c6" data-section="action" aria-label="What to do">${card}</section>`;
   }
 
-  // 2b. Live activity: the step the agent is on, and the few before it.
+  const glance = `<section class="card sec hero ${action ? "c6 with-action" : "c12"} t-${tone}" data-section="glance" aria-label="At a glance" style="--tone:var(${toneVar(phase, tone)})">
+      <div class="hero-main">
+        <div class="crumb"><span><span class="pname">${esc(name)}</span>${meta.description ? ` · ${esc(meta.description)}` : ""}</span><span>Updated ${esc(ago(st.updated))} · live</span></div>
+        <h2 class="title" data-doing>${esc(doing)}</h2>
+        <div class="chips">${chip}${needs}</div>
+        ${st.task ? `<p class="task-line" title="${esc(plain(st.task))}"><span class="lbl">Task: </span>${esc(plain(st.task))}</p>` : `<p class="task-line"><span class="lbl">Give it a task in Claude Code to get started.</span></p>`}
+        ${nowLine}
+        ${loopPicture(st, meta.max_iterations)}
+      </div>
+      ${side}
+    </section>`;
+
+  // Step by step: the step the agent is on, and the few before it.
   const stepRow = a => `<li data-step data-kind="${kindOf(a)}"${a.subagent ? ` data-subagent="${esc(a.subagent)}"` : ""}>
-      <span class="kicon k-${kindOf(a)}">${kindIcon(kindOf(a))}</span><span class="stext">${esc(stepWords(a, phase))}${whoBadge(a)}</span>
+      <span class="kicon k-${kindOf(a)}">${kindIcon(kindOf(a))}</span><span class="stext" title="${esc(stepWords(a, phase))}">${esc(stepWords(a, phase))}${whoBadge(a)}</span>
       <span class="t">${esc(clock(a.ts))}</span></li>`;
   const earlier = steps.slice(0, -1).reverse();
-  const live = `<h3 class="sec-title">Step by step</h3>
-    <section class="panel sec live" data-section="live" aria-label="Step by step">${!now
+  const live = `<section class="card sec live c5" data-section="live" aria-label="Step by step">
+      <div class="ph"><h3>Step by step</h3><span class="pm">${now ? (ACTIVE.has(phase) ? "live" : `last step ${esc(ago(now.ts))}`) : ""}</span></div>${!now
       ? `<p class="empty" data-live-empty>${ACTIVE.has(phase) ? "No steps have arrived yet. They appear here as the agent works in Claude Code (this needs the activity hook)."
           : "No steps yet. Each step the agent takes in Claude Code appears here as it happens."}</p>`
-      : `<div class="current k-${kindOf(now)}" data-current-step data-kind="${kindOf(now)}" data-attention="${asks ? "yes" : "no"}">
+      : `<div class="current k-${kindOf(now)}" data-current-step data-kind="${kindOf(now)}"${now.subagent ? ` data-subagent="${esc(now.subagent)}"` : ""} data-attention="${asks ? "yes" : "no"}">
           <span class="kicon k-${kindOf(now)}">${kindIcon(kindOf(now))}</span>
-          <div class="cbody"><div class="lbl">${asks ? "Needs you now" : "Latest step"}${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</div>
-            <div class="ctext">${esc(stepWords(now, phase))}${whoBadge(now)}</div>
+          <div class="cbody"><div class="ctext">${esc(stepWords(now, phase))}${whoBadge(now)}</div>
+            <div class="lbl">${asks ? "Needs you now" : "Latest step"}${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</div>
             ${now.detail && ["command", "test", "web"].includes(now.kind) ? `<details class="cmd" ${open("step-detail")}><summary>Exact command</summary><code>${esc(now.detail)}</code></details>` : ""}</div></div>
-        ${quiet !== null ? `<p class="quiet" data-quiet><b>No new step for ${esc(minutes(quiet))}.</b> The feed has gone quiet: the agent may be busy with one long step, or Claude Code may have stopped. Have a look in Claude Code if it stays like this.</p>` : ""}
+        ${quiet !== null ? `<p class="quiet" data-quiet><b>No new step for ${esc(minutes(quiet))}: the feed has gone quiet.</b> It may be busy with one long step, or Claude Code may have stopped; have a look there if it stays like this.</p>` : ""}
         ${earlier.length ? `<ol class="step-list" aria-label="Steps before it, newest first">${earlier.slice(0, RECENT).map(stepRow).join("")}</ol>` : ""}
         ${earlier.length > RECENT ? `<details data-detail="steps" ${open("steps")}><summary>${plural(earlier.length - RECENT, "earlier step")}</summary>
           <ol class="step-list">${earlier.slice(RECENT).map(stepRow).join("").replace(/ data-step /g, " ")}</ol></details>` : ""}`}
     </section>`;
 
-  // 3. Health: tests, independent review, attempts used.
-  const testsTile = checks.length ? `<div class="panel tile"><h4>Tests</h4>
-      <div class="tile-row">${donut(nPass, checks.length)}<div><p class="big">${nPass === checks.length ? "All tests pass" : `${checks.length - nPass} of ${checks.length} failing`}</p>
-      <p class="small">Last run ${esc(ago(ck.ran_at))}</p></div></div>
-      <ul class="tests">${checks.map(c => `<li>${c.passed ? ICON.pass : ICON.fail}<span>${esc(c.name)}</span></li>`).join("")}</ul>
-      <details ${open("test-output")}><summary>Show test output</summary>${checks.map(c => `<p class="small"><b>${esc(c.name)}</b> · ran <code>${esc(c.cmd)}</code></p><pre class="out">${esc(c.output || "(no output)")}</pre>`).join("")}</details></div>`
-    : `<div class="panel tile"><h4>Tests</h4><p class="empty">No tests have run yet. They run after the agent's first change.</p></div>`;
+  // Tests: ring chart, each test, the run history as a strip, the independent review and attempts used.
+  const TESTS_SHOWN = 5;
+  const testLi = c => `<li>${c.passed ? ICON.pass : ICON.fail}<span title="${esc(c.name)}">${esc(c.name)}</span></li>`;
+  const listed = checks.length > TESTS_SHOWN ? [...checks.filter(c => !c.passed), ...checks.filter(c => c.passed)] : checks;
+  const allGreen = hist.filter(h => h.passed).length;
+  const strip = hist.length ? `<div class="history" data-viz="history" role="img" aria-label="${hist.length} test runs, ${allGreen} with every test passing, oldest first">
+      <div class="bars">${hist.map(h => `<span class="${h.passed ? "" : "f"}" style="height:${Math.max(12, Math.round(100 * (h.n_total ? h.n_pass / h.n_total : 0)))}%" title="${esc(clock(h.ran_at))}: ${h.n_pass} of ${h.n_total} tests passed"></span>`).join("")}</div>
+      <div class="cap">Test runs, oldest first: ${allGreen} of ${hist.length} fully green</div></div>` : "";
   const rvKind = rv ? rv.verdict : "none";
-  const reviewTile = `<div class="panel tile"><h4>Independent review</h4>
-      <div class="tile-row">${reviewBadge(rvKind)}<div><p class="big">${rvKind === "pass" ? "Approved" : rvKind === "fail" ? "Not approved yet" : "Not reviewed yet"}</p>
-      <p class="small">${rv ? esc(rv.summary) + " · " + esc(ago(rv.at)) : "A second agent reviews the work once every test passes."}</p></div></div>
-      ${rv && rv.report ? `<details ${open("review-report")}><summary>Read the full review</summary><pre class="out">${esc(rv.report)}</pre></details>` : ""}</div>`;
-  const it = st.iteration || 0, maxIt = meta.max_iterations || 0;
   const lastCls = phase === "done" ? " last-ok" : phase === "stuck" ? " last-bad" : phase === "waiting" ? " last-ask" : "";
   const pipsN = Math.max(maxIt, it);
-  const attemptsTile = `<div class="panel tile"><h4>Attempts used</h4>
-      ${pipsN ? `<div class="pips" data-viz="attempts" role="img" aria-label="${it} of ${maxIt || it} attempts used">${Array.from({ length: pipsN }, (_, i) =>
+  const facts = `<div class="facts2">
+      <div><div class="fl">Review</div><div class="fv">${reviewBadge(rvKind)}${rvKind === "pass" ? "Approved" : rvKind === "fail" ? "Not approved yet" : "Not reviewed yet"}</div>
+        <div class="fs" title="${esc(rv ? rv.summary : "")}">${rv ? esc(ago(rv.at)) + " · " + esc(rv.summary) : "after every test passes"}</div></div>
+      <div><div class="fl">Attempts</div>${pipsN ? `<div class="pips" data-viz="attempts" role="img" aria-label="${it} of ${maxIt || it} attempts used">${Array.from({ length: pipsN }, (_, i) =>
           `<span class="${i < it ? "used" + (i === it - 1 ? " last" + lastCls : "") : ""}"></span>`).join("")}</div>` : ""}
-      <p class="big" style="margin-top:10px">${it ? `${plural(it, "attempt")}${maxIt ? ` of up to ${maxIt}` : ""}` : "None yet"}</p>
-      <p class="small">An attempt is one change followed by a test run. ${maxIt ? "If it runs out, the agent stops and asks you." : ""}</p></div>`;
+        <div class="fs">${it ? `${it}${maxIt ? ` of up to ${maxIt}` : ""} used` : "none yet"}</div></div></div>`;
   const health = !checks.length && !rv && !it
-    ? `<h3 class="sec-title">Is the work sound?</h3><section class="panel sec" data-section="health" aria-label="Health"><p class="empty">Nothing to judge yet. Once the agent starts, this shows its tests, the independent review and how many attempts it used.</p></section>`
-    : `<h3 class="sec-title">Is the work sound?</h3>
-    <section class="sec tiles" data-section="health" aria-label="Health">${testsTile}${reviewTile}${attemptsTile}</section>`;
+    ? `<section class="card sec health c3" data-section="health" aria-label="Tests and review"><div class="ph"><h3>Tests</h3></div><p class="empty">Nothing to judge yet. Once the agent starts, this shows its tests, the independent review and how many attempts it used.</p></section>`
+    : `<section class="card sec health c3" data-section="health" aria-label="Tests and review">
+      <div class="ph"><h3>Tests</h3><span class="pm">${ck && ck.ran_at ? `last run ${esc(ago(ck.ran_at))}` : ""}</span></div>
+      ${checks.length ? `<div class="ring">${donut(nPass, checks.length)}<div><div class="big">${nPass} / ${checks.length}</div>
+        <div class="small">${nPass === checks.length ? "All tests pass" : `${checks.length - nPass} failing`}</div></div></div>
+      <ul class="tests">${listed.slice(0, TESTS_SHOWN).map(testLi).join("")}</ul>
+      ${listed.length > TESTS_SHOWN ? `<details class="tests-more" ${open("tests-more")}><summary>${plural(listed.length - TESTS_SHOWN, "more test")}</summary><ul class="tests">${listed.slice(TESTS_SHOWN).map(testLi).join("")}</ul></details>` : ""}`
+      : `<p class="empty">No tests have run yet. They run after the agent's first change.</p>`}
+      ${strip}
+      ${facts}
+      ${checks.length ? `<details ${open("test-output")}><summary>Show test output</summary>${checks.map(c => `<p class="small"><b>${esc(c.name)}</b> · ran <code>${esc(c.cmd)}</code></p><pre class="out">${esc(c.output || "(no output)")}</pre>`).join("")}</details>` : ""}
+      ${rv && rv.report ? `<details ${open("review-report")}><summary>Read the full review</summary><pre class="out">${esc(rv.report)}</pre></details>` : ""}
+    </section>`;
 
-  // 4. Over time: one bar per test run.
-  const allGreen = hist.filter(h => h.passed).length;
-  const history = hist.length ? `<h3 class="sec-title">Test runs over time</h3>
-    <section class="panel sec" data-section="history" aria-label="Test runs over time">
-      <div class="history" data-viz="history" role="img" aria-label="${hist.length} test runs, ${allGreen} with every test passing">
-        <div class="axis"><span>all</span><span>half</span><span>none</span></div>
-        <div class="bars">${hist.map(h => `<span class="${h.passed ? "" : "f"}" style="height:${Math.max(4, Math.round(100 * (h.n_total ? h.n_pass / h.n_total : 0)))}%" title="${esc(clock(h.ran_at))}: ${h.n_pass} of ${h.n_total} tests passed"></span>`).join("")}</div>
-        <div class="cap"><span class="legend"><i style="background:var(--pass)"></i>every test passed</span><span class="legend"><i style="background:var(--fail)"></i>some failed</span>
-          Bar height = share of tests passing, oldest on the left · ${plural(hist.length, "run")}, ${allGreen} fully green</div>
-      </div></section>` : "";
-
-  // 5. Pictures the project produced.
-  const plots = d.plots.length ? `<h3 class="sec-title">Pictures from the project</h3>
-    <section class="panel sec" data-section="plots" aria-label="Plots"><div class="plots">${d.plots.map(p => `<figure class="plot">
+  // Pictures the project produced.
+  const plots = d.plots.length ? `<section class="card sec c12" data-section="plots" aria-label="Plots">
+    <div class="ph"><h3>Pictures from the project</h3><span class="pm">${plural(d.plots.length, "picture")}</span></div><div class="plots">${d.plots.map(p => `<figure class="plot">
       <button type="button" data-file="${esc(p.file)}"><img loading="lazy" alt="${esc(p.file)}" src="/plot?project=${encodeURIComponent(name)}&file=${encodeURIComponent(p.file)}&t=${p.mtime}"></button>
       <figcaption><span>${esc(p.file)}</span><span>${esc(ago(p.mtime))}</span></figcaption></figure>`).join("")}</div></section>` : "";
 
-  // 6. Detail on demand.
+  // Detail on demand.
   const dec = d.decisions || [];
   const decisions = dec.length ? `<ol class="timeline">${dec.slice().reverse().map(x => `<li>
       <div class="dt">${esc(x.date)}</div><div class="dtitle">${esc(x.title)}</div>${x.body ? `<div class="dbody">${esc(x.body)}</div>` : ""}</li>`).join("")}</ol>`
@@ -1516,14 +1629,14 @@ function renderDetail(d) {
     : `<p class="empty">Nothing has happened yet.</p>`;
   const summ = (title, teaser, n) => `<summary><span><span class="st">${title}</span><span class="teaser">${esc(teaser)}</span></span><span class="n">${n}</span><span class="chev"></span></summary>`;
   const firstLine = (d.progress || "").split("\n").find(l => /^\s*[-*]\s+\S/.test(l) || (/\S/.test(l) && !/^#/.test(l))) || "";
-  const more = `<h3 class="sec-title">More detail</h3>
-    <section class="panel sec more" data-section="details" aria-label="More detail">
+  const more = `<section class="card sec more c12" data-section="details" aria-label="More detail">
+      <div class="ph"><h3>More detail</h3></div>
       <details data-detail="decisions" ${open("decisions")}>${summ("Decisions the agent made", dec.length ? "Latest: " + dec[dec.length - 1].title : "None yet", dec.length || "")}<div class="body">${decisions}</div></details>
       <details data-detail="progress" ${open("progress")}>${summ("The agent's notes", firstLine.replace(/^\s*[-*]\s+/, "").replace(/`/g, "") || "Where things stand and what comes next", "")}<div class="body md">${markdown(d.progress || "")}</div></details>
       <details data-detail="activity" ${open("activity")}>${summ("Everything that happened", events.length ? "Latest: " + plain(events[events.length - 1].text) : "Nothing yet", events.length ? plural(events.length, "event") : "")}<div class="body">${activity}</div></details>
     </section>`;
 
-  $("#main").innerHTML = glance + action + live + health + `<div id="tt-slot"></div>` + history + `<div id="rec-slot"></div><div id="git-slot"></div><div id="map-slot"></div>` + plots + more;
+  $("#main").innerHTML = glance + action + live + health + `<div id="rec-slot" class="slot c4"></div><div id="tt-slot" class="slot c8"></div><div id="map-slot" class="slot c4"></div><div id="git-slot" class="slot c12"></div>` + plots + more;
   renderTimelineSlot();
   renderRecordSlot();
   renderGitSlot();
@@ -1553,7 +1666,7 @@ async function tick() {
   try {
     const list = await (await fetch("/api/projects")).json();
     const sig = JSON.stringify(list);
-    if (sig !== lastProjects) { lastProjects = sig; if ((current !== WS || !list.length) && !list.some(p => p.name === current)) current = list[0]?.name || null; renderRail(list); }
+    if (sig !== lastProjects) { lastProjects = sig; if ((current !== WS || !list.length) && !list.some(p => p.name === current)) current = list[0]?.name || null; renderRail(list); loadFleet(); }
     if (!current) { welcome(); return; }
     if (current === WS) {
       const w = await (await fetch("/api/record")).text();
@@ -1579,6 +1692,7 @@ let gitLoading = false;
 tick(); setInterval(tick, 2500);
 setInterval(() => { if (!gitBusy) loadGit(false); }, 30000);
 setInterval(() => { if (!mapLoading) loadMap(); }, 60000);
+setInterval(loadFleet, 60000);
 </script>
 </body>
 </html>

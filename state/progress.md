@@ -3,7 +3,37 @@
 ## Current state
 
 - The dashboard lives in this project; `dashboard/server.py` is a shim that starts `server.py` here.
-- **Redesigned layout (2026-10-14)**, built for people who don't know the code. Top to bottom:
+- **Instrument-panel redesign (roadmap 6, 2026-10-17)**, after the approved design in `design/DESIGN.md`
+  (reference `design/mockup.html`, `design/mockup-dark.png`; comparison images `plots/compare-mockup-{dark,light}.png`).
+  Dark by default (the browser preference is ignored), light through the round button in the rail, remembered.
+  DESIGN.md tokens (`--plan/--change/--test/--review/--polish/--pass/--fail`, surfaces, ink) and fonts (IBM Plex Sans
+  Condensed, Inter Tight, JetBrains Mono, with system fallbacks). One colour per phase everywhere: loop stepper, live
+  step icons (reading/searching grey, editing blue, tests and commands amber, reviewer violet), timeline, rail, hero edge.
+  Rail: four workspace numbers (need you, working, finished, first try from `/api/record`) and a tiny picture per
+  project (progress bar from the plan, or the loop stage, while working; otherwise the last 12 test runs as a line;
+  server: `/api/projects` → `trend`, `plan`). Hero full width: name, what it does, attempt chip, needs pill, task,
+  "Right now", loop stepper; right half "How far along" (`[data-slot=estimate]`): agent's note and the plan's steps
+  (window of five, done/current). When the human is needed, the "what to do" card takes that right half (hero and
+  card 6 + 6 columns). From 1200 px a 12-column grid: step by step (5, still 8 recent steps), tests (3: ring, up to 5
+  tests with the rest folded, run history strip, review and attempts), track record (4: four numbers, compact attempts
+  chart, reasons behind "Why the review said no"), where the time went (8: compact lanes, 3 shown, the rest folded),
+  where the agent works (4: the treemap fills the height its row leaves, at least 70 px, redrawn when that
+  height changes; the "show its own records" toggle sits in the panel header; tile minimum about 30 x 30 px); then Git, pictures, more detail. The
+  separate "Test runs over time" section is now the strip in the tests panel. Under 1200 px one column; phone as
+  before (summary first, project chips in one row). New check `checks/layout.py` (all fixtures: hero and the five
+  panels fully inside 1440 x 900, grid spans, order, phone column, theme, tokens, phase colours, fonts); fixture
+  `image-classifier` got a plan (2 of 5 done). Three checks' order assertions follow the new order; checks that need
+  light store the theme choice; the reasons fold is opened by the track record check before reading (see decisions).
+  Also fixed before the task: the README test read the generated "How it is checked" commands as file references.
+  Review PASS (5 small points). Follow-up fixes: `checks/layout.py` also runs on a temporary workspace with real Git
+  repositories (`check_git`: scheduler, example-done, parser; real treemap and Git section, screenshot
+  `plots/render-layout-git-desktop-dark.png`), which showed the map panel pushing row 3 below 900 px, hence the
+  filling treemap above and the two "what to do" choices side by side on wide screens; the track record shows one line
+  ("No review has happened yet" / "has not said no") instead of an empty "Why the review said no" fold
+  (`checks/track_record.py` asserts it); the plot background and picture viewer use tokens (`--plot-bg`, `--plot-ink`,
+  `--backdrop`) and `tests/test_colours.py` fails on any colour written outside the token blocks. Kept as is: the Git
+  timeline's amber for "tests passed, not reviewed" (it is about testing, so the testing colour fits).
+- *Superseded by the redesign above:* **Redesigned layout (2026-10-14)**, built for people who don't know the code. Top to bottom:
   1. **At a glance**: project, a "Needs you / Nothing needs you" pill, one plain sentence on
      what the agent is doing, the task, the agent's latest note, and a picture of the loop
      (Plan → Change → Test → Review → Finished / Your call / Stuck) with the attempt count.
@@ -127,7 +157,8 @@
 
 ## Next
 
-All four roadmap items are done.
+Roadmap items 1 to 6 are done. Next: **roadmap 7, the time estimate**, in the hero's right half ("How far along"),
+which already shows the plan's steps.
 
 - Show a Git summary (unsent versions, behind) in the project list.
 
@@ -135,6 +166,20 @@ All four roadmap items are done.
   delayed scroll after tapping a chip; add a check for the scroll behaviour.
 
 ## Known issues
+
+- Redesign: the first-screen fit is checked on the fixtures. A real project with long texts can still grow row 2
+  (step texts and test names are cut to one line, at most 5 tests show, but a "gone quiet" note or an opened fold
+  makes a panel taller) and push row 3 partly below 900 px.
+- Redesign: the tests panel shows no time per test (the mockup does; the checks' results do not record durations).
+  The change map preview gets only the height row 3 leaves (about 70 px when the timeline has one task); projects
+  with many files get small tiles, and there is no larger view on tap (DESIGN.md suggests panels below the first
+  screen may open wider). `tests/test_colours.py` scans the style block only (not inline styles or named colours). The "what to do" card for several
+  unfinished fixes will make the hero row taller than one screen allows.
+- Redesign follow-ups (second review, small): `tests/test_colours.py` skips every rule starting with `:root` (also
+  `:root:not(...) .map-tile`), misses named colours and colours in inline styles from JavaScript; the zero-review
+  wording ("No review has happened yet") is not asserted by a check; `check_git` runs in dark only, on three fixtures.
+- Redesign: the track record panel hides each number's one-line explanation on wide screens (it is in the tooltip,
+  in the workspace view and on phones), following the mockup.
 
 - The render check needs Playwright installed into `.venv` once (see CLAUDE.md).
 - The earlier note about `scheduler` scrolling sideways on phones no longer applies; the render check measures 0 px.

@@ -89,6 +89,13 @@ class ReadmeTest(unittest.TestCase):
         self.assertFalse(exists("framework/gone.py"))
         self.assertTrue(exists("aaf.py") and exists("Open Dashboard.command"))
 
+    def test_generated_sections_are_not_references(self):
+        # The generated sections list check commands (.venv/bin/python checks/x.py; ...); like code blocks,
+        # they are commands, written by aaf.py, not paths the README points to. Prose around them still counts.
+        sample = ("See `old/gone.md`.\n<!-- aaf:checks:start -->\n- **A**: `if [ -x .venv/bin/python ]; then "
+                  ".venv/bin/python checks/a.py; fi`\n<!-- aaf:checks:end -->\n")
+        self.assertEqual(named_paths(sample), {"old/gone.md"})
+
     def test_local_only_files_do_not_count(self):
         # Ignored by Git, so missing on a fresh clone: naming them would fail the check there.
         if kept_files(PROJECT) is None:
@@ -111,9 +118,10 @@ class ReadmeTest(unittest.TestCase):
 
 def named_paths(text):
     """Files and folders named in inline backticks, also inside a longer command. Fenced code blocks are
-    left out. A span that is a single file name is taken whole (it may contain a space); otherwise every
+    left out, and so are the sections `aaf.py git commit` generates (they list the check commands). A span that is a single file name is taken whole (it may contain a space); otherwise every
     token with a slash or a file ending. Commands (/task), URLs, options and placeholders are not paths."""
     text = re.sub(r"^```.*?^```[^\n]*$", "", text, flags=re.M | re.S)
+    text = re.sub(r"<!-- aaf:(\w+):start -->.*?<!-- aaf:\1:end -->", "", text, flags=re.S)
     ending = r"\.(py|md|html|json|jsonl|command)$"
     refs = set()
     for span in re.findall(r"`([^`\n]+)`", text):

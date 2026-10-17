@@ -41,6 +41,8 @@ def main():
         for name in projects:
             for label, w, h, scheme in VIEWS:
                 page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
+                if scheme == "light":  # dark is the page's default; light is the choice the theme switch stores
+                    page.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
                 errors = []
                 page.on("pageerror", lambda e: errors.append(str(e)))
                 # Remote resources (web fonts) may be offline; only the page's own requests count.
@@ -65,6 +67,8 @@ def main():
         # The workspace view ("All projects": the track record across projects).
         for label, w, h, scheme in VIEWS:
             page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
+            if scheme == "light":
+                page.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.on("console", lambda m: errors.append(m.text)

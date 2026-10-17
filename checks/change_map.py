@@ -3,7 +3,7 @@
 The data comes from `framework/aaf.py git files <project>`. checks/git_workspace.py builds the
 workspace; code_repo() turns the `scheduler` fixture into a repository with a small code tree whose
 files changed unevenly. In a headless browser it checks:
-- the section ([data-section=changes]) follows the Git section;
+- the section ([data-section=changes]) follows the task timeline, as in design/DESIGN.md;
 - one tile per file ([data-tile]), grouped by top-level folder ([data-group]), tiles inside their
   group, no overlaps, everything inside the map;
 - tile area follows file size; colour follows how often commits changed the file (more changes,
@@ -53,6 +53,8 @@ def aaf_files(root, name):
 
 def open_page(browser, base, name, w=1440, h=900, scheme="light", storage=None):
     ctx = browser.new_context(viewport={"width": w, "height": h}, color_scheme=scheme)
+    if scheme == "light":  # dark is the page's default; light is the choice the theme switch stores
+        ctx.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
@@ -146,8 +148,8 @@ def check_scheduler(browser, base, root, want):
         page, errors = open_page(browser, base, "scheduler", w, h)
         order = page.eval_on_selector_all("main [data-section]", "els => els.filter(e => e.parentElement.closest('[data-section]') === null)"
                                           ".map(e => e.dataset.section)")
-        if "changes" not in order or "git" not in order or order.index("changes") != order.index("git") + 1:
-            bad.append("scheduler/%s: change map does not follow the Git section (%s)" % (label, order))
+        if "changes" not in order or "timeline" not in order or order.index("changes") != order.index("timeline") + 1:
+            bad.append("scheduler/%s: change map does not follow the task timeline (%s)" % (label, order))
         bad += check_map(page, "scheduler/%s (bookkeeping hidden)" % label, code)
         words = page.eval_on_selector('[data-section="changes"]', "s => [...s.querySelectorAll('[data-map-legend],[data-map-toggle],[data-map-intro]')]"
                                       ".map(e => e.textContent).join(' ')")

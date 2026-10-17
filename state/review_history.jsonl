@@ -8,3 +8,5 @@
 {"at": "2026-10-15T02:13:50+02:00", "verdict": "pass", "summary": "Track record meets the task; 8/8 checks; minor findings only"}
 {"at": "2026-10-15T11:45:00+02:00", "verdict": "pass", "summary": "README follows the template, covers every page part in order, keeps markers, links ROADMAP.md; test guards it; 4 minor findings"}
 {"at": "2026-10-15T18:09:58+02:00", "verdict": "pass", "summary": "Follow-up fixes verified (CLAUDE.md test list, plain words, stricter path test); 8/8 checks; 2 minor findings left"}
+{"at": "2026-10-17T13:22:31+02:00", "verdict": "pass", "summary": "Redesign matches DESIGN.md and mockup; 9/9 checks; layout check thorough; 5 minor findings"}
+{"at": "2026-10-17T13:51:30+02:00", "verdict": "pass", "summary": "Follow-up fixes verified: layout check on real Git data, no empty reasons fold, plot colours as tokens; 9/9 checks; 5 minor points"}

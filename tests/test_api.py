@@ -78,6 +78,18 @@ class ApiTest(unittest.TestCase):
         listed = {p["name"]: p for p in json.loads(self.get("/api/projects")[2])}
         self.assertEqual(listed["web-scraper"]["activity"]["kind"], "waiting")
 
+    def test_project_list_carries_trend_and_plan(self):
+        listed = {p["name"]: p for p in json.loads(self.get("/api/projects")[2])}
+        # Share of tests passing per run, oldest first, at most 12 runs.
+        sched = listed["scheduler"]["trend"]
+        self.assertTrue(0 < len(sched) <= 12)
+        self.assertTrue(all(0 <= x <= 1 for x in sched))
+        self.assertEqual(listed["brand-new"]["trend"], [])
+        self.assertEqual(listed["image-classifier"]["plan"]["total"], 5)
+        self.assertEqual(listed["image-classifier"]["plan"]["done"], 2)
+        self.assertTrue(listed["image-classifier"]["plan"]["current"])
+        self.assertIsNone(listed["brand-new"]["plan"])
+
     def test_plots_are_served(self):
         code, ctype, _ = self.get("/plot?project=example-done&file=loss.svg")
         self.assertEqual(code, 200)

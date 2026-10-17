@@ -13,51 +13,64 @@ inside each project. The control room reads those files and turns them into a pa
 can follow without knowing the code or the framework: what is happening now, whether
 anything needs them, and how the work went.
 
-On the left is the project list, grouped into "Needs you", "Working", "Finished" and
-"Not started", with "All projects" on top. Picking a project shows, from top to bottom:
+The page is laid out like an instrument panel: everything important fits on the first screen
+of a laptop, and detail opens when you ask for it. It is dark by default; the round button at
+the top of the left rail switches to a light version and remembers the choice.
 
-- **At a glance** (the summary): the project, a pill that says "Needs you" or "Nothing
-  needs you", one plain sentence on what the agent is doing, the current task, the
-  agent's latest note and a picture of its loop (Plan → Change → Test → Review →
-  Finished, Your call or Stuck) with the number of attempts so far. A "Right now" line
-  says what the agent's latest step was and how long ago. Someone who reads only this
-  part knows what is going on and whether to act.
-- **What to do** appears only when something needs you: unfinished fixes the agent set
-  aside, each with its two choices (continue or discard) and the command to copy, or
-  advice when the agent is stuck or waits for permission in Claude Code.
-- **Step by step**: the live activity feed. The latest step in large type with an icon
-  for its kind (reading, editing, testing, ...), the eight before it, and the rest of the
-  recent steps behind a fold. Steps taken by the independent reviewer carry a "Reviewer"
-  badge. When Claude Code waits for your reply it says so plainly; when a running task
-  has sent no step for five minutes it says the feed has gone quiet.
-- **Is the work sound?**: the latest test results (a ring with a tick or cross per test),
-  the reviewer's verdict and how many attempts were used. Test output and the full review
-  are one tap away.
-- **Where the time went**: the task timeline. One bar per task, latest on top. Each bar is
-  split into coloured segments for planning, making a change, testing, being reviewed and
-  polishing (fixing the reviewer's small points afterwards), with
-  marks where a new attempt began, a hatched break where the task stood still, the outcome
-  at the end and the working time beside it. Tapping a segment tells what happened in it.
-  A running task's bar grows while you watch.
-- **Test runs over time**: one bar per test run, so a run of failures stands out.
-- **Track record**: how well the agent does over time. Four numbers (tasks right the first
-  time, reviews that said no, fixes set aside, times stuck), a chart of attempts per task,
-  and "Why the review said no": the reviewer's rejections grouped by theme, most common
-  first, each with a hint on what to sharpen in the project's instructions or definition
-  of done. "All projects" in the list shows the same across the whole workspace.
-- **Saved versions (Git)**: this computer ⇄ GitHub (versions to send, versions to get,
-  unsaved files), Push and Pull buttons, a link to the repository, and a timeline of the
-  saved versions coloured by whether tests passed and the review approved. Pull is refused
-  while the agent is working. Hidden when the workspace has no framework tool.
-- **Where the agent works**: the change map. Every file of the project as a tile, grouped
-  by folder; a bigger tile is a bigger file, a darker blue one was changed more often.
-  Tapping a tile shows its last change. The framework's own records (progress notes, test
-  results, screenshots) are hidden unless you ask for them.
+**The left rail** shows four numbers for the whole workspace (how many projects need you, how
+many are working, how many have finished, and how often tasks were right the first time), then
+the projects grouped into "Needs you", "Working", "Finished" and "Not started", with "All
+projects" on top. Each project carries a tiny picture: a progress bar while its agent works,
+otherwise a line of how its recent test runs went.
+
+**Picking a project** shows, on the first screen:
+
+- **At a glance** (the summary, across the full width): the project, what the agent is doing in
+  one plain sentence, which attempt it is on, a pill that says "Needs you" or "Nothing needs
+  you", the task, a "Right now" line with its latest step and how long ago, and the agent's loop
+  as a row of steps (Plan → Change → Test → Review → Finished, Your call or Stuck). Its right half,
+  "How far along", shows the agent's latest note and its written plan with the steps done so far.
+  Someone who reads only this part knows what is going on and whether to act.
+- **What to do** appears only when something needs you, in the summary's right half: unfinished
+  fixes the agent set aside, each with its two choices (continue or discard) and the command to
+  copy, or advice when the agent is stuck or waits for permission in Claude Code.
+- **Step by step**: the live activity feed. The latest step in large type, the eight before it
+  with the time, and the rest behind a fold. Each kind of step has an icon in the colour of its
+  stage (reading and searching grey, changing blue, testing amber, reviewing violet); steps taken
+  by the independent reviewer carry a "Reviewer" badge. When Claude Code waits for your reply it
+  says so plainly; when a running task has sent no step for five minutes it says the feed has gone
+  quiet.
+- **Tests**: a ring with how many tests pass, each test with a tick or cross, every earlier test
+  run as a small bar, the reviewer's verdict and how many attempts were used. Test output and the
+  full review are one tap away.
+- **Track record**: how well the agent does over time. Four numbers (tasks right the first time,
+  reviews that said no, fixes set aside, times stuck) and a small chart of attempts per task; tap a
+  bar for that task. "Why the review said no" opens the reviewer's rejections grouped by theme, most
+  common first, each with a hint on what to sharpen in the project's instructions or definition of
+  done. "All projects" in the rail shows the same across the whole workspace.
+- **Where the time went**: the task timeline. One lane per task, latest on top, split into coloured
+  segments for planning, making a change, testing, being reviewed and polishing (fixing the
+  reviewer's small points afterwards), with marks where a new attempt began, a hatched break where
+  the task stood still, the outcome and the working time. Tapping a segment tells what happened in
+  it; a running task's lane grows while you watch. Older tasks wait behind a fold.
+- **Where the agent works**: the change map. Every file of the project as a tile, grouped by
+  folder; a bigger tile is a bigger file, a stronger blue one was changed more often. Tapping a tile
+  shows its last change. The framework's own records (progress notes, test results, screenshots)
+  are hidden unless you ask for them.
+
+Below the first screen:
+
+- **Saved versions (Git)**: this computer ⇄ GitHub (versions to send, versions to get, unsaved
+  files), Push and Pull buttons, a link to the repository, and a timeline of the saved versions
+  coloured by whether tests passed and the review approved. Pull is refused while the agent is
+  working. Hidden when the workspace has no framework tool.
 - **Pictures from the project**: plots the project produced, when there are any.
-- **More detail**, folded away: the decision log, the agent's progress note and the full
-  activity log.
+- **More detail**, folded away: the decision log, the agent's progress note and the full activity
+  log.
 
-The page updates itself every few seconds, works in light and dark mode and on a phone.
+One colour stands for each stage everywhere on the page (the loop, the live steps, the timeline,
+the rail). The page updates itself every few seconds. On a phone it becomes one column in the same
+order, with the summary first and the project list as one row of chips.
 
 ## How to run
 
@@ -98,17 +111,25 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   itself on this machine.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
-  changed.
+  changed. Its colours and fonts are the tokens from the approved design.
+- `design/`: the approved design. `design/DESIGN.md` sets the layout, colour and type rules;
+  `design/mockup.html` and its screenshots are the reference the page is compared with.
 - `fixtures/`: a pretend workspace with seven projects, one for each situation the page
   must handle (running, stuck, waiting for a decision, waiting for permission, finished,
   never started, a long track record). Git repositories are never stored there; the checks
   build them in a temporary folder with `checks/git_workspace.py`.
-- `tests/`: unit tests for the server's answers, its Git safety rules, and this README.
+- `tests/`: unit tests for the server's answers, its Git safety rules, this README, and that every colour
+  comes from the design's tokens.
 - `checks/`: scripts that open the page in a headless browser for every fixture (desktop
   light, desktop dark, phone), fail on errors or sideways scrolling, test each section's
   behaviour, and save screenshots to `plots/` for a person or agent to look at.
-- `ROADMAP.md`: the four features planned on 2026-10-14 (activity feed, task timeline,
-  change map, track record) and their status. See [ROADMAP.md](ROADMAP.md).
+  `checks/layout.py` checks the design itself: the summary and the five main panels all on the
+  first 1440 × 900 screen (on the example projects and on a temporary workspace with real Git
+  repositories), the panel grid and order, one column on phones, dark by default, and the design's colours
+  and fonts.
+- `ROADMAP.md`: the planned features (activity feed, task timeline, change map, track record,
+  README, the instrument-panel redesign, and next the time estimate) and their status. See
+  [ROADMAP.md](ROADMAP.md).
 
 How it fits into the Agentic AI Framework: agents record their progress only through
 `framework/aaf.py` (phases, test runs, reviews, decisions, drafts, Git), and
@@ -130,6 +151,7 @@ Every change must pass these before it is committed:
 - **Task timeline**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/timeline.py; else python3 checks/timeline.py; fi`
 - **Change map**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/change_map.py; else python3 checks/change_map.py; fi`
 - **Track record**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/track_record.py; else python3 checks/track_record.py; fi`
+- **Instrument-panel layout**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/layout.py; else python3 checks/layout.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -137,6 +159,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-10-17: Roadmap 6: redesign the page as an instrument panel (design/DESIGN.md): rail with workspace numbers, hero, 12-column panel grid, dark by default (first try, review passed)
 - 2026-10-15: Write README.md for the control room from the template: what it is, each part of the page, how to start, how it is built, how it fits the framework (first try, review passed)
 - 2026-10-15: Roadmap 4: add a track record (per-project and workspace view, common review-failure reasons) (2 attempts, review passed)
 - 2026-10-15: Roadmap 3: add a change map (treemap of files from aaf.py git files) (first try, review passed)

@@ -171,7 +171,37 @@ def summary(name):
         "verdict": rv.get("verdict"),
         "drafts": len(drafts(name)),
         "activity": (read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), 1) or [None])[-1],
+        "trend": trend(pdir),
+        "plan": plan_progress(pdir),
     }
+
+
+TREND_RUNS = 12  # test runs in the project list's tiny trend line
+
+
+def trend(pdir):
+    """Share of tests passing in each of the latest test runs, oldest first, for the project list."""
+    out = []
+    for h in read_jsonl(os.path.join(pdir, "state", "check_history.jsonl"), last=TREND_RUNS):
+        try:
+            total = int(h.get("n_total") or 0)
+            out.append(round(int(h.get("n_pass") or 0) / total, 3) if total else 0.0)
+        except (AttributeError, TypeError, ValueError):
+            continue
+    return out
+
+
+def plan_progress(pdir):
+    """How many of the current plan's steps are done (state/plan.json, written by aaf.py plan), or None."""
+    p = read_json(os.path.join(pdir, "state", "plan.json"), None)
+    steps = p.get("steps") if isinstance(p, dict) else None
+    if not isinstance(steps, list) or not steps:
+        return None
+    steps = [x for x in steps if isinstance(x, dict)]
+    done = sum(1 for x in steps if x.get("done_at"))
+    current = next((str(x.get("text", "")) for x in steps if not x.get("done_at")), "")
+    return {"done": done, "total": len(steps), "current": current, "task": str(p.get("task", "")),
+            "steps": [{"text": str(x.get("text", "")), "done": bool(x.get("done_at"))} for x in steps[:40]]}
 
 
 def detail(name):

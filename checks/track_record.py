@@ -2,7 +2,8 @@
 
 Data: framework/aaf.py task_stats (what `aaf.py stats <project>` prints) and state/review_history.jsonl.
 For every fixture it checks, in a headless browser:
-- the section ([data-section=record]) comes after the task timeline, with an empty state when no task ran;
+- the section ([data-section=record]) comes right after the tests panel, as in design/DESIGN.md, with an
+  empty state when no task ran;
 - the four numbers ([data-kpi]): right the first time (of the tasks that ended), reviews that said no (of
   all reviews), fixes set aside, times stuck, equal aaf.py's summary; aaf.py counts stuck and waiting tasks
   as ended ("finished"), so where some are, the page must not call them finished tasks (also in the workspace);
@@ -60,6 +61,8 @@ def serve(root):
 
 def open_page(browser, base, name, w=1440, h=900, scheme="light", wait='[data-section="record"]'):
     page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
+    if scheme == "light":  # dark is the page's default; light is the choice the theme switch stores
+        page.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: errors.append(m.text)
@@ -83,6 +86,11 @@ def want_kpis(s):
 
 
 def reasons_in(page, scope):
+    # In the project view the reasons wait behind a fold ("detail on demand"); open it as a person would.
+    fold = page.query_selector(scope + " details[data-reasons-fold]")
+    if fold and fold.get_attribute("open") is None:
+        fold.query_selector("summary").click()
+        page.wait_for_timeout(100)
     return page.eval_on_selector_all(scope + " [data-reason]", """els => els.map(e => ({key: e.dataset.reason,
         count: +e.dataset.count, n: e.querySelector('.rn').textContent.trim(), text: e.innerText}))""")
 
@@ -95,8 +103,8 @@ def check_project(browser, base, name, colours):
     order = page.eval_on_selector_all("main [data-section]",
                                       "els => els.filter(e => e.parentElement.closest('[data-section]') === null)"
                                       ".map(e => e.dataset.section)")
-    if "timeline" in order and order.index("record") < order.index("timeline"):
-        bad.append("track record comes before the task timeline (order %s)" % order)
+    if "health" in order and order.index("record") != order.index("health") + 1:
+        bad.append("track record does not follow the tests panel (order %s)" % order)
     sec = '[data-section="record"]'
     if not tasks:
         if not page.query_selector(sec + " [data-empty]"):
@@ -144,6 +152,11 @@ def check_project(browser, base, name, colours):
         bad.append("a reason shows a different number than it counts")
     if not exp and not page.query_selector(sec + " [data-reasons-empty]"):
         bad.append("no 'the review has not said no' state although no review said no")
+    if not exp and page.query_selector(sec + " details[data-reasons-fold]"):
+        # Nothing to open: say so in one line instead of a fold that leads to nothing.
+        bad.append("offers 'Why the review said no' to open although the review never said no")
+    if not exp and not page.is_visible(sec + " [data-reasons-empty]"):
+        bad.append("the 'the review has not said no' line is not visible")
     if name == "api-client" and got:
         if "definition of done already asks" not in got[0]["text"] or "progress note" not in got[0]["text"]:
             bad.append("api-client: top reason does not point to the definition-of-done item: %r" % got[0]["text"][:300])
@@ -327,7 +340,7 @@ def check_overlap(browser):
 def screenshots(browser, base):
     for label, w, h, scheme in [("desktop", 1440, 900, "light"), ("desktop-dark", 1440, 900, "dark"), ("phone", 390, 844, "light")]:
         page, _ = open_page(browser, base, "api-client", w, h, scheme)
-        page.eval_on_selector('[data-section="record"]', "s => s.previousElementSibling.scrollIntoView()")
+        page.eval_on_selector('[data-section="record"]', "s => s.scrollIntoView()")
         page.wait_for_timeout(200)
         page.screenshot(path=os.path.join(PLOTS, "render-record-%s.png" % label))
         page.close()
