@@ -2,6 +2,28 @@
 
 ## Current state
 
+- **Framework updates (roadmap 8, 2026-10-19)**, from `FRAMEWORK-UPDATES.md`:
+  1. Git timeline: the dashed "not on GitHub yet" ring comes from each commit's own `pushed` field
+     (`aaf.py git info`); only `false` draws it (`null`: no upstream). The "newest `ahead`" guess is gone.
+     `checks/git_section.py` `check_pushed_field` patches a history where the unsent commits are not the newest.
+  2. Activity feed: `server.activity_steps()` turns the hook's records into steps: quiet `done` records are
+     never listed; Claude Code's id-less notification about a permission prompt right after the same prompt
+     logged with its `tool_use_id` counts once; a `waiting` step is marked `resolved` (`done`/`error` for the
+     same `tool_use_id`, `you`, or the next step; another step's error does not count) with `resolved_ts`.
+     `read_activity()` reads 3 × 30 + 10 records so the feed still gets 30 steps. The page: a resolved wait
+     is calm ("You gave permission: …", "Asked for your reply; you answered", right now "Carrying on with
+     your permission"), never "Needs you" (hero, card, rail), and "gone quiet" counts from `resolved_ts`.
+     `error` records are steps with a red warning icon and "What went wrong" (folded on the current step,
+     tooltip in the list); `you` records are steps with a person icon. Fixture: `notes-app` got an activity
+     log in the new format (granted permission as its latest step, an error, a reply). Checks:
+     `ActivityStepsTest` (7 tests) and `checks/activity.py` (notes-app block); all fail on the old code.
+  3. Tests panel: each test shows its time ("0.8 s", "1 min 14 s", "under 0.1 s") from `duration_s`;
+     fixture durations made realistic; `checks/layout.py` `check_test_times` checks every fixture.
+  Screenshots inspected: `render-activity-notes-app-desktop.png`, `render-layout-desktop-dark.png`.
+  Review PASS (4 minor). Follow-up fix kept after a second PASS: the duplicate prompt counts once in either
+  order, and notes, turn ends and other agents' steps no longer close a wait (two new ActivityStepsTest tests).
+  Second follow-up fix kept after a PASS: `checks/layout.py` `check_many_test_times` (patched: eight tests, some
+  folded, one without a time, values at the unit boundaries) and "59.6 s" now reads "1 min", "9.96 s" "10 s".
 - **Time estimate (roadmap 7, 2026-10-19)**: the hero's right half "How far along" (`[data-slot=estimate]`)
   shows, for a running task, a range and never a single number: "28–45% done" in large type, a bar whose solid
   part ends at progress_low and a striped band to progress_high (phase colour), "about 1 to 2 hours left"
@@ -180,7 +202,7 @@
 
 ## Next
 
-Roadmap items 1 to 7 are all done; no roadmap item is left.
+Roadmap items 1 to 8 are all done; no roadmap item is left.
 
 - Time estimate: the rail's progress bar for a working project could show the same striped band.
 - The estimate is cached 15 s while "started N min ago" uses the page clock; fine for now, but a long-cached
@@ -196,8 +218,7 @@ Roadmap items 1 to 7 are all done; no roadmap item is left.
 - Redesign: the first-screen fit is checked on the fixtures. A real project with long texts can still grow row 2
   (step texts and test names are cut to one line, at most 5 tests show, but a "gone quiet" note or an opened fold
   makes a panel taller) and push row 3 partly below 900 px.
-- Redesign: the tests panel shows no time per test (the mockup does; the checks' results do not record durations).
-  The change map preview gets only the height row 3 leaves (about 70 px when the timeline has one task); projects
+- Redesign: the change map preview gets only the height row 3 leaves (about 70 px when the timeline has one task); projects
   with many files get small tiles, and there is no larger view on tap (DESIGN.md suggests panels below the first
   screen may open wider). `tests/test_colours.py` scans the style block only (not inline styles or named colours). The "what to do" card for several
   unfinished fixes will make the hero row taller than one screen allows.
@@ -218,12 +239,15 @@ Roadmap items 1 to 7 are all done; no roadmap item is left.
   contain aaf.py ("python3 the framework tool check ...") read awkwardly. The agent-wording check
   uses one note on one fixture at desktop size.
 - No fixture is stuck below the attempt limit, so that wording of the stuck card is not exercised.
-- Git timeline: "not on GitHub yet" marks the newest `ahead` commits, which is only right for a straight
-  history (merges, more than 40 commits). A real fix needs `aaf.py git info` to report a per-commit pushed flag,
-  a change to the framework's data model; waiting for the human's go-ahead.
-- Activity feed: `framework/hooks/activity.py` logs nothing after a permission is granted (no
-  PostToolUse event), so a long command the human already approved keeps showing "Needs you in
-  Claude Code" until the next step. Needs a hook change outside this project.
+- Activity feed: Claude Code has no event at the moment of approval, so a long command the human already
+  approved still shows "Needs you in Claude Code" until it finishes (`done`) or the next step starts.
+- Activity feed: two permission prompts at once (parallel tool calls) are resolved together by the first
+  `done`; an id-less wait is resolved with the waits that have an id. The two copies of one prompt are merged
+  only when adjacent in the log (a parallel agent's step between them leaves two waits; after a refusal the
+  id-less copy then waits for the main agent's next step or a reply), and the merge does not compare agents.
+  No test has two agents waiting at once or a SubagentStop closing a subagent's wait.
+- `checks/activity.py` does not pin the server's clock, so its notes-app screenshot shows an odd estimate
+  ("about 1 minute to 59 hours left"); `checks/estimate.py` covers the estimate with a pinned clock.
 - Activity feed: on finished, stuck, waiting and idle projects the "N min ago" texts update only
   when data changes (they could be updated in place without a full redraw).
 - Activity feed: the longer "stuck · Claude Code is waiting" flag is checked at desktop width only;
@@ -265,8 +289,11 @@ Roadmap items 1 to 7 are all done; no roadmap item is left.
 - README: `tests/test_readme.py` checks paths in backticks only, not Markdown link targets (the link to the
   workspace README is unchecked; ROADMAP.md has its own test). The Git bullet says "hidden when the workspace
   has no framework tool", which a newcomer may not follow (from the second README review, not yet fixed).
+- Tests panel times: `took()` in `checks/layout.py` copies the page's rounding (Python rounds exact halves
+  differently, e.g. 12.5 s); the expected strings are not written by hand; tests are matched by name only
+  loosely; 3600 s reads "60 min", not "1 h".
 - `checks/render.py` lists the fixture folder raw (a stray `.DS_Store` would be treated as a project).
 
 ## Roadmap
 
-Four features are planned and must all be built, one `/task` each: see `ROADMAP.md` for the order, the data sources and the paste-ready task texts. Mark each item done there when finished.
+Eight items, all built, one `/task` each: see `ROADMAP.md` for the order, the data sources and the paste-ready task texts. Mark each item done there when finished.

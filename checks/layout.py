@@ -10,6 +10,8 @@ At laptop size (1440x900), with the page scrolled to the top:
   Git, pictures and more detail below;
 - the left rail shows four workspace numbers ([data-fleet]: need you, working, finished, first try)
   and a tiny picture for every project ([data-mini]).
+Tests panel: every test shows how long it took ([data-test-time], from duration_s in checks.json),
+also the ones folded away (patched: eight tests, one without a time, which shows none).
 On a phone (390x844): one column in the same order, and no sideways scrolling.
 Theme: dark by default, light after the theme switch (remembered after a reload); the colour
 tokens are the ones in DESIGN.md, and every phase is drawn in its token's colour in the loop
@@ -19,6 +21,7 @@ The first-screen rule is also checked on a temporary workspace with real Git rep
 (checks/git_workspace.py), where the change map draws real tiles and the Git section appears below.
 Screenshots: plots/render-layout-*.png (compare with design/mockup-dark.png).
 """
+import json
 import os
 import sys
 import threading
@@ -123,6 +126,67 @@ def check_desktop(page, name):
             if abs(frac - SPANS[s] / 12) > 0.035:
                 bad.append("%s is %.2f of the width, expected about %d of 12 columns" % (s, frac, SPANS[s]))
     return bad
+
+
+def took(sec):
+    """How the tests panel writes a test's duration (the same rule as secsWords in index.html)."""
+    if sec < 0.1:
+        return "under 0.1 s"
+    if sec < 9.95:
+        return "%.1f s" % sec
+    if round(sec) < 60:
+        return "%d s" % round(sec)
+    m, r = divmod(int(round(sec)), 60)
+    return "%d min %d s" % (m, r) if r else "%d min" % m
+
+
+def check_test_times(page, name, checks=None):
+    if checks is None:
+        try:
+            with open(os.path.join(FIXTURES, "projects", name, "state", "checks.json")) as f:
+                checks = json.load(f).get("checks", [])
+        except OSError:
+            return []
+    want = {c["name"]: took(c["duration_s"]) for c in checks if isinstance(c.get("duration_s"), (int, float))}
+    got = page.eval_on_selector_all('[data-section="health"] [data-test]', """els => els.map(e => {
+        const t = e.querySelector('[data-test-time]'); return [e.dataset.test, t ? t.textContent.replace(/\\s+/g, ' ').trim() : null]; })""")
+    bad = []
+    if len(got) != len(checks):
+        bad.append("tests panel lists %d tests, checks.json has %d" % (len(got), len(checks)))
+    for test, text in got:
+        if test in want and text != want[test]:
+            bad.append("test %r shows time %r, expected %r" % (test, text, want[test]))
+        elif test not in want and text is not None:
+            bad.append("test %r has no recorded time but shows %r" % (test, text))
+    return bad
+
+
+# More tests than the panel shows at once (the rest are folded), times at the unit boundaries,
+# and one test without a recorded time.
+MANY = [{"name": "T%d" % i, "cmd": "true", "passed": i != 3, "exit_code": 0, "output": "", "duration_s": d}
+        for i, d in enumerate([0.05, 0.8, 9.96, 12.4, 59.6, 74.2, 3600.0])] + \
+       [{"name": "T7", "cmd": "true", "passed": True, "exit_code": 0, "output": ""}]
+
+
+def check_many_test_times(browser, base):
+    def patch(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["checks"] = {"ran_at": "2026-10-14T14:40:00+02:00", "passed": False, "checks": MANY}
+        route.fulfill(response=resp, json=d)
+    ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+    page = ctx.new_page()
+    page.clock.set_fixed_time(datetime.fromisoformat(NOW))
+    page.route("**/api/project?name=api-client", patch)
+    page.goto("%s/#p=api-client" % base)
+    page.wait_for_selector('[data-section="health"] [data-test]', timeout=15000)
+    page.wait_for_timeout(500)
+    bad = check_test_times(page, "api-client", MANY)
+    folded = page.locator('[data-section="health"] .tests-more [data-test] [data-test-time]').count()
+    if folded == 0:
+        bad.append("no folded test shows its time")
+    ctx.close()
+    return ["many tests: " + b for b in bad]
 
 
 def check_rail(page):
@@ -282,6 +346,7 @@ def main():
         for name in names:
             ctx, page, errors = open_page(browser, base, name)
             problems += ["%s/desktop: %s" % (name, b) for b in check_desktop(page, name)]
+            problems += ["%s/tests panel: %s" % (name, b) for b in check_test_times(page, name)]
             if name == names[0]:
                 problems += ["rail: " + b for b in check_rail(page)]
             if name == "image-classifier":
@@ -294,6 +359,7 @@ def main():
         ctx, page, _ = open_page(browser, base, "image-classifier", storage={"aaf.theme": "light"})
         page.screenshot(path=os.path.join(PLOTS, "render-layout-desktop-light.png"))
         ctx.close()
+        problems += check_many_test_times(browser, base)
         problems += check_theme(browser, base)
         problems += check_colours(browser, base)
         problems += check_fonts(browser, base)

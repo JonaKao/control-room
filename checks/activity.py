@@ -12,6 +12,11 @@ fixtures it checks, in a headless browser:
 - a latest "waiting" entry makes the human needed: summary flag, a "what to do" card naming
   Claude Code, and the project listed under "Needs you"; an idle prompt after a finished task
   does not;
+- records the hook marks quiet ("done": a step finished) are never listed as steps, and one permission
+  prompt is one step even though Claude Code logs it twice (with and without its tool_use_id); a wait that a
+  later "done" or "error" for the same tool_use_id, a "you" record (the human answered) or the next
+  step resolved is shown calmly ([data-resolved]) and does not make the human needed; "error" and
+  "you" records are steps with their own icons, an error with what went wrong (notes-app);
 - while a task is running, no step for several minutes says the feed has gone quiet
   ([data-quiet]), also when the time passes without new data; a recent step does not;
 - plain words: framework file names and the framework tool are not shown;
@@ -53,6 +58,20 @@ def log(name):
     return rows
 
 
+def feed(rows):
+    """The steps the page should list: no quiet records ("done"), and Claude Code's notification
+    about a permission prompt right after the same prompt logged with its tool_use_id counts once."""
+    out = []
+    for r in rows:
+        if r.get("quiet"):
+            continue
+        if (r.get("kind") == "waiting" and not r.get("tool_use_id") and out and out[-1].get("kind") == "waiting"
+                and out[-1].get("tool_use_id") and "permission" in r.get("text", "").lower()):
+            continue
+        out.append(r)
+    return out
+
+
 def at(iso, minutes):
     return datetime.fromisoformat(iso) + timedelta(minutes=minutes)
 
@@ -80,6 +99,7 @@ def sections(page):
 
 
 def check_feed(page, name, rows):
+    rows = feed(rows)
     bad = []
     order = sections(page)
     needs = page.locator('[data-section="glance"] [data-needs]').first.get_attribute("data-needs")
@@ -224,6 +244,70 @@ def main():
                 problems.append("example-done: the idle prompt after a finished task is highlighted as urgent")
             if needed_in_rail(page, "example-done") == "Needs you":
                 problems.append("example-done: listed under 'Needs you' for an idle prompt")
+            page.close()
+
+            # Granted permission, a failed step and a reply (framework update 2026-10-19): notes-app's
+            # reviewer asked to run a command, a quiet "done" for that tool_use_id followed.
+            rows = log("notes-app")
+            steps = feed(rows)
+            done_ts = rows[-1]["ts"]
+            page, _ = open_page(browser, base, "notes-app", at(done_ts, 1))
+            if page.locator('[data-section="glance"] [data-needs]').first.get_attribute("data-needs") != "no":
+                problems.append("notes-app: a permission that was granted (the step ran) still says the human is needed")
+            if page.locator('[data-section="action"]').count():
+                problems.append("notes-app: a 'what to do' card for a permission that was already granted")
+            if needed_in_rail(page, "notes-app") == "Needs you":
+                problems.append("notes-app: listed under 'Needs you' for a permission that was already granted")
+            cur = page.locator("[data-current-step]")
+            if cur.count() == 0 or cur.first.get_attribute("data-attention") != "no" or cur.first.get_attribute("data-resolved") != "done":
+                problems.append("notes-app: the granted wait is not shown as resolved ([data-resolved=done], no attention)")
+            elif not re.search(r"you gave (it )?permission", cur.first.inner_text(), re.I):
+                problems.append("notes-app: the granted wait does not say permission was given: %r" % cur.first.inner_text())
+            listed = page.locator('[data-section="live"] li[data-kind]')
+            kinds = [listed.nth(i).get_attribute("data-kind") for i in range(listed.count())]
+            if "done" in kinds or len(kinds) != len(steps) - 1:
+                problems.append("notes-app: %d steps listed (%s), expected %d without the quiet records"
+                                % (len(kinds), kinds, len(steps) - 1))
+            err = page.locator('[data-section="live"] li[data-kind="error"]')
+            if err.count() != 1:
+                problems.append("notes-app: the failed step is not listed as an error step")
+            else:
+                if "did not work" not in err.first.text_content():  # may sit in the folded earlier steps
+                    problems.append("notes-app: the error step does not say it did not work: %r" % err.first.text_content())
+                if "2 failed" not in (err.first.get_attribute("title") or ""):
+                    problems.append("notes-app: the error step does not offer what went wrong")
+                if err.first.locator(".kicon.k-error").count() == 0:
+                    problems.append("notes-app: the error step has no error icon")
+            you = page.locator('[data-section="live"] li[data-kind="you"]')
+            if you.count() == 0 or "you" not in you.first.text_content().lower():
+                problems.append("notes-app: the human's reply is not listed as a step of its own")
+            replied = page.locator('[data-section="live"] li[data-kind="waiting"][data-resolved="you"]')
+            if replied.count() != 1 or "answered" not in replied.first.text_content().lower():
+                problems.append("notes-app: the wait the human answered is not shown as answered")
+            page.locator('[data-section="live"]').first.scroll_into_view_if_needed()
+            page.screenshot(path=os.path.join(PLOTS, "render-activity-notes-app-desktop.png"))
+            page.close()
+            # Quiet counts from when the step finished, not from when it asked.
+            page, _ = open_page(browser, base, "notes-app", at(done_ts, 20))
+            quiet = page.locator("[data-quiet]")
+            if quiet.count() == 0 or "20 min" not in quiet.first.inner_text():
+                problems.append("notes-app: 20 min after the granted step finished, the quiet notice says %r"
+                                % (quiet.first.inner_text() if quiet.count() else None))
+            page.close()
+            # Without the resolution the same wait needs the human (the page reads it, not the text).
+            def unresolved(route):
+                resp = route.fetch()
+                d = resp.json()
+                for p_ in (d if isinstance(d, list) else [d.get("summary", {}), {"activity": d.get("activity", [])[-1:]}]):
+                    a = p_.get("activity")
+                    for x in (a if isinstance(a, list) else [a]):
+                        if isinstance(x, dict):
+                            x.pop("resolved", None)
+                            x.pop("resolved_ts", None)
+                route.fulfill(response=resp, json=d)
+            page, _ = open_page(browser, base, "notes-app", at(done_ts, 1), route=("**/api/project*", unresolved))
+            if page.locator('[data-section="glance"] [data-needs]').first.get_attribute("data-needs") != "yes":
+                problems.append("notes-app: an unresolved permission wait does not make the human needed")
             page.close()
 
             # Quiet: a running task with no step for a while.

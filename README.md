@@ -44,10 +44,12 @@ otherwise a line of how its recent test runs went.
 - **Step by step**: the live activity feed. The latest step in large type, the eight before it
   with the time, and the rest behind a fold. Each kind of step has an icon in the colour of its
   stage (reading and searching grey, changing blue, testing amber, reviewing violet); steps taken
-  by the independent reviewer carry a "Reviewer" badge. When Claude Code waits for your reply it
-  says so plainly; when a running task has sent no step for five minutes it says the feed has gone
-  quiet.
-- **Tests**: a ring with how many tests pass, each test with a tick or cross, every earlier test
+  by the independent reviewer carry a "Reviewer" badge. When Claude Code waits for your permission or
+  reply it says so plainly, and calms down again as soon as you answered (the step ran, you sent a
+  message, or the next step started). A step that did not work is marked red, with what went wrong
+  one tap away; your own messages in Claude Code appear as steps too. When a running task has sent
+  no step for five minutes it says the feed has gone quiet.
+- **Tests**: a ring with how many tests pass, each test with a tick or cross and how long it took, every earlier test
   run as a small bar, the reviewer's verdict and how many attempts were used. Test output and the
   full review are one tap away.
 - **Track record**: how well the agent does over time. Four numbers (tasks right the first time,
@@ -70,7 +72,8 @@ Below the first screen:
 
 - **Saved versions (Git)**: this computer ⇄ GitHub (versions to send, versions to get, unsaved
   files), Push and Pull buttons, a link to the repository, and a timeline of the saved versions
-  coloured by whether tests passed and the review approved. Pull is refused while the agent is
+  coloured by whether tests passed and the review approved; a dashed ring marks each version GitHub
+  does not have yet. Pull is refused while the agent is
   working. Hidden when the workspace has no framework tool.
 - **Pictures from the project**: plots the project produced, when there are any.
 - **More detail**, folded away: the decision log, the agent's progress note and the full activity
@@ -138,7 +141,8 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   repositories), the panel grid and order, one column on phones, dark by default, and the design's colours
   and fonts.
 - `ROADMAP.md`: the planned features (activity feed, task timeline, change map, track record,
-  README, the instrument-panel redesign, and next the time estimate) and their status. See
+  README, the instrument-panel redesign, the time estimate and the use of the framework's 2026-10-19
+  updates) and their status. See
   [ROADMAP.md](ROADMAP.md).
 
 How it fits into the Agentic AI Framework: agents record their progress only through
@@ -170,6 +174,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-10-19: Use framework updates: per-commit pushed flag, done/you/error activity records, per-test durations (review passed)
 - 2026-10-19: Roadmap 7: show how far along a running task is and how long is left (time estimate) (first try, review passed)
 - 2026-10-17: Roadmap 6: redesign the page as an instrument panel (design/DESIGN.md): rail with workspace numbers, hero, 12-column panel grid, dark by default (first try, review passed)
 - 2026-10-15: Write README.md for the control room from the template: what it is, each part of the page, how to start, how it is built, how it fits the framework (first try, review passed)

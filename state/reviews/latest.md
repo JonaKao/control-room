@@ -1,11 +1,10 @@
 VERDICT: PASS
-SUMMARY: The time estimate meets Roadmap 7: a range with a striped band, "step N of M", time left as a range, a plain "based on" sentence with the task count, "not enough history yet" when there is no range, and how often estimates held in the hero and the track record. Fixtures cover the four scenarios, a new check covers it, and all 10 checks pass when run independently.
+SUMMARY: All three framework updates are used correctly; each is covered by a new check that fails on the old code; all 10 checks pass. Only minor edge cases.
 
 FINDINGS
-- [minor] index.html:1339 — The "not enough history yet" text says "only the plan shows how far along it is" even when there is no plan (first-run fixture). The "3" is hard-coded (matches aaf.MIN_HISTORY today).
-- [minor] index.html:1340 — The plan-based sentence says "from 14 past tasks from all projects" ("from" appears twice).
-- [minor] index.html:1346 — The hero's "estimates held 7 of 10 times" covers all projects, but only the tooltip says so.
-- [minor] fixtures/data-pipeline — "longer than all but one" rather than literally "longer than any". It reaches the same aaf branch and is documented.
-- [minor] server.py:estimate — A failed run is not cached, so a project whose estimate always fails starts a subprocess on every poll.
+- [minor] server.py activity_steps: (a) the duplicate permission prompt is folded only when the id-less notification comes after the PermissionRequest record; reversed order gives two waits. (b) Any later non-wait, non-error record (note, turn, a parallel subagent step) resolves a pending wait; a `turn` after a reply wait shows "you answered" when nobody did. Matches FRAMEWORK-UPDATES.md ("or the next step starts"); not listed in progress.md.
+- [minor] checks/layout.py: docstring says folded tests are checked, but no fixture has more than 5 checks; tests without duration_s are skipped, so a missing time is not caught.
+- [minor] index.html secsWords: 59.6 s shows "60 s" instead of "1 min" (the check copies the rounding).
+- [minor] render-activity-notes-app-desktop.png shows an odd estimate because checks/activity.py does not pin the server clock (already a known issue).
 
-DONE.md: all items met (progress.md updated by the implementer at the end).
+DONE.md: every item met (checks run by the reviewer: unit tests 76 OK, all browser checks exit 0; no check weakened; screenshots opened; plain language; server read-only).

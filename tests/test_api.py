@@ -79,6 +79,15 @@ class ApiTest(unittest.TestCase):
         self.assertIsNone(empty["summary"]["activity"])
         listed = {p["name"]: p for p in json.loads(self.get("/api/projects")[2])}
         self.assertEqual(listed["web-scraper"]["activity"]["kind"], "waiting")
+        self.assertNotIn("resolved", listed["web-scraper"]["activity"])
+        # notes-app: the reviewer's command needed permission, which was granted (a quiet "done" followed).
+        notes = json.loads(self.get("/api/project?name=notes-app")[2])
+        self.assertFalse(any(a.get("quiet") for a in notes["activity"]))
+        self.assertEqual(notes["activity"][-1]["kind"], "waiting")
+        self.assertEqual(notes["activity"][-1]["resolved"], "done")
+        self.assertEqual(listed["notes-app"]["activity"]["resolved"], "done")
+        self.assertIn("error", [a["kind"] for a in notes["activity"]])
+        self.assertIn("you", [a["kind"] for a in notes["activity"]])
 
     def test_project_list_carries_trend_and_plan(self):
         listed = {p["name"]: p for p in json.loads(self.get("/api/projects")[2])}
@@ -162,6 +171,89 @@ class ActivityTailTest(unittest.TestCase):
             f.write('{"kind": "read"}\nnot json\n["a list"]\n{"kind": "edit"')
         self.assertEqual(server.read_jsonl_tail(self.path, 30), [{"kind": "read"}])
         self.assertEqual(server.read_jsonl_tail(os.path.join(self.dir, "missing.jsonl"), 30), [])
+
+
+class ActivityStepsTest(unittest.TestCase):
+    """The hook also writes quiet "done" records, "error" and "you" records and a tool_use_id per step
+    (framework update 2026-10-19). Quiet records are not steps; they and "you" resolve a wait."""
+
+    def steps(self, rows):
+        return server.activity_steps(rows)
+
+    def test_quiet_records_are_not_steps(self):
+        rows = [{"ts": "1", "kind": "read", "text": "Reading a", "tool_use_id": "t1"},
+                {"ts": "2", "kind": "done", "text": "Finished: reading a", "tool_use_id": "t1", "quiet": True},
+                {"ts": "3", "kind": "edit", "text": "Editing a", "tool_use_id": "t2"}]
+        self.assertEqual([r["kind"] for r in self.steps(rows)], ["read", "edit"])
+
+    def test_done_for_the_same_step_resolves_a_permission_wait(self):
+        rows = [{"ts": "1", "kind": "command", "text": "Run it", "tool_use_id": "t1"},
+                {"ts": "2", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
+                {"ts": "3", "kind": "waiting", "text": "Waiting for your permission in Claude Code"},
+                {"ts": "4", "kind": "done", "text": "Finished: run it", "tool_use_id": "t1", "quiet": True}]
+        out = self.steps(rows)
+        # The notification without an id is the same prompt, not a second wait.
+        self.assertEqual([r["kind"] for r in out], ["command", "waiting"])
+        self.assertEqual(out[-1]["tool_use_id"], "t1")
+        self.assertEqual(out[-1]["resolved"], "done")
+        self.assertEqual(out[-1]["resolved_ts"], "4")
+
+    def test_a_wait_without_an_id_is_resolved_with_the_waits_before_it(self):
+        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
+                {"ts": "2", "kind": "waiting", "text": "Waiting for your reply in Claude Code"},
+                {"ts": "3", "kind": "done", "text": "Finished", "tool_use_id": "t1", "quiet": True}]
+        self.assertEqual([r.get("resolved") for r in self.steps(rows)], ["done", "done"])
+
+    def test_done_for_another_step_does_not_resolve_it(self):
+        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
+                {"ts": "2", "kind": "done", "text": "Finished: other", "tool_use_id": "t9", "quiet": True}]
+        self.assertNotIn("resolved", self.steps(rows)[-1])
+
+    def test_error_reply_and_next_step_resolve_waits(self):
+        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
+                {"ts": "2", "kind": "error", "text": "A step did not work: run it", "tool_use_id": "t1", "detail": "exit 1"},
+                {"ts": "3", "kind": "waiting", "text": "Waiting for your reply in Claude Code"},
+                {"ts": "4", "kind": "you", "text": "You sent a message in Claude Code"},
+                {"ts": "5", "kind": "waiting", "text": "Waiting for your reply in Claude Code"},
+                {"ts": "6", "kind": "read", "text": "Reading b"}]
+        out = self.steps(rows)
+        self.assertEqual([r["kind"] for r in out], ["waiting", "error", "waiting", "you", "waiting", "read"])
+        self.assertEqual([out[i].get("resolved") for i in (0, 2, 4)], ["error", "you", "step"])
+        self.assertEqual(out[1]["detail"], "exit 1")
+
+    def test_the_duplicate_prompt_counts_once_in_either_order(self):
+        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code"},
+                {"ts": "2", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"}]
+        out = self.steps(rows)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["tool_use_id"], "t1")
+
+    def test_notes_turns_and_other_agents_are_no_answer(self):
+        for later in ({"ts": "2", "kind": "turn", "text": "Finished its turn"},
+                      {"ts": "2", "kind": "note", "text": "Notification"},
+                      {"ts": "2", "kind": "read", "text": "Reading b", "subagent": "reviewer"}):
+            rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"}, later]
+            self.assertNotIn("resolved", self.steps(rows)[0], later)
+        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your reply in Claude Code", "subagent": "reviewer"},
+                {"ts": "2", "kind": "read", "text": "Reading b", "subagent": "reviewer"}]
+        self.assertEqual(self.steps(rows)[0]["resolved"], "step")
+
+    def test_feed_keeps_thirty_steps_however_many_quiet_records(self):
+        import tempfile
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "activity.jsonl")
+        with open(path, "w") as f:
+            for i in range(100):
+                f.write(json.dumps({"ts": str(i), "kind": "read", "text": "step %d" % i, "tool_use_id": "t%d" % i}) + "\n")
+                f.write(json.dumps({"ts": str(i), "kind": "done", "text": "done", "tool_use_id": "t%d" % i, "quiet": True}) + "\n")
+        try:
+            rows = server.read_activity(path, server.ACTIVITY_LAST)
+        finally:
+            import shutil
+            shutil.rmtree(d)
+        self.assertEqual(len(rows), server.ACTIVITY_LAST)
+        self.assertEqual(rows[-1]["text"], "step 99")
+        self.assertFalse(any(r.get("quiet") for r in rows))
 
 
 class TimelineTest(unittest.TestCase):

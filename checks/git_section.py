@@ -4,7 +4,8 @@ Builds a throwaway workspace (checks/git_workspace.py), serves it, and checks in
 headless browser that, per project:
 - the commit timeline shows one point per commit, oldest left, coloured by its
   Checks/Review trailers ([data-state] = ok | tested | bad | none), commits not yet on
-  GitHub marked ([data-pushed=no]), and subject plus decisions shown when a point is picked;
+  GitHub marked ([data-pushed=no]) from each commit's own `pushed` field (also when that is not
+  the newest ones, as after a merge), and subject plus decisions shown when a point is picked;
 - the sync picture states ahead / behind / uncommitted files, with the file list on demand;
 - the repo link appears when there is a GitHub address;
 - Push sends commits and Pull fetches them, Pull is disabled while the agent works,
@@ -109,6 +110,35 @@ def check_trailer_case(page, label):
     return bad
 
 
+def check_pushed_field(browser, base):
+    """Each commit's own `pushed` field decides the mark, not a count of the newest `ahead` ones:
+    after a merge the commit GitHub lacks can sit anywhere in the list (newest first from aaf.py)."""
+    flags = [True, False, True, False, None]  # newest first; None: no upstream known for it
+    def patch(route):
+        resp = route.fetch()
+        d = resp.json()
+        for c, f in zip(d["commits"], flags):
+            c["pushed"] = f
+        d["ahead"] = 2
+        route.fulfill(response=resp, json=d)
+    page = browser.new_page(viewport={"width": 1440, "height": 900})
+    page.route("**/api/git?name=example-done*", patch)
+    page.goto("%s/#p=example-done" % base)
+    page.wait_for_selector('[data-section="git"] [data-git-ready]', timeout=20000)
+    pts = page.locator('[data-viz="git-timeline"] [data-commit]')
+    got = [pts.nth(i).get_attribute("data-pushed") for i in range(pts.count())][::-1]
+    labels = [pts.nth(i).get_attribute("aria-label") for i in range(pts.count())][::-1]
+    page.close()
+    want = ["yes", "no", "yes", "no", "yes"]
+    bad = []
+    if got != want:
+        bad.append("pushed field: marks newest first %s, expected %s from each commit's pushed field" % (got, want))
+    for lab, w in zip(labels, want):
+        if (w == "no") != ("not on GitHub yet" in (lab or "")):
+            bad.append("pushed field: point %r says the wrong thing about GitHub" % lab)
+    return bad
+
+
 def png_size(path):
     with open(path, "rb") as f:
         head = f.read(24)
@@ -150,6 +180,8 @@ def main():
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
+
+            problems += check_pushed_field(browser, base)
 
             # Reading: example-done (2 commits not on GitHub), desktop and phone.
             for label, w, h in (("desktop", 1440, 900), ("phone", 390, 844)):

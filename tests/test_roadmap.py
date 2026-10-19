@@ -6,7 +6,7 @@ import unittest
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILT = {"1": "Live activity feed", "2": "Task timeline", "3": "Change map", "4": "Track record", "5": "README",
-         "6": "Instrument-panel redesign", "7": "Time estimate"}
+         "6": "Instrument-panel redesign", "7": "Time estimate", "8": "Framework updates"}
 
 
 class RoadmapTest(unittest.TestCase):

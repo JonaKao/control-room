@@ -19,7 +19,9 @@ includes people who do not know the code behind it.
   dropped after Push/Pull),
   and `POST /api/git/push|pull` with `{"name": ...}`. `/api/project` also carries the newest
   30 steps of `state/activity.jsonl` (the live feed, written by `framework/hooks/activity.py`),
-  read from the end of the file; `/api/projects` carries each project's newest step, `trend` (share of
+  read from the end of the file; `activity_steps()` leaves out quiet records (`done`), counts a
+  permission prompt once, and marks a `waiting` step `resolved` (+ `resolved_ts`) by `done`/`error`
+  for the same `tool_use_id`, a `you` record or the next step by the same agent (notes and turn ends do not count); `/api/projects` carries each project's newest step, `trend` (share of
   tests passing in each of the last 12 runs, for the rail's tiny line) and `plan` (`state/plan.json`:
   steps done, total, the current step and every step's text; `null` without a plan).
   `/api/project` also carries `tasks`: the task timeline, i.e. `task_stats()` from `framework/aaf.py`
@@ -76,8 +78,8 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    repositories, then checks the timeline colours, sync picture, repo link, Push and Pull,
    and saves `plots/render-git-*.png`.
 5. **Live activity feed**: `checks/activity.py` pins the browser clock and checks the current
-   step, the recent history, reviewer marks, the "waiting for you in Claude Code" state and the
-   "gone quiet" notice; it saves `plots/render-activity-*.png`.
+   step, the recent history, reviewer marks, the "waiting for you in Claude Code" state, waits
+   resolved by `done` / `you` records, `error` and `you` steps, and the "gone quiet" notice; it saves `plots/render-activity-*.png`.
 6. **Task timeline**: `checks/timeline.py` pins the clock and checks one bar per task (latest on
    top), one segment per stage in proportion to its time, one colour per stage, attempt marks,
    pause breaks, outcome and duration, the detail shown on tapping a segment, and that a running
@@ -130,7 +132,8 @@ reasons, a fix set aside, one stuck episode), `image-classifier` (running, faili
 with 2 of 5 steps done), `parser` (waiting for a decision
 on a draft), `example-done` (finished, with a plot and reviewer steps in its activity log),
 `scheduler` (stuck), `brand-new` (nothing run yet, no activity log), `web-scraper`
-(mid-task, Claude Code waiting for permission), `notes-app` (being reviewed, plan all done) and
+(mid-task, Claude Code waiting for permission), `notes-app` (being reviewed, plan all done; its activity
+log uses the hook's newer records: a permission granted by a quiet `done`, an `error`, a reply answered by `you`) and
 `data-pipeline` (running about 19 h, longer than any past task). `fixtures/first-run/` is a
 second workspace with one planning project and no finished task anywhere (the estimate's "not enough
 history"). `api-client/state/estimates.jsonl` holds ten logged estimate ranges, seven of which held, so

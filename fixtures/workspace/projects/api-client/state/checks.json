@@ -7,7 +7,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 4.1,
       "output": ""
     },
     {
@@ -15,7 +15,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 0.9,
       "output": ""
     },
     {
@@ -23,7 +23,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 18.4,
       "output": ""
     },
     {
@@ -31,7 +31,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 125.0,
       "output": ""
     },
     {
@@ -39,7 +39,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 0.5,
       "output": ""
     }
   ]

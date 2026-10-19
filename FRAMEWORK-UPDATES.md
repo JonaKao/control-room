@@ -24,4 +24,10 @@ Newest first. When a task has used an update, note it under "Used by".
 3. **Test durations exist.** `state/checks.json` has `duration_s` for every check, and
    always has. The tests panel can show per-test times as in the mockup.
 
-Used by: (not yet)
+Used by: control-room roadmap item 8 (2026-10-19). 1: the Git timeline's dashed "not on GitHub
+yet" ring now comes from each commit's `pushed` (`false` only; `null` draws no ring). 2: the server
+(`activity_steps` in server.py) leaves quiet records out of the feed, folds Claude Code's id-less
+notification about a permission prompt into the wait logged with its `tool_use_id`, and marks a wait
+`resolved` (by `done`/`error` for the same id, `you`, or the next step); the page shows it calmly
+("You gave permission", "Asked for your reply; you answered") and lists `error` (red, with what went
+wrong) and `you` records as steps. 3: the tests panel shows each test's `duration_s`.

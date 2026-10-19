@@ -13,6 +13,7 @@ knows where to continue.
 | 5 | README | What is this project, for someone new to it? | `template/README.md`; generated sections refreshed by `aaf.py git commit` | Done (2026-10-15) |
 | 6 | Instrument-panel redesign | Does everything important fit on one laptop screen? | `design/DESIGN.md`, `design/mockup.html`, `design/mockup-dark.png` (approved 2026-10-17) | Done (2026-10-17) |
 | 7 | Time estimate | How far along is the task, and how long is left? | `python3 framework/aaf.py estimate <project>`; plan steps in `state/plan.json`; accuracy in `aaf.py stats` → `estimate_accuracy` | Done (2026-10-19) |
+| 8 | Framework updates | Is a version on GitHub? Did I already answer Claude Code? How long did each test take? | `FRAMEWORK-UPDATES.md` (2026-10-19): `pushed` per commit in `aaf.py git info`; `done` / `error` / `you` records and `tool_use_id` in `state/activity.jsonl`; `duration_s` in `state/checks.json` | Done (2026-10-19) |
 
 Shared requirements for all features: plain language, as visual as possible, calm and
 consistent with the existing design, detail on demand. Each feature gets fixtures for
@@ -64,4 +65,10 @@ The hero's right half ("How far along", `[data-slot=estimate]`) already shows th
 
 ```
 /task control-room Roadmap 7: show how far along a running task is and how long is left. Get the data from `python3 framework/aaf.py estimate <project>` (active, phase, elapsed_s, plan {steps, done, current}, progress_low/high as fractions, remaining_low_s/high_s, basis, history_tasks, history_scope, calibration {predictions_checked, coverage, width_scale}); cache it briefly like the Git info. Show it as a range, never a single number: a progress bar with a shaded band from progress_low to progress_high, "step 3 of 5" with the current step, and "about 20 to 45 minutes left". Say plainly what it is based on and how many past tasks, and say "not enough history yet" when the range is missing. In the track record, add how often past estimates held (calibration.coverage, with the number of predictions checked). Add fixtures for planning without history, mid-plan, in review, and a task running longer than any before. Put it in the hero's right half ("How far along"), as in design/mockup-dark.png. Mark roadmap item 7 done in ROADMAP.md.
+```
+
+### 8. Framework updates (2026-10-19)
+
+```
+/task control-room Use the framework updates described in FRAMEWORK-UPDATES.md: mark commits as on GitHub or not from the new per-commit pushed field instead of guessing from ahead; resolve "Needs you" with the new done / you activity records (matched by tool_use_id) without listing quiet records as steps, and show error records; show per-test durations in the tests panel. Remove the known issues these settle from state/progress.md, fill in "Used by" in FRAMEWORK-UPDATES.md, and add this as roadmap item 8 (Done) in ROADMAP.md.
 ```

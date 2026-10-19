@@ -181,3 +181,15 @@ A failing aaf estimate subprocess was retried on every 2.5 s poll; it is now cac
 ## 2026-10-19: Fixed: data-pipeline runs longer than any past task
 
 The roadmap asks for a task running longer than any before; the fixture was longer than all but one. Its start moved to 2026-10-13T20:00 (about 19 h at the pinned clock); test_scenarios asserts it exceeds every finished task.
+
+## 2026-10-19: Activity: waits resolved in the server, not the page
+
+The page polls /api/projects (one newest step per project, for the rail) and /api/project (30 steps). Resolving a wait needs the quiet records after it, so the server (activity_steps) drops quiet records, folds Claude Code's id-less duplicate of a permission prompt into the wait with the tool_use_id, and marks waits resolved; both endpoints share it and the feed still gets 30 real steps. Rejected: sending raw records to the page (the rail would need a tail per project, and quiet records would eat the 30-step budget); hiding resolved waits (the human would lose that they approved something).
+
+## 2026-10-19: Fixed: waits closed only by real answers
+
+activity_steps now merges the two copies of a permission prompt in either order and closes a wait only by done/error for its tool_use_id, a you record, or the next step by the same agent; notes, turn ends and other agents' steps no longer count. Tests: test_the_duplicate_prompt_counts_once_in_either_order, test_notes_turns_and_other_agents_are_no_answer (fail on the old code). Reviewer PASS; remaining edge cases (non-adjacent copies, two agents waiting) listed as known issues.
+
+## 2026-10-19: Fixed: test times checked with folded and missing times
+
+checks/layout.py check_many_test_times patches api-client with eight tests (some folded, one without duration_s, values 0.05/0.8/9.96/12.4/59.6/74.2/3600 s); a test without a time must show none. secsWords and the check now round before choosing the unit, so 59.6 s reads 1 min and 9.96 s reads 10 s. Reviewer PASS (verified the check fails on three deliberate breakages). Remaining: rounding of exact halves differs between Python and JS; expected strings come from a copy of the rule.

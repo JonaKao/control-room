@@ -201,6 +201,8 @@ summary { cursor: pointer; }
 .kicon.k-test, .kicon.k-command { background: var(--test); color: var(--panel); }
 .kicon.k-agent { background: var(--review); color: var(--panel); }
 .kicon.k-waiting { background: var(--accent); color: var(--panel); }
+.kicon.k-waiting.resolved, .kicon.k-you { background: var(--panel2); color: var(--ink); }
+.kicon.k-error { background: var(--fail); color: var(--panel); }
 [data-subagent="reviewer"] > .kicon { background: var(--review); color: var(--panel); }
 .live .current { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 11px; align-items: center; padding: 9px 10px; border-radius: 9px; background: var(--panel2); }
 .live .current .kicon { width: 30px; height: 30px; border-radius: 8px; }
@@ -231,6 +233,7 @@ summary { cursor: pointer; }
 .tests { list-style: none; margin: 8px 0 0; padding: 0; font-size: 12.5px; }
 .tests li { display: flex; gap: 7px; align-items: center; padding: 2px 0; border-top: 1px solid var(--grid); min-width: 0; }
 .tests li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tests li .took { margin-left: auto; flex: none; padding-left: 6px; color: var(--muted); font: 11px var(--mono); }
 .tests li .mk, .mk { width: 14px; height: 14px; flex: none; }
 .tests-more > summary { font-size: 12px; padding: 3px 0; }
 .history .bars { display: flex; gap: 2px; align-items: flex-end; height: 22px; margin-top: 7px; }
@@ -629,6 +632,8 @@ const KIND_ICON = {
   web: `<circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c2 2.2 2 10.8 0 13M8 1.5c-2 2.2-2 10.8 0 13"/>`,
   plan: `<path d="M2.5 4l1.2 1.2L6 3M2.5 9l1.2 1.2L6 8M8.5 4.5h5M8.5 9.5h5M8.5 13h5"/>`,
   waiting: `<path d="M2.5 3h11v7.5h-6l-3 3v-3h-2z"/><path d="M8 5v2.6M8 9.2v.1"/>`,
+  you: `<circle cx="8" cy="5" r="2.6"/><path d="M3 14c.6-3 2.5-4.6 5-4.6s4.4 1.6 5 4.6"/>`,
+  error: `<path d="M8 1.8L14.6 13.5H1.4z"/><path d="M8 6.2v3.3M8 11.6v.1"/>`,
   turn: `<path d="M5.5 3.5v9M10.5 3.5v9"/>`,
   note: `<path d="M4 11V7.5a4 4 0 0 1 8 0V11l1.5 1.5h-11zM6.5 14.5h3"/>`,
   other: `<circle cx="8" cy="8" r="2.5"/>`,
@@ -637,24 +642,34 @@ const KIND_ICON = {
 const KIND_WORDS = { read: "Reading the code", edit: "Changing a file", search: "Searching the code", test: "Running tests",
   framework: "Recording its progress", command: "Running a command", agent: "Working with a helper agent",
   web: "Looking something up online", plan: "Planning its next steps", waiting: "Waiting for you in Claude Code",
-  turn: "Paused between steps", note: "Got a notification", other: "Working" };
+  turn: "Paused between steps", note: "Got a notification", you: "You answered in Claude Code",
+  error: "A step did not work", other: "Working" };
 const kindOf = a => (a && KIND_ICON[a.kind]) ? a.kind : "other";
 const kindIcon = k => `<svg viewBox="0 0 16 16" aria-hidden="true">${KIND_ICON[k] || KIND_ICON.other}</svg>`;
 const tsOf = a => { const t = Date.parse(a && a.ts); return isNaN(t) ? null : t; };
 // A "waiting" step needs the human when Claude Code asks for permission, or when it asks for a reply
 // in the middle of a task. After a finished task, Claude Code simply sits idle: nothing needs the human.
-const waitingNeedsYou = (a, phase) => !!a && a.kind === "waiting" && (/permission/i.test(String(a.text || "")) || !["done", "idle"].includes(phase));
+// The server marks a wait `resolved` once the human answered: the step ran or failed (same tool_use_id),
+// they sent a message, or the next step started.
+const asksPermission = a => /permission/i.test(String(a.text || ""));
+const waitingNeedsYou = (a, phase) => !!a && a.kind === "waiting" && !a.resolved && (asksPermission(a) || !["done", "idle"].includes(phase));
 // Stuck stays red: a waiting step adds to that, it does not replace it.
 const toneOf = p => { const t = phaseOf(p.phase).tone; return t !== "bad" && waitingNeedsYou(p.activity, p.phase) ? "ask" : t; };
 function quietFor(a, phase) {
   // Minutes without a step while a task runs; null when that is not worth saying.
-  const t = tsOf(a);
-  if (!ACTIVE.has(phase) || t === null || (a && a.kind === "waiting")) return null;
+  // An answered wait counts from when it was answered (or the step it allowed finished).
+  const t = a && a.resolved ? (tsOf({ ts: a.resolved_ts }) ?? tsOf(a)) : tsOf(a);
+  if (!ACTIVE.has(phase) || t === null || (a && a.kind === "waiting" && !a.resolved)) return null;
   const m = Math.floor((Date.now() - t) / 60000);
   return m >= QUIET_MIN ? m : null;
 }
 const minutes = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
 function stepWords(a, phase) {
+  if (a.kind === "waiting" && a.resolved) {
+    const what = a.detail && !/permission/i.test(String(a.detail)) ? `: ${a.detail}` : "";
+    if (!asksPermission(a)) return "Asked for your reply; you answered";
+    return ["done", "error"].includes(a.resolved) ? `You gave permission${what}` : `You answered the permission request${what}`;
+  }
   if (a.kind === "waiting" && !waitingNeedsYou(a, phase)) return "Idle in Claude Code, ready for a new task";
   const text = String(a.text ?? "");
   return (a.kind === "waiting" ? text : plain(text)) || KIND_WORDS[kindOf(a)];
@@ -963,7 +978,8 @@ function gitHtml() {
   const cs = (g.commits || []).slice().reverse();
   const n = cs.length;
   const pts = cs.map((c, i) => {
-    const st = commitState(c), pushed = remote && ahead != null && (n - 1 - i) < ahead ? "no" : "yes";
+    // aaf.py git info: pushed is false only when GitHub lacks the commit (null: no upstream to compare).
+    const st = commitState(c), pushed = c.pushed === false ? "no" : "yes";
     return `<button type="button" data-commit="${esc(c.hash)}" data-state="${st}" data-pushed="${pushed}" aria-pressed="${gitPick === c.hash}"
       aria-label="${esc(c.subject)}: ${esc(STATE_WORDS[st])}${pushed === "no" ? ", not on GitHub yet" : ""}" title="${esc(c.subject)}"><span class="pt"></span></button>`;
   }).join("");
@@ -1556,7 +1572,8 @@ function renderDetail(d) {
         : quiet !== null ? `Probably nothing needs you, but it has been quiet for ${minutes(quiet)}` : "Nothing needs you. It will keep going on its own"}</span></div>`;
   const doing = phase === "idle" && !st.task && !events.some(e => e.kind === "check") ? "Waiting for its first task" : ph.doing;
   const nowLine = now ? `<p class="now-line k-${kindOf(now)}${asks ? " ask" : ""}" data-now>${kindIcon(kindOf(now))}<span>Right now: <b>${esc(
-      now.kind === "waiting" && !asks ? "Idle in Claude Code, ready for a new task" : KIND_WORDS[kindOf(now)])}</b>${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</span>${
+      now.kind === "waiting" && now.resolved ? (asksPermission(now) ? "Carrying on with your permission" : "Carrying on after your answer")
+      : now.kind === "waiting" && !asks ? "Idle in Claude Code, ready for a new task" : KIND_WORDS[kindOf(now)])}</b>${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</span>${
       quiet !== null ? `<span class="q">no new step for ${esc(minutes(quiet))}</span>` : ""}</p>` : "";
   const it = st.iteration || 0, maxIt = meta.max_iterations || 0;
   const chip = it ? `<span class="chip" title="An attempt is one change followed by a test run">Attempt ${it}${maxIt ? ` of up to ${maxIt}` : ""}</span>` : "";
@@ -1642,19 +1659,23 @@ function renderDetail(d) {
     </section>`;
 
   // Step by step: the step the agent is on, and the few before it.
-  const stepRow = a => `<li data-step data-kind="${kindOf(a)}"${a.subagent ? ` data-subagent="${esc(a.subagent)}"` : ""}>
-      <span class="kicon k-${kindOf(a)}">${kindIcon(kindOf(a))}</span><span class="stext" title="${esc(stepWords(a, phase))}">${esc(stepWords(a, phase))}${whoBadge(a)}</span>
+  const resolvedAttr = a => a.kind === "waiting" && a.resolved ? ` data-resolved="${esc(a.resolved)}"` : "";
+  const kiconOf = a => `<span class="kicon k-${kindOf(a)}${a.kind === "waiting" && a.resolved ? " resolved" : ""}">${kindIcon(kindOf(a))}</span>`;
+  const stepTitle = a => stepWords(a, phase) + (a.kind === "error" && a.detail ? ` (${a.detail})` : "");
+  const stepRow = a => `<li data-step data-kind="${kindOf(a)}"${resolvedAttr(a)}${a.subagent ? ` data-subagent="${esc(a.subagent)}"` : ""} title="${esc(stepTitle(a))}">
+      ${kiconOf(a)}<span class="stext">${esc(stepWords(a, phase))}${whoBadge(a)}</span>
       <span class="t">${esc(clock(a.ts))}</span></li>`;
   const earlier = steps.slice(0, -1).reverse();
   const live = `<section class="card sec live c5" data-section="live" aria-label="Step by step">
       <div class="ph"><h3>Step by step</h3><span class="pm">${now ? (ACTIVE.has(phase) ? "live" : `last step ${esc(ago(now.ts))}`) : ""}</span></div>${!now
       ? `<p class="empty" data-live-empty>${ACTIVE.has(phase) ? "No steps have arrived yet. They appear here as the agent works in Claude Code (this needs the activity hook)."
           : "No steps yet. Each step the agent takes in Claude Code appears here as it happens."}</p>`
-      : `<div class="current k-${kindOf(now)}" data-current-step data-kind="${kindOf(now)}"${now.subagent ? ` data-subagent="${esc(now.subagent)}"` : ""} data-attention="${asks ? "yes" : "no"}">
-          <span class="kicon k-${kindOf(now)}">${kindIcon(kindOf(now))}</span>
+      : `<div class="current k-${kindOf(now)}" data-current-step data-kind="${kindOf(now)}"${resolvedAttr(now)}${now.subagent ? ` data-subagent="${esc(now.subagent)}"` : ""} data-attention="${asks ? "yes" : "no"}">
+          ${kiconOf(now)}
           <div class="cbody"><div class="ctext">${esc(stepWords(now, phase))}${whoBadge(now)}</div>
             <div class="lbl">${asks ? "Needs you now" : "Latest step"}${tsOf(now) !== null ? ` · ${esc(ago(now.ts))}` : ""}</div>
-            ${now.detail && ["command", "test", "web"].includes(now.kind) ? `<details class="cmd" ${open("step-detail")}><summary>Exact command</summary><code>${esc(now.detail)}</code></details>` : ""}</div></div>
+            ${now.detail && ["command", "test", "web"].includes(now.kind) ? `<details class="cmd" ${open("step-detail")}><summary>Exact command</summary><code>${esc(now.detail)}</code></details>` : ""}
+            ${now.detail && now.kind === "error" ? `<details class="cmd" ${open("step-detail")}><summary>What went wrong</summary><code>${esc(now.detail)}</code></details>` : ""}</div></div>
         ${quiet !== null ? `<p class="quiet" data-quiet><b>No new step for ${esc(minutes(quiet))}: the feed has gone quiet.</b> It may be busy with one long step, or Claude Code may have stopped; have a look there if it stays like this.</p>` : ""}
         ${earlier.length ? `<ol class="step-list" aria-label="Steps before it, newest first">${earlier.slice(0, RECENT).map(stepRow).join("")}</ol>` : ""}
         ${earlier.length > RECENT ? `<details data-detail="steps" ${open("steps")}><summary>${plural(earlier.length - RECENT, "earlier step")}</summary>
@@ -1663,7 +1684,12 @@ function renderDetail(d) {
 
   // Tests: ring chart, each test, the run history as a strip, the independent review and attempts used.
   const TESTS_SHOWN = 5;
-  const testLi = c => `<li>${c.passed ? ICON.pass : ICON.fail}<span title="${esc(c.name)}">${esc(c.name)}</span></li>`;
+  // How long each test took (duration_s in the test results), as in the design.
+  const secsWords = x => x < 0.1 ? "under 0.1\u00a0s" : x < 9.95 ? `${x.toFixed(1)}\u00a0s` : Math.round(x) < 60 ? `${Math.round(x)}\u00a0s`
+    : (m => `${Math.floor(m / 60)}\u00a0min${m % 60 ? ` ${m % 60}\u00a0s` : ""}`)(Math.round(x));
+  const tookOf = c => typeof c.duration_s === "number" && isFinite(c.duration_s) && c.duration_s >= 0
+    ? `<span class="took" data-test-time title="This test took ${esc(secsWords(c.duration_s))}">${esc(secsWords(c.duration_s))}</span>` : "";
+  const testLi = c => `<li data-test="${esc(c.name)}">${c.passed ? ICON.pass : ICON.fail}<span title="${esc(c.name)}">${esc(c.name)}</span>${tookOf(c)}</li>`;
   const listed = checks.length > TESTS_SHOWN ? [...checks.filter(c => !c.passed), ...checks.filter(c => c.passed)] : checks;
   const allGreen = hist.filter(h => h.passed).length;
   const strip = hist.length ? `<div class="history" data-viz="history" role="img" aria-label="${hist.length} test runs, ${allGreen} with every test passing, oldest first">

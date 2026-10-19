@@ -7,7 +7,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 3.4,
       "output": ""
     },
     {
@@ -15,7 +15,7 @@
       "cmd": "echo val_acc=0.81 below 0.85; false",
       "passed": false,
       "exit_code": 1,
-      "duration_s": 0.0,
+      "duration_s": 74.2,
       "output": "val_acc=0.81 below 0.85\n"
     },
     {
@@ -23,7 +23,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 0.06,
       "output": ""
     }
   ]

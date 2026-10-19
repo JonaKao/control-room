@@ -7,7 +7,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 0.8,
       "output": ""
     },
     {
@@ -15,7 +15,7 @@
       "cmd": "true",
       "passed": true,
       "exit_code": 0,
-      "duration_s": 0.0,
+      "duration_s": 1.2,
       "output": ""
     }
   ]

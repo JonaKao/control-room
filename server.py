@@ -128,6 +128,56 @@ def read_jsonl_tail(path, last, chunk=65536, limit=262144):
     return out[-last:]
 
 
+def activity_steps(rows):
+    """The steps of the live feed, from the hook's records (framework/hooks/activity.py).
+
+    Records marked quiet ("done": a step finished) are not steps. A "waiting" step is marked
+    resolved, with what resolved it and when, once a later record shows the human answered:
+    "done" or "error" for the same tool_use_id (the permission was granted and the step ran),
+    "you" (the human sent a message) or the next step by the same agent ("step"). Notes, turn
+    ends, other agents' steps and other steps' errors are no answer. Claude Code logs a permission
+    prompt twice, with and without its tool_use_id, in either order: that is one wait. A wait
+    without an id is resolved along with the waits that have one."""
+    steps, pending = [], []
+
+    def answer(waits, how, ts):
+        for w in waits:
+            w.update(resolved=how, resolved_ts=ts)
+        pending[:] = [w for w in pending if not any(w is x for x in waits)]
+
+    def permission(r):
+        return "permission" in str(r.get("text", "")).lower()
+
+    for row in rows:
+        kind, tid = row.get("kind"), row.get("tool_use_id")
+        if kind in ("done", "error") and tid:
+            hit = [w for w in pending if w.get("tool_use_id") == tid]
+            if hit:
+                answer(hit + [w for w in pending if not w.get("tool_use_id")], kind, row.get("ts"))
+        if row.get("quiet"):
+            continue
+        if kind == "waiting":
+            twin = pending[-1] if pending and steps and steps[-1] is pending[-1] and permission(row) and permission(pending[-1]) else None
+            if twin is not None and not tid and twin.get("tool_use_id"):
+                continue  # the notification about the prompt just logged with its id
+            row = dict(row)
+            if twin is not None and tid and not twin.get("tool_use_id"):
+                steps.pop()  # the notification came first: keep the record with the id
+                pending.pop()
+            pending.append(row)
+        elif kind == "you":
+            answer(list(pending), "you", row.get("ts"))
+        elif kind not in ("error", "note", "turn"):
+            answer([w for w in pending if w.get("subagent") == row.get("subagent")], "step", row.get("ts"))
+        steps.append(row)
+    return steps
+
+
+def read_activity(path, last):
+    """The newest `last` steps of the live feed. The log also holds quiet records, so read more."""
+    return activity_steps(read_jsonl_tail(path, last * 3 + 10))[-last:]
+
+
 def parse_decisions(md):
     items = []
     for block in re.split(r"^## ", md, flags=re.M)[1:]:
@@ -173,7 +223,7 @@ def summary(name):
         "checks_total": len(checks),
         "verdict": rv.get("verdict"),
         "drafts": len(drafts(name)),
-        "activity": (read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), 1) or [None])[-1],
+        "activity": (read_activity(os.path.join(pdir, "state", "activity.jsonl"), 1) or [None])[-1],
         "trend": trend(pdir),
         "plan": plan_progress(pdir),
     }
@@ -226,7 +276,7 @@ def detail(name):
         "decisions": parse_decisions(read_text(os.path.join(pdir, "state", "decisions.md"))),
         "progress": read_text(os.path.join(pdir, "state", "progress.md")),
         "events": read_jsonl(os.path.join(pdir, "state", "events.jsonl"), last=60),
-        "activity": read_jsonl_tail(os.path.join(pdir, "state", "activity.jsonl"), ACTIVITY_LAST),
+        "activity": read_activity(os.path.join(pdir, "state", "activity.jsonl"), ACTIVITY_LAST),
         "plots": plots,
         "tasks": task_stats(name),
         "record": record(name),
