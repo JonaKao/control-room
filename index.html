@@ -133,6 +133,20 @@ summary { cursor: pointer; }
 .plan-bar { height: 8px; border-radius: 4px; background: var(--panel2); overflow: hidden; margin: 2px 0 8px; }
 .plan-bar span { display: block; height: 100%; background: var(--tone, var(--test)); border-radius: 4px; }
 .est-wait { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+.est-top { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 14px; flex-wrap: wrap; }
+.est-range { font: 700 40px/1 var(--cond); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.est-range small { font: 600 13px var(--sans); color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+.est-left { font-size: 13px; font-weight: 600; color: var(--ink); }
+.est-bar { position: relative; height: 10px; border-radius: 5px; background: var(--panel2); overflow: hidden; margin: 8px 0 5px; }
+.est-bar span { position: absolute; top: 0; bottom: 0; }
+.est-done { left: 0; background: var(--tone, var(--test)); }
+.est-band { background: repeating-linear-gradient(135deg, var(--tone, var(--test)) 0 3px, transparent 3px 7px); opacity: .75; }
+.est-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+.est-meta [data-est-step] { color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-meta span:last-child { white-space: nowrap; }
+.est-basis { font-size: 11.5px; color: var(--muted); margin: 4px 0 6px; }
+.hero-side.est .plan-steps { font-size: 12px; }
+.hero-side .agent-note.one { margin: 6px 0 0; font-size: 12px; -webkit-line-clamp: 1; }
 
 /* Loop stepper */
 .steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); }
@@ -353,6 +367,7 @@ pre.out { margin: 6px 0 0; padding: 10px 12px; background: var(--panel2); border
 .trend .marks i.dr { border-radius: 1px; background: var(--accent); }
 .trend .marks i.st { border-radius: 0; background: none; width: 0; height: 0; border: 3px solid transparent; border-bottom: 5px solid var(--fail); border-top: 0; }
 .rec-cap { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+p.rec-held { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .rec-legend { display: flex; flex-wrap: wrap; gap: 1px 9px; font-size: 10.5px; color: var(--muted); margin-top: 3px; }
 .rec-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
 .rec-legend i.dot-p { border-radius: 50%; background: var(--pass); width: 6px; height: 6px; }
@@ -1297,6 +1312,67 @@ function kpi(key, label, value, of, desc, col) {
     <div class="kv">${value}${of !== null ? `<small> of ${of}</small>` : ""}</div><div class="kl">${esc(label)}</div><div class="kd">${esc(desc)}</div>
     ${of !== null ? `<div class="meter" aria-hidden="true"><span style="width:${pct(value, of)}%;background:var(${col})"></span></div>` : ""}</div>`;
 }
+// The time estimate (aaf.py estimate): always a range, never a single number.
+function leftPart(sec) {
+  const m = sec / 60;
+  if (m < 1) return [1, "minute", "less than "];
+  if (m < 100) { const v = m < 20 ? Math.round(m) : Math.round(m / 5) * 5; return v === 60 ? [1, "hour", ""] : [v, v === 1 ? "minute" : "minutes", ""]; }
+  if (m < 600) { const h = Math.round(m / 30) / 2; return [h, h === 1 ? "hour" : "hours", ""]; }
+  if (m < 96 * 60) return [Math.round(m / 60), "hours", ""];
+  const d = Math.round(m / 1440);
+  return [d, "days", ""];
+}
+function leftWords(lo, hi) {
+  const a = leftPart(lo), b = leftPart(hi);
+  if (a[0] === b[0] && a[1] === b[1]) b[0] = b[1].startsWith("minute") ? b[0] + 1 : b[0] + 0.5;
+  if (b[1] === "minute" && b[0] > 1) b[1] = "minutes";
+  if (b[1] === "hour" && b[0] > 1) b[1] = "hours";
+  if (b[1] === "days" && a[1] === "days" && a[0] === b[0]) b[0] += 1;
+  const sameUnit = a[1].replace(/s$/, "") === b[1].replace(/s$/, "") && !a[2];
+  return `${a[2] ? a[2] : "about "}${a[0]}${sameUnit ? "" : " " + a[1]} to ${b[0]} ${b[1]} left`;
+}
+function basisWords(e, hasPlan) {
+  const n = e.history_tasks || 0, from = e.history_scope === "this project" ? "of this project" : "in all projects";
+  const tasks = `${plural(n, "past task")} ${from}`;
+  const b = e.basis || "";
+  if (b === "too little history")
+    return `Not enough history yet: a range appears once a few tasks have finished${n ? ` (so far ${n})` : ""}. ${hasPlan
+      ? "Until then, only the plan shows how far along it is." : "Until then, there is nothing to measure progress against."}`;
+  if (b.startsWith("plan steps")) return `Based on how long each finished plan step took so far, plus the usual time for the review, from ${tasks}.`;
+  if (b.startsWith("past review")) return `Based on how long the review and any follow-up fixes took in ${tasks}.`;
+  if (b.startsWith("already longer")) return `This task is already running longer than almost every one of the ${tasks}, so this is a rough guess.`;
+  if (b.startsWith("how long past")) return `Based on how long ${tasks} took.`;
+  return `Based on ${tasks}.`;
+}
+function heldWords(h) {
+  if (!h || !h.predictions_checked) return "";
+  return `estimates held ${Math.round(h.coverage * h.predictions_checked)} of ${h.predictions_checked} times (all projects)`;
+}
+function estimateSide(e, ranged, plan, stepText, started, list, bar, note) {
+  const held = heldWords(e.held || e.calibration);
+  const lo = ranged ? Math.round(e.progress_low * 100) : 0, hi = ranged ? Math.round(e.progress_high * 100) : 0;
+  const step = plan ? `<span data-est-step>${esc(stepText[0].toUpperCase() + stepText.slice(1))}${plan.current && plan.done < plan.total ? `: ${esc(plain(plan.current))}` : ""}</span>` : "";
+  return `<div class="hero-side est" data-slot="estimate" data-est="${ranged ? "range" : "none"}">
+      <div class="ph"><h3>How far along</h3><span class="pm"${held ? ` data-est-held title="How often the range given in earlier tasks contained the real time left"` : ""}>${esc(held)}</span></div>
+      ${ranged ? `<div class="est-top"><div class="est-range" data-est-range>${lo}–${hi}<small>% done</small></div>
+        <div class="est-left" data-est-left>${esc(leftWords(e.remaining_low_s, e.remaining_high_s))}</div></div>
+      <div class="est-bar" data-est-bar role="img" aria-label="Between ${lo} and ${hi} percent done"><span class="est-done" data-est-done style="width:${lo}%"></span><span class="est-band" data-est-band style="left:${lo}%;width:${Math.max(0, hi - lo)}%"></span></div>
+      <div class="est-meta">${step || "<span></span>"}<span>${esc(started)}</span></div>` : `${bar}<div class="est-meta">${step || "<span></span>"}<span>${esc(started)}</span></div>`}
+      <p class="est-basis" data-est-basis>${esc(basisWords(e, !!plan))}</p>
+      ${list}${note ? `<p class="agent-note one">Agent's latest note: “${esc(plain(note))}”</p>` : ""}</div>`;
+}
+// How often the time estimates of past tasks held (aaf.py's calibration, over all projects). In the
+// header when there are tasks (no extra height on the first screen), as a line in the empty state.
+function recHeld(inHeader) {
+  const h = recData && recData.held;
+  if (!h) return "";
+  const n = h.predictions_checked || 0, tip = "Each time the agent reaches a milestone, its range for the time left is noted and later compared with when the task really ended (all projects)."
+    + (h.width_scale > 1 ? " Too few held, so new ranges are drawn wider." : h.width_scale < 1 ? " Nearly all held, so new ranges are drawn narrower." : "");
+  const words = n ? `time estimates held ${Math.round(h.coverage * n)} of ${n} times (${Math.round(h.coverage * 100)}%)`
+    : inHeader ? "no time estimate checked yet" : "No time estimate has been checked against a finished task yet.";
+  return inHeader ? `<span class="rec-held" data-est-record title="${esc(tip)}">${esc(words)}</span>`
+    : `<p class="rec-held" data-est-record title="${esc(tip)}">${esc(words[0].toUpperCase() + words.slice(1))}${n ? ", across all projects." : ""}</p>`;
+}
 // aaf.py's "finished" counts every task that ended: finished, stuck or waiting for a decision.
 const ended = s => (s.finished || 0) === (s.done || 0) ? "finished tasks" : "tasks that ended (finished, stuck or waiting for you)";
 function recKpis(s) {
@@ -1374,11 +1450,11 @@ function reasonsHtml(reasons, across, reviews) {
 function recordHtml() {
   const st = recData && recData.stats, tasks = (st && st.tasks) || [];
   const head = `<section class="card sec" data-section="record" aria-label="Track record">
-    <div class="ph"><h3>Track record</h3><span class="pm">${tasks.length ? plural(tasks.length, "task") : ""}</span></div>`;
+    <div class="ph"><h3>Track record</h3><span class="pm">${tasks.length ? `${plural(tasks.length, "task")}${recData && recData.held ? " · " + recHeld(true) : ""}` : ""}</span></div>`;
   if (!st || st.available === false)
-    return head + `<p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p></section>`;
+    return head + `<p class="empty" data-empty>The track record cannot be read here: the framework tool that keeps the task history was not found.</p>${recHeld()}</section>`;
   if (!tasks.length)
-    return head + `<p class="empty" data-empty>No task has run yet. After a few tasks, this shows how often the agent gets it right the first time, how often the review says no and why, and whether it needs fewer attempts over time.</p></section>`;
+    return head + `<p class="empty" data-empty>No task has run yet. After a few tasks, this shows how often the agent gets it right the first time, how often the review says no and why, and whether it needs fewer attempts over time.</p>${recHeld()}</section>`;
   const s = st.summary || {}, pick = tasks.find(t => t.start === recPick);
   const older = tasks.length > REC_SHOWN ? ` The ${tasks.length - REC_SHOWN} oldest are left out.` : "";
   const reasons = recData.reasons || [];
@@ -1455,7 +1531,8 @@ function renderDetail(d) {
   const name = meta.name || current, phase = st.phase || "idle", ph = phaseOf(phase);
   gitPhase = phase;
   ttData = d.tasks || null;
-  recData = { stats: d.tasks || null, reviews: (d.record || {}).reviews || [], reasons: (d.record || {}).reasons || [] };
+  recData = { stats: d.tasks || null, reviews: (d.record || {}).reviews || [], reasons: (d.record || {}).reasons || [],
+              held: d.estimate && d.estimate.available ? d.estimate.held : null };
   const drafts = d.drafts || [], hist = d.check_history || [], events = d.events || [];
   const steps = (d.activity || []).filter(a => a && typeof a === "object"), now = steps[steps.length - 1];
   const asks = waitingNeedsYou(now, phase), quiet = quietFor(now, phase);
@@ -1484,25 +1561,31 @@ function renderDetail(d) {
   const it = st.iteration || 0, maxIt = meta.max_iterations || 0;
   const chip = it ? `<span class="chip" title="An attempt is one change followed by a test run">Attempt ${it}${maxIt ? ` of up to ${maxIt}` : ""}</span>` : "";
   const plan = (d.summary || {}).plan, planOn = plan && plan.total && (!plan.task || !st.task || plan.task === st.task);
-  const planSteps = planOn ? (() => {
-    // The plan as written by the agent, a window of five steps around the current one.
+  const est = d.estimate && d.estimate.available && d.estimate.active ? d.estimate : null;
+  const ranged = est && est.remaining_low_s !== null && est.remaining_low_s !== undefined && est.progress_low !== null;
+  const planList = win => {
+    // The plan as written by the agent, a window of steps around the current one.
     const names = plan.steps || [];
-    const cur = Math.min(plan.done, plan.total - 1), from = Math.max(0, Math.min(cur - 2, plan.total - 5));
+    const cur = Math.min(plan.done, plan.total - 1), from = Math.max(0, Math.min(cur - (win > 3 ? 2 : 1), plan.total - win));
     const rows = [];
-    for (let i = from; i < Math.min(plan.total, from + 5); i++) {
+    for (let i = from; i < Math.min(plan.total, from + win); i++) {
       const txt = names[i] ? names[i].text : i === plan.done ? plan.current : "";
       const state = i < plan.done ? "d" : i === plan.done ? "cur" : "";
       rows.push(`<li class="${state}"><b>${i + 1}</b><span aria-hidden="true">${state === "d" ? "✓" : state === "cur" ? "→" : ""}</span><span>${esc(plain(txt || (state === "d" ? "Done" : "Still to do")))}</span></li>`);
     }
-    return `<div class="plan-bar" role="img" aria-label="${plan.done} of ${plan.total} plan steps done"><span style="width:${pct(plan.done, plan.total)}%"></span></div>
-      <ol class="plan-steps" data-plan>${rows.join("")}</ol>`;
-  })() : "";
-  const sideMeta = ACTIVE.has(phase) && st.task_started ? `started ${ago(st.task_started)}` : planOn ? `step ${Math.min(plan.done + 1, plan.total)} of ${plan.total}` : "";
+    return `<ol class="plan-steps" data-plan>${rows.join("")}</ol>`;
+  };
+  const planBar = () => `<div class="plan-bar" role="img" aria-label="${plan.done} of ${plan.total} plan steps done"><span style="width:${pct(plan.done, plan.total)}%"></span></div>`;
+  const planSteps = planOn ? planBar() + planList(5) : "";
+  const stepText = planOn ? `step ${Math.min(plan.done + 1, plan.total)} of ${plan.total}${plan.done >= plan.total ? ", all done" : ""}` : "";
+  const started = ACTIVE.has(phase) && st.task_started ? `started ${ago(st.task_started)}` : "";
+  const sideMeta = started || stepText;
   const sideWords = phase === "done" ? "The task is finished. A new task's plan and progress will show here."
     : phase === "idle" ? "No task is running. Once one starts, its plan and progress show here."
     : "The agent has not written down a plan for this task yet, so there is nothing to measure its progress against.";
-  const side = `<div class="hero-side" data-slot="estimate">
-      <div class="ph"><h3>How far along</h3><span class="pm">${esc(planOn ? `step ${Math.min(plan.done + 1, plan.total)} of ${plan.total}${sideMeta && ACTIVE.has(phase) ? " · " + sideMeta : ""}` : sideMeta)}</span></div>
+  const side = est ? estimateSide(est, ranged, planOn ? plan : null, stepText, started, planOn ? planList(ranged ? 3 : 5) : "", planOn && !ranged ? planBar() : "", st.note && st.note !== "Project created" ? st.note : "")
+    : `<div class="hero-side" data-slot="estimate">
+      <div class="ph"><h3>How far along</h3><span class="pm">${esc(planOn ? `${stepText}${started ? " · " + started : ""}` : sideMeta)}</span></div>
       ${st.note && st.note !== "Project created" ? `<p class="agent-note">Agent's latest note: “${esc(plain(st.note))}”</p>` : ""}
       ${planSteps || `<p class="est-wait">${esc(sideWords)}</p>`}</div>`;
 

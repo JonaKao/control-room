@@ -1,0 +1,18 @@
+{
+  "task": "Add tags to notes and filter by tag",
+  "created": "2026-10-14T14:13:00+02:00",
+  "steps": [
+    {
+      "text": "Store tags with each note",
+      "done_at": "2026-10-14T14:22:00+02:00"
+    },
+    {
+      "text": "Filter the list by tag",
+      "done_at": "2026-10-14T14:31:00+02:00"
+    },
+    {
+      "text": "Test tag filtering",
+      "done_at": "2026-10-14T14:40:00+02:00"
+    }
+  ]
+}

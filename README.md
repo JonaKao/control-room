@@ -29,7 +29,14 @@ otherwise a line of how its recent test runs went.
   one plain sentence, which attempt it is on, a pill that says "Needs you" or "Nothing needs
   you", the task, a "Right now" line with its latest step and how long ago, and the agent's loop
   as a row of steps (Plan → Change → Test → Review → Finished, Your call or Stuck). Its right half,
-  "How far along", shows the agent's latest note and its written plan with the steps done so far.
+  "How far along", shows how far a running task has got and how long is left, always as a range
+  and never as a single number: a big "28–45% done", a bar whose solid part is the least it has done
+  and whose striped band is how much further it may be, and "about 1 to 2 hours left". Beneath it:
+  which step of the agent's written plan it is on, what the range is based on (the plan steps
+  finished so far, how long past tasks or their reviews took, and how many past tasks), and how
+  often earlier estimates held. With too few finished tasks to learn from it says "not
+  enough history yet" and shows only the plan; a task already running longer than almost every
+  past one is called a rough guess. Without a running task it shows the agent's note and plan.
   Someone who reads only this part knows what is going on and whether to act.
 - **What to do** appears only when something needs you, in the summary's right half: unfinished
   fixes the agent set aside, each with its two choices (continue or discard) and the command to
@@ -44,7 +51,8 @@ otherwise a line of how its recent test runs went.
   run as a small bar, the reviewer's verdict and how many attempts were used. Test output and the
   full review are one tap away.
 - **Track record**: how well the agent does over time. Four numbers (tasks right the first time,
-  reviews that said no, fixes set aside, times stuck) and a small chart of attempts per task; tap a
+  reviews that said no, fixes set aside, times stuck), how often the time estimates held (across
+  all projects, at the top of the panel) and a small chart of attempts per task; tap a
   bar for that task. "Why the review said no" opens the reviewer's rejections grouped by theme, most
   common first, each with a hint on what to sharpen in the project's instructions or definition of
   done. "All projects" in the rail shows the same across the whole workspace.
@@ -105,8 +113,9 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   project's `state/` and `plots/` folders and answers the page's questions as JSON. It
   never writes project files and refuses paths outside the workspace. Derived data comes
   from the framework rather than being recomputed: the task timeline and track record
-  from `framework/aaf.py stats`, the change map from `aaf.py git files`, the Git section
-  from `aaf.py git info`; results are cached so polling stays cheap. The only thing it
+  from `framework/aaf.py stats`, the time estimate from `aaf.py estimate`, the change map
+  from `aaf.py git files`, the Git section from `aaf.py git info`; results are cached so
+  polling stays cheap. The only thing it
   changes is Git, and only through `aaf.py git push|pull`, only for requests from the page
   itself on this machine.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
@@ -114,9 +123,10 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   changed. Its colours and fonts are the tokens from the approved design.
 - `design/`: the approved design. `design/DESIGN.md` sets the layout, colour and type rules;
   `design/mockup.html` and its screenshots are the reference the page is compared with.
-- `fixtures/`: a pretend workspace with seven projects, one for each situation the page
-  must handle (running, stuck, waiting for a decision, waiting for permission, finished,
-  never started, a long track record). Git repositories are never stored there; the checks
+- `fixtures/`: a pretend workspace with nine projects, one for each situation the page
+  must handle (running mid-plan, running longer than any task before, being reviewed, stuck,
+  waiting for a decision, waiting for permission, finished, never started, a long track
+  record), and `fixtures/first-run`, a workspace where no task has finished yet. Git repositories are never stored there; the checks
   build them in a temporary folder with `checks/git_workspace.py`.
 - `tests/`: unit tests for the server's answers, its Git safety rules, this README, and that every colour
   comes from the design's tokens.
@@ -152,6 +162,7 @@ Every change must pass these before it is committed:
 - **Change map**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/change_map.py; else python3 checks/change_map.py; fi`
 - **Track record**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/track_record.py; else python3 checks/track_record.py; fi`
 - **Instrument-panel layout**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/layout.py; else python3 checks/layout.py; fi`
+- **Time estimate**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/estimate.py; else python3 checks/estimate.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -159,6 +170,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-10-19: Roadmap 7: show how far along a running task is and how long is left (time estimate) (first try, review passed)
 - 2026-10-17: Roadmap 6: redesign the page as an instrument panel (design/DESIGN.md): rail with workspace numbers, hero, 12-column panel grid, dark by default (first try, review passed)
 - 2026-10-15: Write README.md for the control room from the template: what it is, each part of the page, how to start, how it is built, how it fits the framework (first try, review passed)
 - 2026-10-15: Roadmap 4: add a track record (per-project and workspace view, common review-failure reasons) (2 attempts, review passed)

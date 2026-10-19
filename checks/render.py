@@ -24,8 +24,37 @@ except ImportError:
     sys.exit(1)
 
 FIXTURES = os.path.join(PROJECT, "fixtures", "workspace")
+FIRST_RUN = os.path.join(PROJECT, "fixtures", "first-run")
 PLOTS = os.path.join(PROJECT, "plots")
 VIEWS = [("desktop", 1440, 900, "light"), ("desktop-dark", 1440, 900, "dark"), ("phone", 390, 844, "light")]
+
+
+def render_project(browser, base, name, problems):
+    for label, w, h, scheme in VIEWS:
+        page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
+        if scheme == "light":  # dark is the page's default; light is the choice the theme switch stores
+            page.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        # Remote resources (web fonts) may be offline; only the page's own requests count.
+        page.on("console", lambda m: errors.append(m.text)
+                if m.type == "error" and not m.text.startswith("Failed to load resource") else None)
+        page.on("requestfailed", lambda r: errors.append("failed request " + r.url)
+                if r.url.startswith(base) else None)
+        page.goto("%s/#p=%s" % (base, name))
+        page.wait_for_timeout(1200)
+        body = page.inner_text("body")
+        if "not reachable" in body:
+            problems.append("%s/%s: page shows the 'server not reachable' fallback" % (name, label))
+        if errors:
+            problems.append("%s/%s: JavaScript errors: %s" % (name, label, "; ".join(errors[:3])))
+        if label == "phone":
+            overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+            if overflow > 1:
+                problems.append("%s/phone: page scrolls sideways by %dpx" % (name, overflow))
+        page.screenshot(path=os.path.join(PLOTS, "render-%s-%s.png" % (name, label)),
+                        full_page=(label != "phone"))
+        page.close()
 
 
 def main():
@@ -39,31 +68,7 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for name in projects:
-            for label, w, h, scheme in VIEWS:
-                page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
-                if scheme == "light":  # dark is the page's default; light is the choice the theme switch stores
-                    page.add_init_script("try { localStorage.setItem('aaf.theme', 'light'); } catch (e) {}")
-                errors = []
-                page.on("pageerror", lambda e: errors.append(str(e)))
-                # Remote resources (web fonts) may be offline; only the page's own requests count.
-                page.on("console", lambda m: errors.append(m.text)
-                        if m.type == "error" and not m.text.startswith("Failed to load resource") else None)
-                page.on("requestfailed", lambda r: errors.append("failed request " + r.url)
-                        if r.url.startswith(base) else None)
-                page.goto("%s/#p=%s" % (base, name))
-                page.wait_for_timeout(1200)
-                body = page.inner_text("body")
-                if "not reachable" in body:
-                    problems.append("%s/%s: page shows the 'server not reachable' fallback" % (name, label))
-                if errors:
-                    problems.append("%s/%s: JavaScript errors: %s" % (name, label, "; ".join(errors[:3])))
-                if label == "phone":
-                    overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
-                    if overflow > 1:
-                        problems.append("%s/phone: page scrolls sideways by %dpx" % (name, overflow))
-                page.screenshot(path=os.path.join(PLOTS, "render-%s-%s.png" % (name, label)),
-                                full_page=(label != "phone"))
-                page.close()
+            render_project(browser, base, name, problems)
         # The workspace view ("All projects": the track record across projects).
         for label, w, h, scheme in VIEWS:
             page = browser.new_page(viewport={"width": w, "height": h}, color_scheme=scheme)
@@ -83,12 +88,17 @@ def main():
                 problems.append("workspace/%s: page scrolls sideways" % label)
             page.screenshot(path=os.path.join(PLOTS, "render-workspace-%s.png" % label), full_page=(label != "phone"))
             page.close()
+        # A workspace where no task has finished yet (the time estimate has no history to go on).
+        server.set_root(FIRST_RUN)
+        for name in sorted(os.listdir(os.path.join(FIRST_RUN, "projects"))):
+            render_project(browser, base, name, problems)
         browser.close()
     httpd.shutdown()
     if problems:
         print("FAILED:\n- " + "\n- ".join(problems))
         sys.exit(1)
-    print("Rendered %d fixture projects in %d views without errors; screenshots in plots/" % (len(projects), len(VIEWS)))
+    print("Rendered %d fixture projects and the first-run workspace in %d views without errors; screenshots in plots/"
+          % (len(projects), len(VIEWS)))
 
 
 if __name__ == "__main__":

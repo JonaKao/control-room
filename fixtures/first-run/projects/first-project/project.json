@@ -1,0 +1,12 @@
+{
+  "name": "first-project",
+  "description": "A fresh workspace's first project",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "python3 -m pytest tests -q"
+    }
+  ]
+}

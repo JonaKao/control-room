@@ -1,0 +1,22 @@
+{
+  "ran_at": "2026-10-14T13:20:00+02:00",
+  "passed": false,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "true",
+      "passed": true,
+      "exit_code": 0,
+      "duration_s": 2.1,
+      "output": ""
+    },
+    {
+      "name": "Report matches last year",
+      "cmd": "false",
+      "passed": false,
+      "exit_code": 1,
+      "duration_s": 3.0,
+      "output": "March 2019: 0 rows, expected 412\n"
+    }
+  ]
+}

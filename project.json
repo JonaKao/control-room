@@ -47,6 +47,11 @@
       "name": "Instrument-panel layout",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/layout.py; else python3 checks/layout.py; fi",
       "timeout": 240
+    },
+    {
+      "name": "Time estimate",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/estimate.py; else python3 checks/estimate.py; fi",
+      "timeout": 240
     }
   ]
 }

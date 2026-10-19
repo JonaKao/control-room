@@ -1,12 +1,11 @@
-# Review: follow-up fixes to the redesign (second round)
+VERDICT: PASS
+SUMMARY: The time estimate meets Roadmap 7: a range with a striped band, "step N of M", time left as a range, a plain "based on" sentence with the task count, "not enough history yet" when there is no range, and how often estimates held in the hero and the track record. Fixtures cover the four scenarios, a new check covers it, and all 10 checks pass when run independently.
 
-VERDICT: PASS (blockers: 0, majors: 0, minors: 5)
+FINDINGS
+- [minor] index.html:1339 — The "not enough history yet" text says "only the plan shows how far along it is" even when there is no plan (first-run fixture). The "3" is hard-coded (matches aaf.MIN_HISTORY today).
+- [minor] index.html:1340 — The plan-based sentence says "from 14 past tasks from all projects" ("from" appears twice).
+- [minor] index.html:1346 — The hero's "estimates held 7 of 10 times" covers all projects, but only the tooltip says so.
+- [minor] fixtures/data-pipeline — "longer than all but one" rather than literally "longer than any". It reaches the same aaf branch and is documented.
+- [minor] server.py:estimate — A failed run is not cached, so a project whose estimate always fails starts a subprocess on every poll.
 
-SUMMARY: All three fixes do what their issues ask (layout check on real Git data, no empty reasons fold, plot colours as tokens) and all 9 checks pass when run independently. The first round failed only because state/progress.md had not been updated for the fixes; now it is.
-
-## Findings
-- [minor] tests/test_colours.py skips every rule whose selector starts with :root, not only the token blocks.
-- [minor] tests/test_colours.py does not see named colours or literals in inline styles built in JavaScript (none today).
-- [minor] --plot-bg, --plot-ink and --backdrop are not in design/DESIGN.md.
-- [minor] checks/track_record.py does not assert the separate "No review has happened yet." wording for zero reviews.
-- [minor] check_git covers three fixtures in dark only.
+DONE.md: all items met (progress.md updated by the implementer at the end).

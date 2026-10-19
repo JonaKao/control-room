@@ -1,0 +1,10 @@
+{"ts": "2026-10-06T09:10:00+02:00", "task_start": "2026-10-06T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 864, "remaining_high_s": 2160, "basis": "how long past tasks took"}
+{"ts": "2026-10-07T09:10:00+02:00", "task_start": "2026-10-07T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 2916, "remaining_high_s": 7290, "basis": "how long past tasks took"}
+{"ts": "2026-10-08T09:10:00+02:00", "task_start": "2026-10-08T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 1980, "remaining_high_s": 4950, "basis": "how long past tasks took"}
+{"ts": "2026-10-09T09:10:00+02:00", "task_start": "2026-10-09T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 3048, "remaining_high_s": 7620, "basis": "how long past tasks took"}
+{"ts": "2026-10-10T09:10:00+02:00", "task_start": "2026-10-10T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 4860, "remaining_high_s": 12150, "basis": "how long past tasks took"}
+{"ts": "2026-10-11T09:10:00+02:00", "task_start": "2026-10-11T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 864, "remaining_high_s": 2160, "basis": "how long past tasks took"}
+{"ts": "2026-10-12T09:10:00+02:00", "task_start": "2026-10-12T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 1416, "remaining_high_s": 3540, "basis": "how long past tasks took"}
+{"ts": "2026-10-13T09:10:00+02:00", "task_start": "2026-10-13T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 1980, "remaining_high_s": 4950, "basis": "how long past tasks took"}
+{"ts": "2026-10-14T09:10:00+02:00", "task_start": "2026-10-14T09:00:00+02:00", "phase": "implementing", "elapsed_s": 600, "remaining_low_s": 864, "remaining_high_s": 2160, "basis": "how long past tasks took"}
+{"ts": "2026-10-10T11:00:00+02:00", "task_start": "2026-10-10T09:00:00+02:00", "phase": "reviewing", "elapsed_s": 7200, "remaining_low_s": 3000, "remaining_high_s": 6000, "basis": "past review and fixing time"}

@@ -30,6 +30,11 @@ includes people who do not know the code behind it.
   theme (`REASONS` in server.py: keywords in the one-line summary), each matched to the project's
   `DONE.md` item that covers it. `/api/record` is the workspace view ("All projects"): every project's
   task_stats summary and tasks (from the same cache) and the reasons across all projects.
+  `/api/project` also carries `estimate`: `estimate()` from `framework/aaf.py` (what `aaf.py estimate <name>`
+  prints: active, phase, elapsed_s, plan, progress_low/high, remaining_low_s/high_s, basis, history_tasks,
+  history_scope, calibration) plus `held` (aaf's `_calibration()`, i.e. `estimate_accuracy` in `aaf.py stats`)
+  and `available`, run in a subprocess with `aaf.PROJECTS` set to the served workspace, cached 15 s (a failed run too).
+  `server.CLOCK` (None: real time) pins "now" inside that subprocess, so checks get fixed numbers.
 - **Git is the one exception to read-only.** Push and Pull run
   `<workspace>/framework/aaf.py git push|pull <name>`, never `git` directly. Writes are
   accepted only from the page itself: the request must come from this machine, carry the
@@ -40,8 +45,8 @@ includes people who do not know the code behind it.
   API every 2.5 s and re-renders only when the data changed. Layout and look follow the approved
   design in `design/DESIGN.md` (reference: `design/mockup.html`, `design/mockup-dark.png`): a left
   rail with four workspace numbers (`/api/record` gives the first-try rate) and a tiny picture per
-  project; a full-width hero (its right half, `[data-slot=estimate]`, is "How far along", reserved
-  for the time estimate, and gives way to the "what to do" card when the human is needed); then a
+  project; a full-width hero (its right half, `[data-slot=estimate]`, is "How far along": the time
+  estimate as a range, the plan, the basis, and gives way to the "what to do" card when the human is needed); then a
   12-column grid from 1200 px: step by step (5), tests (3), track record (4), where the time went
   (8), where the agent works (4); Git, pictures and more detail below. Under 1200 px one column.
 - The data model is defined by `framework/aaf.py` (status phases, checks.json,
@@ -63,8 +68,8 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    stay marked done (`tests/test_roadmap.py`) and that `README.md` follows the template, names
    every part of the page and only points to files that exist (`tests/test_readme.py`), and that every
    colour in the page's styles comes from a token (`tests/test_colours.py`)
-2. **Page renders in every state**: `checks/render.py` opens every fixture project in a
-   headless browser (desktop light, desktop dark, phone), fails on JavaScript errors or
+2. **Page renders in every state**: `checks/render.py` opens every fixture project (and
+   `fixtures/first-run`) in a headless browser (desktop light, desktop dark, phone), fails on JavaScript errors or
    sideways scrolling, and writes screenshots to `plots/render-*.png`.
 3. **Understandable at a glance**: `checks/glance.py` (summary first, plain words, detail on demand).
 4. **Git section works**: `checks/git_section.py` builds a temporary workspace with real
@@ -95,6 +100,13 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    on a temporary workspace with real Git repositories (`check_git`: real treemap, Git section below). It saves
    `plots/render-layout-desktop-{dark,light}.png` and `plots/render-layout-git-desktop-dark.png`. After a visual change, put that next to
    `design/mockup-dark.png` and compare (e.g. `plots/compare-mockup-dark.png`).
+10. **Time estimate**: `checks/estimate.py` pins the server's and the browser's clock and checks, for every
+   fixture and `fixtures/first-run`, the hero's "How far along": the range in per cent, the bar's solid part
+   and striped band at progress_low/high, "about … to … left" against remaining_low/high_s, "step N of M"
+   with the current step, the plain "based on" sentence with the number of past tasks (plan steps, review
+   time, longer than almost every past task, not enough history yet), how often estimates held (hero and
+   track record), no range without a running task, the "what to do" card in its place when the human is
+   needed, plain words and phone width. It saves `plots/render-estimate-*.png`.
 
 The page is dark by default and ignores the browser's colour preference, so checks that need the
 light theme store the switch's choice first (`localStorage aaf.theme = light`).
@@ -112,13 +124,17 @@ is actually clear.
 
 ## Fixtures
 
-`fixtures/workspace/projects/` holds seven projects, one per situation the page must
+`fixtures/workspace/projects/` holds nine projects, one per situation the page must
 handle: `api-client` (finished, a long track record: nine tasks, six rejected reviews with repeated
 reasons, a fix set aside, one stuck episode), `image-classifier` (running, failing a check, a plan
 with 2 of 5 steps done), `parser` (waiting for a decision
 on a draft), `example-done` (finished, with a plot and reviewer steps in its activity log),
-`scheduler` (stuck), `brand-new` (nothing run yet, no activity log) and `web-scraper`
-(mid-task, Claude Code waiting for permission). `state/activity.jsonl` in a fixture is
+`scheduler` (stuck), `brand-new` (nothing run yet, no activity log), `web-scraper`
+(mid-task, Claude Code waiting for permission), `notes-app` (being reviewed, plan all done) and
+`data-pipeline` (running about 19 h, longer than any past task). `fixtures/first-run/` is a
+second workspace with one planning project and no finished task anywhere (the estimate's "not enough
+history"). `api-client/state/estimates.jsonl` holds ten logged estimate ranges, seven of which held, so
+the calibration has data; `image-classifier`'s plan (2 of 5 done) makes the mid-plan estimate. `state/activity.jsonl` in a fixture is
 the live feed's data; its timestamps are fixed, so `checks/activity.py` pins the clock.
 `state/events.jsonl` drives the task timeline: `example-done` has four tasks (finished first try,
 stuck, stuck then resumed and finished, finished with a polish step), `image-classifier` a finished

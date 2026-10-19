@@ -59,6 +59,9 @@ _git_locks_guard = threading.Lock()
 _stats_cache = {}
 _files_cache = {}
 FILES_CACHE_S = 30
+_estimate_cache = {}
+ESTIMATE_CACHE_S = 15
+CLOCK = None  # "now" for the time estimate as an ISO time stamp; None is the real time (checks pin it)
 STATS_TASKS_EVENTS = 400  # events of the shown tasks sent along, so the page can say what happened in a segment
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PLOT_EXT = (".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp")
@@ -227,6 +230,7 @@ def detail(name):
         "plots": plots,
         "tasks": task_stats(name),
         "record": record(name),
+        "estimate": estimate(name),
         "drafts": drafts(name),
         "discarded": read_jsonl(os.path.join(pdir, "state", "discarded_drafts.jsonl"), last=20),
     }
@@ -302,6 +306,44 @@ def task_stats(name):
                       for e in rows[-STATS_TASKS_EVENTS:]]
     if data["available"]:  # a failed run is tried again on the next request
         _stats_cache[(ROOT, name)] = (sig, data)
+    return data
+
+
+_ESTIMATE_CODE = ("import datetime as real, importlib.util, json, sys, types\n"
+                  "spec = importlib.util.spec_from_file_location('aaf', sys.argv[1])\n"
+                  "aaf = importlib.util.module_from_spec(spec); spec.loader.exec_module(aaf)\n"
+                  "aaf.PROJECTS = sys.argv[2]\n"
+                  "if sys.argv[4]:\n"
+                  "    at = real.datetime.fromisoformat(sys.argv[4])\n"
+                  "    class Fixed(real.datetime):\n"
+                  "        @classmethod\n"
+                  "        def now(cls, tz=None): return at if tz is None else at.astimezone(tz)\n"
+                  "    aaf.dt = types.SimpleNamespace(datetime=Fixed, timedelta=real.timedelta,\n"
+                  "                                   timezone=real.timezone, date=real.date)\n"
+                  "print(json.dumps({'estimate': aaf.estimate(sys.argv[3]), 'held': aaf._calibration()}))\n")
+
+
+def estimate(name):
+    """aaf.estimate(<project folder>), i.e. what `aaf.py estimate <name>` prints, for the served workspace,
+    plus aaf's calibration (how often past ranges held, `estimate_accuracy` in `aaf.py stats`) as `held`.
+    Cached briefly like the Git info, a failed run too."""
+    path = stats_aaf_path()
+    if not path:
+        return {"available": False}
+    hit = _estimate_cache.get((ROOT, name))
+    if hit and time.time() - hit[0] < ESTIMATE_CACHE_S:
+        return hit[1]
+    try:
+        proc = subprocess.run([sys.executable, "-c", _ESTIMATE_CODE, path, PROJECTS, os.path.join(PROJECTS, name),
+                               CLOCK or ""], capture_output=True, text=True, timeout=20, cwd=ROOT)
+        out = json.loads(proc.stdout) if proc.returncode == 0 else None
+    except (subprocess.TimeoutExpired, ValueError):
+        out = None
+    if isinstance(out, dict) and isinstance(out.get("estimate"), dict):
+        data = dict(out["estimate"], available=True, held=out.get("held"))
+    else:  # kept as briefly as a good answer, so a broken run is not repeated on every poll
+        data = {"available": False, "error": "could not work out the estimate"}
+    _estimate_cache[(ROOT, name)] = (time.time(), data)
     return data
 
 

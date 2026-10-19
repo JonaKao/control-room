@@ -46,20 +46,22 @@ class ApiTest(unittest.TestCase):
 
     def test_lists_every_fixture_project(self):
         names = {p["name"] for p in json.loads(self.get("/api/projects")[2])}
-        self.assertEqual(names, {"api-client", "brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"})
+        self.assertEqual(names, {"api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser", "scheduler",
+                   "web-scraper"})
 
     def test_detail_has_all_sections(self):
-        for name in ("api-client", "brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
+        for name in ("api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser", "scheduler",
+                   "web-scraper"):
             d = json.loads(self.get("/api/project?name=" + name)[2])
             for key in ("summary", "meta", "status", "checks", "check_history", "review",
-                        "decisions", "progress", "events", "plots", "drafts", "activity", "record"):
+                        "decisions", "progress", "events", "plots", "drafts", "activity", "record", "estimate"):
                 self.assertIn(key, d, "%s missing %s" % (name, key))
 
     def test_workspace_record_endpoint(self):
         code, ctype, body = self.get("/api/record")
         self.assertEqual(code, 200)
         w = json.loads(body)
-        self.assertEqual(len(w["projects"]), 7)
+        self.assertEqual(len(w["projects"]), 9)
         self.assertEqual(w["reasons"][0]["key"], "progress")
 
     def test_waiting_project_exposes_its_draft(self):
@@ -190,7 +192,8 @@ class TimelineTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_same_as_aaf_stats(self):
-        for name in ("api-client", "brand-new", "example-done", "image-classifier", "parser", "scheduler", "web-scraper"):
+        for name in ("api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser", "scheduler",
+                   "web-scraper"):
             d = server.detail(name)
             self.assertIn("tasks", d, name)
             want = self.aaf.task_stats(os.path.join(self.tmp, "projects", name))
@@ -308,6 +311,131 @@ class TrackRecordTest(unittest.TestCase):
     def test_overlapping_themes_are_counted_per_rejection(self):
         rows = [{"verdict": "fail", "summary": "progress note missing and a crash"}, {"verdict": "fail", "summary": "a race"}]
         self.assertEqual(server.review_reasons(rows)[0]["rejections"], 2)
+
+
+
+class EstimateTest(unittest.TestCase):
+    """/api/project carries the time estimate: exactly what aaf.py's estimate() gives for the served
+    workspace at the server's clock, plus aaf's calibration (how often past ranges held), cached briefly."""
+    NOW = "2026-10-14T14:50:00+02:00"
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        path = os.path.join(os.path.dirname(os.path.dirname(PROJECT)), "framework", "aaf.py")
+        spec = importlib.util.spec_from_file_location("aaf_for_estimate", path)
+        cls.aaf = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.aaf)
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        self.old_root, self.old_clock = server.ROOT, server.CLOCK
+        self.tmp = tempfile.mkdtemp()
+        shutil.copytree(os.path.join(FIXTURES, "projects"), os.path.join(self.tmp, "projects"))
+        server.set_root(self.tmp)
+        server.CLOCK = self.NOW
+        server._estimate_cache.clear()
+
+    def tearDown(self):
+        import shutil
+        server.set_root(self.old_root)
+        server.CLOCK = self.old_clock
+        server._estimate_cache.clear()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def expected(self, root, name):
+        """aaf.estimate() on <root>/projects/<name> with the clock at NOW (written here, not taken from server.py)."""
+        import datetime as real
+        import types
+        now = real.datetime.fromisoformat(self.NOW)
+
+        class Fixed(real.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return now if tz is None else now.astimezone(tz)
+        old_projects, old_dt = self.aaf.PROJECTS, self.aaf.dt
+        self.aaf.PROJECTS = os.path.join(root, "projects")
+        self.aaf.dt = types.SimpleNamespace(datetime=Fixed, timedelta=real.timedelta, timezone=real.timezone,
+                                            date=real.date)
+        try:
+            return self.aaf.estimate(os.path.join(root, "projects", name)), self.aaf._calibration()
+        finally:
+            self.aaf.PROJECTS, self.aaf.dt = old_projects, old_dt
+
+    def test_same_as_aaf_estimate(self):
+        active = 0
+        for name in sorted(os.listdir(os.path.join(self.tmp, "projects"))):
+            got = server.detail(name)["estimate"]
+            want, cal = self.expected(self.tmp, name)
+            self.assertTrue(got.pop("available"), name)
+            self.assertEqual(got.pop("held"), cal, name)
+            self.assertEqual(got, want, name)
+            active += want["active"]
+        self.assertEqual(active, 4)  # data-pipeline, image-classifier, notes-app, web-scraper
+
+    def test_scenarios(self):
+        e = server.detail("image-classifier")["estimate"]
+        self.assertEqual(e["plan"], {"steps": 5, "done": 2, "current": "Retrain and compare validation accuracy"})
+        self.assertLess(e["progress_low"], e["progress_high"])
+        self.assertIn("past review and fixing", server.detail("notes-app")["estimate"]["basis"])
+        self.assertIn("longer than almost every", server.detail("data-pipeline")["estimate"]["basis"])
+        longest = max(t["duration_s"] or 0 for n in os.listdir(os.path.join(self.tmp, "projects"))
+                      for t in self.aaf.task_stats(os.path.join(self.tmp, "projects", n))["tasks"] if t["outcome"] != "running")
+        self.assertGreater(server.detail("data-pipeline")["estimate"]["elapsed_s"], longest,
+                           "data-pipeline runs longer than any task before it")
+        held = server.detail("brand-new")["estimate"]["held"]
+        self.assertEqual((held["predictions_checked"], held["coverage"]), (10, 0.7))
+
+    def test_no_history(self):
+        root = os.path.join(PROJECT, "fixtures", "first-run")
+        server.set_root(root)
+        got = server.detail("first-project")["estimate"]
+        want, cal = self.expected(root, "first-project")
+        self.assertEqual(got["remaining_low_s"], None)
+        self.assertEqual(got["basis"], "too little history")
+        self.assertEqual(got["held"]["predictions_checked"], 0)
+        got.pop("available"), got.pop("held")
+        self.assertEqual(got, want)
+
+    def test_cached_briefly(self):
+        first = server.detail("notes-app")["estimate"]
+        path = os.path.join(self.tmp, "projects", "notes-app", "state", "status.json")
+        with open(path) as f:
+            st = json.load(f)
+        st["phase"] = "done"
+        with open(path, "w") as f:
+            json.dump(st, f)
+        self.assertEqual(server.detail("notes-app")["estimate"], first, "asked again at once: from the cache")
+        key = (server.ROOT, "notes-app")
+        server._estimate_cache[key] = (server._estimate_cache[key][0] - server.ESTIMATE_CACHE_S - 1,
+                                       server._estimate_cache[key][1])
+        self.assertEqual(server.detail("notes-app")["estimate"]["active"], False, "after the cache time: fresh")
+
+    def test_failed_run_is_not_repeated_on_every_poll(self):
+        calls = []
+        real = server.subprocess.run
+
+        def failing(*a, **k):
+            calls.append(1)
+            return real([sys.executable, "-c", "import sys; sys.exit(1)"], capture_output=True, text=True)
+        server.subprocess.run = failing
+        try:
+            first = server.estimate("notes-app")
+            second = server.estimate("notes-app")
+        finally:
+            server.subprocess.run = real
+        self.assertFalse(first["available"])
+        self.assertEqual(second, first)
+        self.assertEqual(len(calls), 1, "a failed estimate is kept briefly, not retried on every request")
+
+    def test_unavailable_without_aaf(self):
+        old = server.stats_aaf_path
+        server.stats_aaf_path = lambda: None
+        try:
+            self.assertEqual(server.detail("notes-app")["estimate"], {"available": False})
+        finally:
+            server.stats_aaf_path = old
 
 
 if __name__ == "__main__":

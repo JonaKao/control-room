@@ -1,0 +1,6 @@
+{"ts": "2026-10-14T14:10:00+02:00", "kind": "status", "text": "Planning: Add tags to notes and filter by tag", "phase": "planning", "iteration": 0, "task": "Add tags to notes and filter by tag"}
+{"ts": "2026-10-14T14:13:00+02:00", "kind": "plan", "text": "Plan: 3 steps", "n_steps": 3}
+{"ts": "2026-10-14T14:14:00+02:00", "kind": "status", "text": "Implementing (iteration 1): Adding the tag field", "phase": "implementing", "iteration": 1, "task": null}
+{"ts": "2026-10-14T14:33:00+02:00", "kind": "status", "text": "Checking (iteration 1)", "phase": "checking", "iteration": 1, "task": null}
+{"ts": "2026-10-14T14:41:00+02:00", "kind": "check", "text": "Checks passed: 2 of 2", "passed": true, "n_pass": 2, "n_total": 2}
+{"ts": "2026-10-14T14:41:00+02:00", "kind": "status", "text": "Reviewing (iteration 1): All checks pass; the reviewer is looking at it", "phase": "reviewing", "iteration": 1, "task": null}

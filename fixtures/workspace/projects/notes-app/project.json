@@ -1,0 +1,12 @@
+{
+  "name": "notes-app",
+  "description": "A small notes app with search",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "python3 -m pytest tests -q"
+    }
+  ]
+}

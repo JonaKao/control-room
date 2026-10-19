@@ -12,7 +12,7 @@ knows where to continue.
 | 4 | Track record | How well is the agent doing over time? | `python3 framework/aaf.py stats <project>` → `summary`, plus `state/review_history.jsonl` | Done (2026-10-15) |
 | 5 | README | What is this project, for someone new to it? | `template/README.md`; generated sections refreshed by `aaf.py git commit` | Done (2026-10-15) |
 | 6 | Instrument-panel redesign | Does everything important fit on one laptop screen? | `design/DESIGN.md`, `design/mockup.html`, `design/mockup-dark.png` (approved 2026-10-17) | Done (2026-10-17) |
-| 7 | Time estimate | How far along is the task, and how long is left? | `python3 framework/aaf.py estimate <project>`; plan steps in `state/plan.json`; accuracy in `aaf.py stats` → `estimate_accuracy` | Not started |
+| 7 | Time estimate | How far along is the task, and how long is left? | `python3 framework/aaf.py estimate <project>`; plan steps in `state/plan.json`; accuracy in `aaf.py stats` → `estimate_accuracy` | Done (2026-10-19) |
 
 Shared requirements for all features: plain language, as visual as possible, calm and
 consistent with the existing design, detail on demand. Each feature gets fixtures for

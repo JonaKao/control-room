@@ -161,3 +161,23 @@ When the review never said no, the track record shows one line ('No review has h
 ## 2026-10-17: Fixed: plot and viewer colours are tokens
 
 Plots are images drawn on white, so the plot background and the picture viewer stay white in both themes, now as tokens on :root (--plot-bg, --plot-ink, --backdrop) instead of literals; these three are not in DESIGN.md on purpose (they belong to the images, not the theme). tests/test_colours.py fails on any hex, rgb or hsl colour in the style block outside the :root blocks. Reviewer PASS.
+
+## 2026-10-19: Estimate: server runs aaf.estimate() in a subprocess, clock pinnable for checks
+
+The page gets the estimate inside /api/project (key estimate, cached 15 s like the Git info), computed by the served workspace's aaf.py (or this workspace's for the fixtures) with aaf.PROJECTS pointed at the served workspace, plus aaf._calibration() for the track record (what aaf.py stats prints as estimate_accuracy). server.CLOCK (None = real time) pins 'now' inside that subprocess only, so checks get stable numbers from fixtures with fixed timestamps. Rejected: re-implementing the estimate in server.py (roadmap says call aaf.py); calling 'aaf.py estimate' as a command (no workspace override for the fixtures, no fixed clock); changing aaf.py (outside the project).
+
+## 2026-10-19: Estimate fixtures: two new projects plus a separate first-run workspace
+
+Mid-plan is image-classifier (its task_started moved to 14:02 to match its events and plan). New in fixtures/workspace: notes-app (in review, plan done) and data-pipeline (running about 6 h, longer than all but one past task). 'No history' cannot happen in the main fixture workspace (it has 14 finished tasks), so fixtures/first-run holds one planning project in a workspace without any finished task. api-client gets state/estimates.jsonl (10 logged ranges, 7 held) so the calibration has data. Rejected: generating these scenarios at check time only (the README and render check should see them as fixtures).
+
+## 2026-10-19: Fixed: plainer estimate wording
+
+Review minor findings: the no-history sentence no longer mentions a missing plan or a fixed history size (aaf's MIN_HISTORY may change), 'from' is no longer doubled, and 'estimates held' says it covers all projects. Checked in checks/estimate.py.
+
+## 2026-10-19: Fixed: failed estimate runs cached briefly
+
+A failing aaf estimate subprocess was retried on every 2.5 s poll; it is now cached 15 s like a good result. Unlike the timeline (cached until events change), the estimate expires quickly anyway, so a failure recovers within 15 s. Test: test_failed_run_is_not_repeated_on_every_poll.
+
+## 2026-10-19: Fixed: data-pipeline runs longer than any past task
+
+The roadmap asks for a task running longer than any before; the fixture was longer than all but one. Its start moved to 2026-10-13T20:00 (about 19 h at the pinned clock); test_scenarios asserts it exceeds every finished task.

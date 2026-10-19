@@ -1,0 +1,12 @@
+{
+  "name": "data-pipeline",
+  "description": "Nightly sales data pipeline",
+  "max_iterations": 8,
+  "fix_iterations": 3,
+  "checks": [
+    {
+      "name": "Unit tests",
+      "cmd": "python3 -m pytest tests -q"
+    }
+  ]
+}

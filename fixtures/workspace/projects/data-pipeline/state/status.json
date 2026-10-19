@@ -1,0 +1,8 @@
+{
+  "phase": "implementing",
+  "task": "Load the yearly sales export and rebuild the monthly report",
+  "iteration": 4,
+  "note": "Still fixing date parsing for the 2019 files",
+  "updated": "2026-10-14T14:20:00+02:00",
+  "task_started": "2026-10-13T20:00:00+02:00"
+}

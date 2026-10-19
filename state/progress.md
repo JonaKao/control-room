@@ -2,6 +2,29 @@
 
 ## Current state
 
+- **Time estimate (roadmap 7, 2026-10-19)**: the hero's right half "How far along" (`[data-slot=estimate]`)
+  shows, for a running task, a range and never a single number: "28–45% done" in large type, a bar whose solid
+  part ends at progress_low and a striped band to progress_high (phase colour), "about 1 to 2 hours left"
+  (minutes, half hours, whole hours from 10 h, days from 4 days), "Step 3 of 5: <current step>", "started
+  N min ago", a plain "based on" sentence with the number of past tasks and where they come from (plan steps,
+  review time, "already running longer than almost every one of the 14 past tasks … a rough guess", or "Not
+  enough history yet"), a window of three plan steps and the agent's note on one line; the header says
+  "estimates held 7 of 10 times (all projects)". Without enough history it shows the plan bar and the full plan instead.
+  When the human is needed the "what to do" card still takes that half. The track record's header adds
+  "time estimates held 7 of 10 times (70%)" (across all projects; empty state as a line). Server:
+  `/api/project` → `estimate` = aaf's `estimate()` + `held` (`_calibration()`), subprocess with
+  `aaf.PROJECTS` set to the served workspace, cached 15 s; `server.CLOCK` pins "now" for checks (decision).
+  New fixtures: `notes-app` (in review), `data-pipeline` (running 19 h, longer than any task before), `fixtures/first-run` (no history),
+  `api-client/state/estimates.jsonl` (calibration); `image-classifier`'s task start and plan times now match its
+  events. New check `checks/estimate.py`; `tests/test_api.py` EstimateTest; render check also renders
+  `fixtures/first-run`; fixture lists in `tests/test_api.py` and `checks/glance.py` updated for the two new
+  fixtures. Screenshots `plots/render-estimate-*.png` inspected; the full first screen
+  (`render-estimate-desktop-dark.png`) matches the mockup's layout. Found while inspecting: with the real clock
+  the fixtures' estimates read "123.5 to 281.5 hours"; fixed and now checked.
+  Review PASS (5 minor points); follow-up fixes kept after a second PASS: the "based on" wording (no doubled
+  "from", no plan mentioned when there is none, no fixed history size), the held line says "(all projects)", a
+  failed estimate run is cached 15 s like a good one, and `data-pipeline` now runs longer than any past task.
+  Open: no fixture shows "not enough history" together with a plan, so that sentence is not rendered by a check.
 - The dashboard lives in this project; `dashboard/server.py` is a shim that starts `server.py` here.
 - **Instrument-panel redesign (roadmap 6, 2026-10-17)**, after the approved design in `design/DESIGN.md`
   (reference `design/mockup.html`, `design/mockup-dark.png`; comparison images `plots/compare-mockup-{dark,light}.png`).
@@ -157,8 +180,11 @@
 
 ## Next
 
-Roadmap items 1 to 6 are done. Next: **roadmap 7, the time estimate**, in the hero's right half ("How far along"),
-which already shows the plan's steps.
+Roadmap items 1 to 7 are all done; no roadmap item is left.
+
+- Time estimate: the rail's progress bar for a working project could show the same striped band.
+- The estimate is cached 15 s while "started N min ago" uses the page clock; fine for now, but a long-cached
+  estimate would drift slightly from the elapsed time.
 
 - Show a Git summary (unsent versions, behind) in the project list.
 
