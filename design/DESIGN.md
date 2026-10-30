@@ -47,6 +47,25 @@ One colour per phase, used identically everywhere (live steps, timeline, progres
 
 "Needs you" uses the accent (blue) for decisions and permission waits, red for stuck.
 
+## Colour-blind mode
+
+A second switch in the rail (the eye, next to the theme switch; remembered) swaps the seven
+state colours for ones that stay apart for protanopia, deuteranopia and tritanopia. It works
+with either theme; surfaces, text and lines stay as above, and the accent follows `--change`.
+Passing is blue and failing orange, the convention of GitHub's colour-blind themes.
+`checks/colour_blind.py` simulates each kind of colour blindness and requires every pair to be
+at least 12 apart (CIEDE2000) and each colour at least 3:1 against the panel.
+
+| Token | Dark | Light | Meaning |
+|---|---|---|---|
+| `--plan` | `#919FB8` | `#8F908D` | planning, reading, searching |
+| `--change` | `#6FE2DA` | `#0B7A8C` | making a change; also the accent |
+| `--test` | `#F2E14A` | `#B07F05` | testing; also "working" |
+| `--review` | `#D0ADFF` | `#8655FF` | independent review, reviewer steps |
+| `--polish` | `#F84E9D` | `#8E2F55` | follow-up fixes |
+| `--pass` | `#5084F1` | `#1E449A` | passing, finished |
+| `--fail` | `#F09862` | `#BB1A02` | failing, stuck |
+
 ## Type
 
 A condensed sans for headings, panel labels and large numbers (IBM Plex Sans Condensed),

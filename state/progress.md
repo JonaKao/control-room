@@ -2,6 +2,23 @@
 
 ## Current state
 
+- **Colour-blind mode (2026-10-30)**: an eye button in the rail, next to the theme switch (`#palette`,
+  `aria-pressed`, remembered as `aaf.palette`), sets `data-palette="cb"` on `<html>`. Two token blocks in
+  `index.html` (dark and light) swap only the seven state colours and the accent; surfaces, text and lines
+  stay. Passing is blue, failing orange. DESIGN.md has a "Colour-blind mode" table. New check
+  `checks/colour_blind.py` (registered as "Colour-blind mode"): the switch, the tokens in both themes, that the loop,
+  live steps and timeline use them, every fixture without JS errors and no sideways scrolling on phones, and
+  a simulation (Machado 2009 protan/deutan/tritan, CIEDE2000): every pair of the seven colours at least 12
+  apart and 3:1 against the panel. The default palette fails that measurement (change/review 1.4 under
+  deuteranopia), which the check also asserts. Screenshots inspected: `render-colourblind-desktop-{dark,light}.png`,
+  `render-colourblind-phone.png`, `render-colourblind-deuteranopia-{default,cb}.png`.
+  Limits: with seven colours the closest pairs sit around 13 (fail/test, change/review under deuteranopia);
+  pushing one pair apart pulled another together, so the mode relies on the existing non-colour cues too
+  (icons in the tests list, text and grouping in the rail).
+  Note: the checks need to run outside Claude Code's sandbox (Chromium cannot start inside it); one full
+  run had "Live activity feed" fail under load (70 s instead of 25 s); it passed alone and in the next full run.
+  Review PASS with four notes and no minor findings, so there was no follow-up fix step. The notes are left for
+  the human (see Next, first item).
 - **Framework updates (roadmap 8, 2026-10-19)**, from `FRAMEWORK-UPDATES.md`:
   1. Git timeline: the dashed "not on GitHub yet" ring comes from each commit's own `pushed` field
      (`aaf.py git info`); only `false` draws it (`null`: no upstream). The "newest `ahead`" guess is gone.
@@ -202,6 +219,12 @@
 
 ## Next
 
+- Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,
+  so "Agent Control Room" wraps onto three lines and the sub-line is cut ("9 projects in this wo…"), also with
+  the mode off; (2) in the mode, `--accent` (teal, used for "needs you") becomes pale grey under deuteranopia and sits
+  near the planning grey, and the distance test does not cover `--accent`; (3) the deuteranopia screenshots are saved,
+  not checked. Possible follow-ups: compact the brand block, give the accent its own colour-blind value in the distance test,
+  hatch the failing bars in the mode as a cue that does not depend on colour.
 Roadmap items 1 to 8 are all done; no roadmap item is left.
 
 - Time estimate: the rail's progress bar for a working project could show the same striped band.

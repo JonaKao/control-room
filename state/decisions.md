@@ -193,3 +193,7 @@ activity_steps now merges the two copies of a permission prompt in either order 
 ## 2026-10-19: Fixed: test times checked with folded and missing times
 
 checks/layout.py check_many_test_times patches api-client with eight tests (some folded, one without duration_s, values 0.05/0.8/9.96/12.4/59.6/74.2/3600 s); a test without a time must show none. secsWords and the check now round before choosing the unit, so 59.6 s reads 1 min and 9.96 s reads 10 s. Reviewer PASS (verified the check fails on three deliberate breakages). Remaining: rounding of exact halves differs between Python and JS; expected strings come from a copy of the rule.
+
+## 2026-10-30: Colour-blind mode: a separate switch with its own palette, checked by simulation
+
+A second rail switch (remembered as aaf.palette) swaps the seven phase/state tokens for a palette in both dark and light, so it combines with either theme. Passing is blue and failing is orange, as in GitHub's colour-blind themes. checks/colour_blind.py simulates protanopia, deuteranopia and tritanopia (Machado 2009, full severity) and requires every pair of tokens to be at least 12 apart (CIEDE2000) and each at least 3:1 against the panel. The default palette fails this (change/review 1.4 under deuteranopia), which is why it is a mode and not a fix to the default: the approved design stays the default. Rejected: following a browser setting (none exists for colour blindness), replacing the default palette (changes the approved design), and patterns only (the page has too many coloured marks).

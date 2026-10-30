@@ -1,10 +1,13 @@
+# Review: Create a colour-blind mode (2026-10-30)
+
 VERDICT: PASS
-SUMMARY: All three framework updates are used correctly; each is covered by a new check that fails on the old code; all 10 checks pass. Only minor edge cases.
+SUMMARY: The colour-blind mode works as asked. A remembered rail switch swaps the seven state tokens in both themes, a new check backs it (it simulates three kinds of colour blindness and fails on the old code because there is no switch), and all 11 checks pass when the reviewer ran them.
 
-FINDINGS
-- [minor] server.py activity_steps: (a) the duplicate permission prompt is folded only when the id-less notification comes after the PermissionRequest record; reversed order gives two waits. (b) Any later non-wait, non-error record (note, turn, a parallel subagent step) resolves a pending wait; a `turn` after a reply wait shows "you answered" when nobody did. Matches FRAMEWORK-UPDATES.md ("or the next step starts"); not listed in progress.md.
-- [minor] checks/layout.py: docstring says folded tests are checked, but no fixture has more than 5 checks; tests without duration_s are skipped, so a missing time is not caught.
-- [minor] index.html secsWords: 59.6 s shows "60 s" instead of "1 min" (the check copies the rounding).
-- [minor] render-activity-notes-app-desktop.png shows an odd estimate because checks/activity.py does not pin the server clock (already a known issue).
+## Findings
+- [note] index.html:578 — The new eye button takes width from the rail's brand block. With the default palette, "AGENT CONTROL ROOM" now wraps onto three lines, and the sub-line is cut to "9 projects in this wo…" (it used to read "9 projects in this workspace" in full). The rest of the rail moves down about 18 px. The layout check still passes, so this is cosmetic.
+- [note] index.html:31-33 — In the mode, `--accent` follows `--change` (teal). Under the deuteranopia simulation, the "Needs you" dots (accent) turn pale grey and sit close to the planning grey in the rail. The check's distance test covers only the seven state tokens, not `--accent`. Stuck and failing still show clearly in orange.
+- [note] checks/colour_blind.py:207-209 — The simulation screenshots are only saved, not checked. The real guarantee is the colour-distance test on the token values, which is sound: it also confirms the default palette fails the same test.
+- [note] FRAMEWORK-UPDATES.md and state/usage.jsonl are also changed or untracked in the working tree. They look like framework and hook output (dated 2026-10-21), not part of this task.
 
-DONE.md: every item met (checks run by the reviewer: unit tests 76 OK, all browser checks exit 0; no check weakened; screenshots opened; plain language; server read-only).
+## DONE.md
+All items met. progress.md was still pending at review time (updated afterwards). The reviewer opened the colour-blind screenshots: dark, light, phone and both deuteranopia simulations.

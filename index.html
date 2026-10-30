@@ -25,6 +25,16 @@
   --pass: #18825F; --fail: #C33B2C; --accent: #2F62A8; --glow: transparent;
   color-scheme: light;
 }
+/* Colour-blind mode (design/DESIGN.md): the seven state colours only, with either theme.
+   Passing is blue and failing orange; every pair stays apart for protan, deutan and tritan vision. */
+:root[data-palette="cb"] {
+  --plan: #919FB8; --change: #6FE2DA; --test: #F2E14A; --review: #D0ADFF; --polish: #F84E9D;
+  --pass: #5084F1; --fail: #F09862; --accent: #6FE2DA; --glow: rgba(111, 226, 218, .14);
+}
+:root[data-theme="light"][data-palette="cb"] {
+  --plan: #8F908D; --change: #0B7A8C; --test: #B07F05; --review: #8655FF; --polish: #8E2F55;
+  --pass: #1E449A; --fail: #BB1A02; --accent: #0B7A8C; --glow: transparent;
+}
 /* Older names, kept so every part reads the same tokens. */
 :root { --paper: var(--bg); --track: var(--grid); --code-bg: var(--panel2); --active: var(--test); }
 /* Plots are images drawn on white, in both themes; the picture viewer keeps that white. */
@@ -49,9 +59,10 @@ code { font: 12px var(--mono); background: var(--panel2); padding: 1px 5px; bord
 .brand .bt { min-width: 0; flex: 1; }
 .rail h1 { font: 700 15px/1.15 var(--cond); letter-spacing: .03em; text-transform: uppercase; margin: 0; }
 .rail .sub { display: block; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#theme { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 28px; height: 28px; padding: 0; cursor: pointer; color: var(--muted); flex: none; display: grid; place-items: center; }
-#theme svg { width: 15px; height: 15px; }
-#theme:hover { color: var(--ink); }
+#theme, #palette { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 28px; height: 28px; padding: 0; cursor: pointer; color: var(--muted); flex: none; display: grid; place-items: center; }
+#theme svg, #palette svg { width: 15px; height: 15px; }
+#theme:hover, #palette:hover { color: var(--ink); }
+#palette[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); background: var(--panel2); }
 .fleet { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 4px 6px; }
 .fleet > div { background: var(--panel2); border-radius: 8px; padding: 7px 7px; min-width: 0; }
 .fleet b { display: block; font: 700 20px/1 var(--cond); font-variant-numeric: tabular-nums; }
@@ -564,6 +575,7 @@ details[open] > summary .chev { transform: rotate(45deg); }
 <div class="app">
   <nav class="rail" aria-label="Projects">
     <div class="brand"><span class="logo" aria-hidden="true"></span><div class="bt"><h1>Agent Control Room</h1><span class="sub" id="rail-sub">What each project's agent is doing, live</span></div>
+      <button id="palette" type="button" aria-pressed="false" aria-label="Colour-blind friendly colours" title="Colour-blind friendly colours"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.2 8s2.5-4.6 6.8-4.6S14.8 8 14.8 8s-2.5 4.6-6.8 4.6S1.2 8 1.2 8z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/></svg></button>
       <button id="theme" type="button" aria-label="Switch between light and dark" title="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4z" fill="currentColor"/></svg></button></div>
     <div id="overview"></div>
     <div id="projects"></div>
@@ -692,6 +704,20 @@ $("#theme").addEventListener("click", () => {
   theme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem("aaf.theme", theme); } catch (e) {}
+  if (current && current !== WS) renderMapSlot();
+});
+
+// Colour-blind mode: its own palette for the state colours, with either theme; off unless chosen.
+function setPalette(on) {
+  if (on) document.documentElement.dataset.palette = "cb";
+  else delete document.documentElement.dataset.palette;
+  $("#palette").setAttribute("aria-pressed", on ? "true" : "false");
+}
+try { setPalette(localStorage.getItem("aaf.palette") === "cb"); } catch (e) { setPalette(false); }
+$("#palette").addEventListener("click", () => {
+  const on = document.documentElement.dataset.palette !== "cb";
+  setPalette(on);
+  try { localStorage.setItem("aaf.palette", on ? "cb" : "default"); } catch (e) {}
   if (current && current !== WS) renderMapSlot();
 });
 

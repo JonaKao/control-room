@@ -109,6 +109,11 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    time, longer than almost every past task, not enough history yet), how often estimates held (hero and
    track record), no range without a running task, the "what to do" card in its place when the human is
    needed, plain words and phone width. It saves `plots/render-estimate-*.png`.
+11. **Colour-blind mode**: `checks/colour_blind.py` checks the rail's `#palette` switch (off by default,
+   `aria-pressed`, remembered as `aaf.palette = cb`), the colour-blind tokens from DESIGN.md in both themes
+   (`:root[data-palette="cb"]`), that the loop, live steps and timeline use them, and, simulating protanopia,
+   deuteranopia and tritanopia, that every pair of the seven state colours is at least 12 apart (CIEDE2000)
+   and 3:1 against the panel. It saves `plots/render-colourblind-*.png`, including deuteranopia simulations.
 
 The page is dark by default and ignores the browser's colour preference, so checks that need the
 light theme store the switch's choice first (`localStorage aaf.theme = light`).

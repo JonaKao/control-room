@@ -15,7 +15,10 @@ anything needs them, and how the work went.
 
 The page is laid out like an instrument panel: everything important fits on the first screen
 of a laptop, and detail opens when you ask for it. It is dark by default; the round button at
-the top of the left rail switches to a light version and remembers the choice.
+the top of the left rail switches to a light version and remembers the choice. The eye button
+next to it turns on a colour-blind mode: the colours for each stage, passing and failing change to
+ones that people with red-green or blue-yellow colour blindness can tell apart (passing becomes
+blue, failing orange). It works with both versions and is remembered too.
 
 **The left rail** shows four numbers for the whole workspace (how many projects need you, how
 many are working, how many have finished, and how often tasks were right the first time), then
@@ -140,6 +143,9 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   first 1440 × 900 screen (on the example projects and on a temporary workspace with real Git
   repositories), the panel grid and order, one column on phones, dark by default, and the design's colours
   and fonts.
+  `checks/colour_blind.py` checks the colour-blind mode: the switch, its colours in both versions,
+  and, by simulating the three common kinds of colour blindness, that every pair of colours stays
+  clearly apart. Its screenshots include the page as someone with deuteranopia sees it.
 - `ROADMAP.md`: the planned features (activity feed, task timeline, change map, track record,
   README, the instrument-panel redesign, the time estimate and the use of the framework's 2026-10-19
   updates) and their status. See
@@ -167,6 +173,7 @@ Every change must pass these before it is committed:
 - **Track record**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/track_record.py; else python3 checks/track_record.py; fi`
 - **Instrument-panel layout**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/layout.py; else python3 checks/layout.py; fi`
 - **Time estimate**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/estimate.py; else python3 checks/estimate.py; fi`
+- **Colour-blind mode**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/colour_blind.py; else python3 checks/colour_blind.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -174,6 +181,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-10-30: Create a colour-blind mode (first try, review passed)
 - 2026-10-19: Use framework updates: per-commit pushed flag, done/you/error activity records, per-test durations (review passed)
 - 2026-10-19: Roadmap 7: show how far along a running task is and how long is left (time estimate) (first try, review passed)
 - 2026-10-17: Roadmap 6: redesign the page as an instrument panel (design/DESIGN.md): rail with workspace numbers, hero, 12-column panel grid, dark by default (first try, review passed)

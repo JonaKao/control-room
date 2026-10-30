@@ -52,6 +52,11 @@
       "name": "Time estimate",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/estimate.py; else python3 checks/estimate.py; fi",
       "timeout": 240
+    },
+    {
+      "name": "Colour-blind mode",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/colour_blind.py; else python3 checks/colour_blind.py; fi",
+      "timeout": 240
     }
   ]
 }

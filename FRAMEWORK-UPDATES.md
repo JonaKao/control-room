@@ -3,6 +3,24 @@
 Changes made to the framework (outside this project) that the page can now use.
 Newest first. When a task has used an update, note it under "Used by".
 
+## 2026-10-21
+
+1. **Tokens per task.** `aaf.py stats` now gives every task a `tokens` field
+   (`input`, `output`, `cache_read`, `cache_write`, or `null` when nothing was
+   recorded) and the summary `tokens_output` and `tokens_input_total`. Recorded by the
+   activity hook at the end of each turn (`state/usage.jsonl`, cumulative per session).
+   Only tasks run after this update have numbers. Good for the track record and timeline.
+2. **Feature list.** Projects can have `features.json` (`aaf.py feature add|list|next|pass|fail`):
+   `features[]` with `id`, `title`, `criteria`, `spec`, `passes`, `passed_at`, `evidence`.
+   A "features passing" progress (e.g. 7 of 12) would fit the hero or the rail.
+3. **New activity kind `feature`** in `state/events.jsonl` (feature added, passes,
+   fails again), and **new phase meaning**: `waiting` with a note starting "Question:"
+   means the agent asked the human something in Claude Code.
+4. **Review findings can be `note`** (style or ideas, never auto-fixed) besides blocker,
+   major and minor.
+
+Used by: (not yet)
+
 ## 2026-10-19
 
 1. **Per-commit "on GitHub" flag.** `aaf.py git info` now gives every commit a
