@@ -64,10 +64,10 @@ class GitServer:
 
     def set_phase(self, name, phase):
         path = os.path.join(self.root, "projects", name, "state", "status.json")
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             st = json.load(f)
         st["phase"] = phase
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(st, f)
 
     def remote_log(self, name):
@@ -197,7 +197,7 @@ class GitTestOrderTest(unittest.TestCase):
         loader = unittest.TestLoader()
         loader.sortTestMethodsUsing = lambda a, b: (a < b) - (a > b)
         suite = unittest.TestSuite(loader.loadTestsFromTestCase(c) for c in (GitWriteTest, GitApiTest))
-        with open(os.devnull, "w") as quiet:
+        with open(os.devnull, "w", encoding="utf-8") as quiet:
             result = unittest.TextTestRunner(stream=quiet, verbosity=0).run(suite)
         failed = [str(t) for t, _ in result.failures + result.errors]
         self.assertTrue(result.wasSuccessful(), "fail when run in reverse order: %s" % failed)
@@ -289,7 +289,7 @@ class GitWithoutFrameworkTest(unittest.TestCase):
 
 class NoDirectGitTest(unittest.TestCase):
     def test_server_never_runs_git_itself(self):
-        src = open(os.path.join(PROJECT, "server.py")).read()
+        src = open(os.path.join(PROJECT, "server.py"), encoding="utf-8").read()
         self.assertIsNone(re.search(r"""\[\s*["']git["']""", src), "server.py must go through aaf.py, not git")
         self.assertIn("aaf.py", src)
 
@@ -311,7 +311,7 @@ class ChangeMapApiTest(GitServer, unittest.TestCase):
     def test_same_as_aaf_git_files(self):
         import subprocess
         out = subprocess.run([sys.executable, os.path.join(self.root, "framework", "aaf.py"), "git", "files", "scheduler"],
-                             capture_output=True, text=True, check=True).stdout
+                             capture_output=True, text=True, check=True, encoding="utf-8", errors="replace").stdout
         code, d = self.request("GET", "/api/files?name=scheduler&fresh=1")
         self.assertEqual(code, 200)
         self.assertTrue(d["available"])

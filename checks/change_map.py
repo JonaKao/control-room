@@ -47,7 +47,7 @@ INTERNAL = re.compile(r"\b(iteration|implementing|phase)\b|\baaf\b|\b[\w-]+\.(js
 
 def aaf_files(root, name):
     out = subprocess.run([sys.executable, os.path.join(root, "framework", "aaf.py"), "git", "files", name],
-                         capture_output=True, text=True, check=True).stdout
+                         capture_output=True, text=True, check=True, encoding="utf-8", errors="replace").stdout
     return json.loads(out)["files"]
 
 

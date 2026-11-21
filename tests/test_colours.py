@@ -17,7 +17,7 @@ def style_without_tokens(html):
 
 class ColourTokensTest(unittest.TestCase):
     def test_no_colour_written_outside_the_tokens(self):
-        with open(os.path.join(PROJECT, "index.html")) as f:
+        with open(os.path.join(PROJECT, "index.html"), encoding="utf-8") as f:
             css = style_without_tokens(f.read())
         found = sorted({m.group(0) for m in LITERAL.finditer(css)})
         self.assertEqual(found, [], "colours written directly instead of a token: %s" % found)

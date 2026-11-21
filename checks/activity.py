@@ -51,7 +51,7 @@ HISTORY_MAX = 8
 def log(name):
     rows = []
     try:
-        with open(os.path.join(FIXTURES, "projects", name, "state", "activity.jsonl")) as f:
+        with open(os.path.join(FIXTURES, "projects", name, "state", "activity.jsonl"), encoding="utf-8") as f:
             rows = [json.loads(line) for line in f if line.strip()]
     except OSError:
         pass
@@ -186,7 +186,7 @@ def main():
     names = sorted(n for n in os.listdir(pdir) if not n.startswith(".") and os.path.isdir(os.path.join(pdir, n)))
     problems = []
     if not [n for n in names if log(n) and log(n)[-1]["kind"] == "waiting"
-            and json.load(open(os.path.join(pdir, n, "state", "status.json"))).get("phase") not in ("done", "idle")]:
+            and json.load(open(os.path.join(pdir, n, "state", "status.json"), encoding="utf-8")).get("phase") not in ("done", "idle")]:
         problems.append("no fixture where the agent waits for the human mid-task")
     if not any(r.get("subagent") == "reviewer" for n in names for r in log(n)):
         problems.append("no fixture with steps by the reviewer")

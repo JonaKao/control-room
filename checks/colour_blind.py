@@ -136,7 +136,7 @@ def check_measurement():
         if not palette_problems(default, TOKENS["--panel"][i], theme):
             bad.append("measurement: the default %s palette passes, so the simulation does not see the problem" % theme)
         bad += palette_problems({k: CB_TOKENS[k][i] for k in STATES}, TOKENS["--panel"][i], "colour-blind " + theme)
-    with open(os.path.join(PROJECT, "design", "DESIGN.md")) as f:
+    with open(os.path.join(PROJECT, "design", "DESIGN.md"), encoding="utf-8") as f:
         design = f.read()
     part = design[design.find("## Colour-blind mode"):] if "## Colour-blind mode" in design else ""
     if not part:

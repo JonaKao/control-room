@@ -16,7 +16,7 @@ class TestFileLayoutTest(unittest.TestCase):
         for fn in sorted(os.listdir(HERE)):
             if not (fn.startswith("test_") and fn.endswith(".py")):
                 continue
-            with open(os.path.join(HERE, fn)) as f:
+            with open(os.path.join(HERE, fn), encoding="utf-8") as f:
                 body = ast.parse(f.read()).body
             mains = [i for i, node in enumerate(body) if is_main_block(node)]
             after = [n.name for n in body[mains[0] + 1:] if isinstance(n, ast.ClassDef)] if mains else []

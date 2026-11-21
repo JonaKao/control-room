@@ -316,7 +316,7 @@ def check_overlap(browser):
     try:
         for n in ("parser", "brand-new"):
             shutil.copytree(os.path.join(FIXTURES, "projects", n), os.path.join(tmp, "projects", n))
-        with open(os.path.join(tmp, "projects", "parser", "state", "review_history.jsonl"), "w") as f:
+        with open(os.path.join(tmp, "projects", "parser", "state", "review_history.jsonl"), "w", encoding="utf-8") as f:
             f.write(json.dumps({"at": "2026-10-14T12:15:00+02:00", "verdict": "fail",
                                 "summary": "Progress note not updated, and a crash on empty input"}) + "\n")
         httpd, base = serve(tmp)

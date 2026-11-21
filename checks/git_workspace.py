@@ -32,12 +32,12 @@ def find_aaf():
 
 def git(cwd, *args, stdin=None):
     return subprocess.run(["git"] + list(args), cwd=cwd, env=GIT_ENV, input=stdin, text=True,
-                          capture_output=True, check=True).stdout
+                          capture_output=True, check=True, encoding="utf-8", errors="replace").stdout
 
 
 def commit(cwd, subject, body="", trailers=None, touch=None):
     path = os.path.join(cwd, touch or "work.txt")
-    with open(path, "a") as f:
+    with open(path, "a", encoding="utf-8") as f:
         f.write(subject + "\n")
     git(cwd, "add", "-A")
     msg = subject + "\n\n" + (body + "\n\n" if body else "")
@@ -64,7 +64,7 @@ def _repo(root, name, history, push_upto):
     remote = os.path.join(root, "remotes", name + ".git")
     git(root, "init", "-q", "--bare", "-b", "main", remote)
     git(pdir, "init", "-q", "-b", "main")
-    with open(os.path.join(pdir, ".gitignore"), "w") as f:
+    with open(os.path.join(pdir, ".gitignore"), "w", encoding="utf-8") as f:
         f.write("state/status.json\nstate/checks.json\nstate/check_history.jsonl\nstate/events.jsonl\n"
                 "state/git.json\nstate/drafts/\n")
     git(pdir, "remote", "add", "origin", remote)
@@ -102,7 +102,7 @@ def make_workspace(projects=("example-done", "image-classifier", "parser")):
         pdir, _ = _repo(root, "parser", HISTORY[:2], push_upto=2)
         add_remote_commit(root, "parser", "Fix typo in the README")
         git(pdir, "fetch", "-q")
-        with open(os.path.join(pdir, "notes.txt"), "w") as f:
+        with open(os.path.join(pdir, "notes.txt"), "w", encoding="utf-8") as f:
             f.write("not committed yet\n")
         info["parser"] = {"commits": 2, "ahead": 0, "behind": 1, "changed": 1}
     if "image-classifier" in projects:
@@ -141,7 +141,7 @@ def code_repo(root, name="scheduler"):
             os.makedirs(os.path.dirname(full), exist_ok=True)
             # The first commit writes most of the file; later ones grow it a little.
             body = "x" * max(0, size - 40 * (n - 1) - 30) + "\n" if r == 0 else ""
-            with open(full, "a") as f:
+            with open(full, "a", encoding="utf-8") as f:
                 f.write(body + ("# change %02d %s\n" % (r + 1, "." * 21))[:40])
             want[path] = (n, subject)
         git(pdir, "add", "-A")

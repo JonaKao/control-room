@@ -69,7 +69,7 @@ PLOT_EXT = (".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp")
 
 def read_json(path, default=None):
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError):
         return default
@@ -77,7 +77,7 @@ def read_json(path, default=None):
 
 def read_text(path):
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return f.read()
     except OSError:
         return ""
@@ -86,7 +86,7 @@ def read_text(path):
 def read_jsonl(path, last=None):
     out = []
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -294,7 +294,7 @@ def aaf(*args, timeout=60):
     env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
     try:
         proc = subprocess.run([sys.executable, path] + list(args), cwd=ROOT, capture_output=True,
-                              text=True, timeout=timeout, env=env)
+                              text=True, timeout=timeout, env=env, encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         return 124, "", "timed out after %d s" % timeout
     return proc.returncode, proc.stdout, proc.stderr
@@ -323,7 +323,7 @@ def _stats_run(pdir):
         return {"available": False, "summary": {}, "tasks": [], "error": "framework/aaf.py not found"}
     try:
         proc = subprocess.run([sys.executable, "-c", _STATS_CODE, path, pdir], capture_output=True,
-                              text=True, timeout=20, cwd=pdir)
+                              text=True, timeout=20, cwd=pdir, encoding="utf-8", errors="replace")
         data = json.loads(proc.stdout) if proc.returncode == 0 else None
     except (subprocess.TimeoutExpired, ValueError):
         data = None
@@ -385,7 +385,7 @@ def estimate(name):
         return hit[1]
     try:
         proc = subprocess.run([sys.executable, "-c", _ESTIMATE_CODE, path, PROJECTS, os.path.join(PROJECTS, name),
-                               CLOCK or ""], capture_output=True, text=True, timeout=20, cwd=ROOT)
+                               CLOCK or ""], capture_output=True, text=True, timeout=20, cwd=ROOT, encoding="utf-8", errors="replace")
         out = json.loads(proc.stdout) if proc.returncode == 0 else None
     except (subprocess.TimeoutExpired, ValueError):
         out = None

@@ -15,7 +15,7 @@ PAGE_PARTS = ["At a glance", "Step by step", "Where the time went", "Track recor
 
 
 def read(path):
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return f.read()
 
 
@@ -109,11 +109,12 @@ class ReadmeTest(unittest.TestCase):
         self.assertEqual(refs, set(), "'## What it does' should say in words what these are: %s" % sorted(refs))
 
     def test_claude_md_lists_every_test_file(self):
-        # The project's CLAUDE.md says what the Server API check runs; every test file must be named there.
-        claude = read(os.path.join(PROJECT, "CLAUDE.md"))
+        # The project's instructions (control-room.md, formerly CLAUDE.md) say what the Server API
+        # check runs; every test file must be named there.
+        claude = read(os.path.join(PROJECT, "control-room.md"))
         for fn in sorted(os.listdir(os.path.join(PROJECT, "tests"))):
             if fn.startswith("test_") and fn.endswith(".py"):
-                self.assertTrue("tests/" + fn in claude, "CLAUDE.md does not say the Server API check runs tests/%s" % fn)
+                self.assertTrue("tests/" + fn in claude, "control-room.md does not say the Server API check runs tests/%s" % fn)
 
 
 def named_paths(text):
@@ -144,7 +145,7 @@ def kept_files(folder):
     if not os.path.isdir(os.path.join(folder, ".git")):
         return None
     out = subprocess.run(["git", "-C", folder, "ls-files", "-co", "--exclude-standard"],
-                         capture_output=True, text=True, timeout=30)
+                         capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     return set(out.stdout.splitlines()) if out.returncode == 0 else None
 
 

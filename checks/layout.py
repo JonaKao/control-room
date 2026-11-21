@@ -143,7 +143,7 @@ def took(sec):
 def check_test_times(page, name, checks=None):
     if checks is None:
         try:
-            with open(os.path.join(FIXTURES, "projects", name, "state", "checks.json")) as f:
+            with open(os.path.join(FIXTURES, "projects", name, "state", "checks.json"), encoding="utf-8") as f:
                 checks = json.load(f).get("checks", [])
         except OSError:
             return []

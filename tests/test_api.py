@@ -126,7 +126,7 @@ class ActivityTailTest(unittest.TestCase):
         shutil.rmtree(self.dir)
 
     def test_returns_the_newest_entries_in_order(self):
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             for i in range(20000):
                 f.write(json.dumps({"ts": "t", "kind": "read", "text": "step %d %s" % (i, "x" * 30)}) + "\n")
         rows = server.read_jsonl_tail(self.path, 30)
@@ -135,7 +135,7 @@ class ActivityTailTest(unittest.TestCase):
         self.assertEqual(rows[0]["text"].split()[1], "19970")
 
     def test_reads_only_the_end_of_a_big_file(self):
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write("x" * 2_000_000 + "\n")
             f.write(json.dumps({"kind": "edit", "text": "last"}) + "\n")
         read = []
@@ -167,7 +167,7 @@ class ActivityTailTest(unittest.TestCase):
         self.assertLess(sum(read), 300_000, "read %d bytes of a 2 MB log to get its last line" % sum(read))
 
     def test_skips_broken_lines_and_missing_file(self):
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write('{"kind": "read"}\nnot json\n["a list"]\n{"kind": "edit"')
         self.assertEqual(server.read_jsonl_tail(self.path, 30), [{"kind": "read"}])
         self.assertEqual(server.read_jsonl_tail(os.path.join(self.dir, "missing.jsonl"), 30), [])
@@ -242,7 +242,7 @@ class ActivityStepsTest(unittest.TestCase):
         import tempfile
         d = tempfile.mkdtemp()
         path = os.path.join(d, "activity.jsonl")
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             for i in range(100):
                 f.write(json.dumps({"ts": str(i), "kind": "read", "text": "step %d" % i, "tool_use_id": "t%d" % i}) + "\n")
                 f.write(json.dumps({"ts": str(i), "kind": "done", "text": "done", "tool_use_id": "t%d" % i, "quiet": True}) + "\n")
@@ -301,7 +301,7 @@ class TimelineTest(unittest.TestCase):
             server.task_stats("parser")
             server.task_stats("parser")
             self.assertEqual(len(runs), 1)
-            with open(os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl"), "a") as f:
+            with open(os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl"), "a", encoding="utf-8") as f:
                 f.write(json.dumps({"ts": "2026-10-14T14:00:00+02:00", "kind": "status", "text": "Planning: Next",
                                     "phase": "planning", "iteration": 0, "task": "Next"}) + "\n")
             d = server.task_stats("parser")
@@ -313,7 +313,7 @@ class TimelineTest(unittest.TestCase):
     def test_events_filtered_by_time_not_text(self):
         # 13 tasks; the oldest shown starts 10:00+02:00. An event at 09:30+01:00 (= 10:30+02:00) belongs to it.
         path = os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl")
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             for h in range(13):
                 f.write(json.dumps({"ts": "2026-10-14T%02d:00:00+02:00" % (9 + h), "kind": "status", "text": "Planning: T%d" % h,
                                     "phase": "planning", "iteration": 0, "task": "T%d" % h}) + "\n")
@@ -493,10 +493,10 @@ class EstimateTest(unittest.TestCase):
     def test_cached_briefly(self):
         first = server.detail("notes-app")["estimate"]
         path = os.path.join(self.tmp, "projects", "notes-app", "state", "status.json")
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             st = json.load(f)
         st["phase"] = "done"
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(st, f)
         self.assertEqual(server.detail("notes-app")["estimate"], first, "asked again at once: from the cache")
         key = (server.ROOT, "notes-app")

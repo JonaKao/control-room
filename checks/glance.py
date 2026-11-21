@@ -46,7 +46,7 @@ INTERNAL = ("iteration", "implementing", "phase", "aaf")
 
 def fixture_json(name, rel):
     try:
-        with open(os.path.join(FIXTURES, "projects", name, rel)) as f:
+        with open(os.path.join(FIXTURES, "projects", name, rel), encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError):
         return {}
