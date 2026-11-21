@@ -181,5 +181,15 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
-_No finished tasks yet._
+- 2026-10-30: Create a colour-blind mode (first try, review passed)
+- 2026-10-19: Use framework updates: per-commit pushed flag, done/you/error activity records, per-test durations (review passed)
+- 2026-10-19: Roadmap 7: show how far along a running task is and how long is left (time estimate) (first try, review passed)
+- 2026-10-17: Roadmap 6: redesign the page as an instrument panel (design/DESIGN.md): rail with workspace numbers, hero, 12-column panel grid, dark by default (first try, review passed)
+- 2026-10-15: Write README.md for the control room from the template: what it is, each part of the page, how to start, how it is built, how it fits the framework (first try, review passed)
+- 2026-10-15: Roadmap 4: add a track record (per-project and workspace view, common review-failure reasons) (2 attempts, review passed)
+- 2026-10-15: Roadmap 3: add a change map (treemap of files from aaf.py git files) (first try, review passed)
+- 2026-10-15: Roadmap 2: add a task timeline (per-task bars split into phases, from aaf.py stats) (first try, review passed)
+- 2026-10-14: Roadmap 1: live activity feed from state/activity.jsonl (3 attempts, review passed)
+- 2026-10-14: Add a visual Git section: commit timeline, sync state, repo link, Push/Pull buttons (3 attempts, review passed)
+- 2026-10-14: Redesign the layout so a newcomer sees at a glance what the agent is doing and whether anything needs them (4 attempts, review passed)
 <!-- aaf:history:end -->
