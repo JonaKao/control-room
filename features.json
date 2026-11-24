@@ -1,0 +1,104 @@
+{
+  "features": [
+    {
+      "id": "F1",
+      "title": "Rust core gives the same answers as server.py",
+      "criteria": "cargo test covers activity_steps, review themes, tail reads, caches, path traversal, write guards; checks/parity.py: every GET endpoint of 'control-room serve' equals server.py on all fixtures, first-run and the Git workspace with a pinned clock; push/pull results and refusals match tests/test_git.py; no git command in app/src",
+      "spec": "specs/desktop-app.md",
+      "passes": true,
+      "added": "2026-11-24T20:13:28+01:00",
+      "passed_at": "2026-11-24T21:21:40+01:00",
+      "evidence": "checks 'Rust core' (cargo test, 45 tests) and 'Same answers as before' (checks/parity.py: 212 GET requests identical to server.py on four workspaces with a pinned clock, push/pull as tests/test_git.py expects, no git command in app/src); 13/13 checks; review PASS (iteration 2)"
+    },
+    {
+      "id": "F2",
+      "title": "All existing checks run against the Rust core",
+      "criteria": "checks/app_server.py starts 'control-room serve'; no check or test imports server.py; all eleven checks plus Rust core pass with no assertion removed or loosened; screenshots compared by eye",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:28+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F3",
+      "title": "Its own window",
+      "criteria": "App opens a window 'Agent Control Room' with no browser UI, size/position remembered, no listening TCP port; checks/desktop.py drives the real WebView2 window over CDP: all nine fixtures without JS errors, push/pull, theme and colour-blind kept across restart; plots/render-desktop-*.png",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:28+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F4",
+      "title": "Several workspaces",
+      "criteria": "Welcome screen with folder picker on first start; non-workspace refused with a reason; switcher in the rail; add/rename/remove in settings; survives restart; missing folder shown as not found; Python path in settings; Workspaces check passes and layout.py still passes",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:28+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F5",
+      "title": "Tray and background",
+      "criteria": "Closing hides to tray, Quit ends; tray menu per workspace with needs-you count; dot icon exactly while count > 0; second launch focuses the running window; start-at-login switch, off by default, verified via the autostart plugin",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:28+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F6",
+      "title": "Notifications",
+      "criteria": "Notifications check: one event per change (waiting, decision, stuck, finished, failing) in /api/events from file changes on copied fixtures, none for states true at start, none twice; all workspaces watched; plain-words system notification, click opens workspace and project; per-kind switch suppresses the notification",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:29+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F7",
+      "title": "Icon and installer",
+      "criteria": "design/icon.svg approved by the human (decision recorded), app/icons generated from it; build.py produces dist/Agent Control Room_<version>_x64-setup.exe, per-user, desktop and Start-menu shortcuts, version bumped (Installer check); installed once with the human's OK, screenshot; reinstall keeps settings",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:29+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F8",
+      "title": "Mac build on GitHub",
+      "criteria": ".github/workflows/build.yml on windows-latest and macos-latest: cargo test, build, serve smoke check, installer and .dmg artifacts; a run is green on both (gh run view, link in progress.md); no Windows-only path without a Mac counterpart; unchecked Mac behaviour listed",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:29+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F9",
+      "title": "Plain README for the app",
+      "criteria": "README How to run covers install, first start, SmartScreen/Gatekeeper, tray, notifications, settings; How it is built covers app/, one router two ways in, checks; tests/test_readme.py updated to the new names and still fails when one is missing; control-room.md updated; ROADMAP item 9 Desktop app Done",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:29+01:00",
+      "passed_at": null,
+      "evidence": ""
+    },
+    {
+      "id": "F10",
+      "title": "Browser version retired",
+      "criteria": "server.py, dashboard/ and Open Dashboard.command removed; workspace README and framework/REFERENCE.md point to the app; parity check removed with a recorded decision; every other check passes; DONE.md server line says the app's core",
+      "spec": "specs/desktop-app.md",
+      "passes": false,
+      "added": "2026-11-24T20:13:29+01:00",
+      "passed_at": null,
+      "evidence": ""
+    }
+  ]
+}

@@ -13,3 +13,5 @@
 {"at": "2026-10-19T11:32:50+02:00", "verdict": "pass", "summary": "Time estimate meets roadmap 7; 5 minor findings (wording, all-projects label, failed-run caching)"}
 {"at": "2026-10-19T12:23:26+02:00", "verdict": "pass", "summary": "All three framework updates used correctly and checked; 4 minor edge cases"}
 {"at": "2026-10-30T18:58:13+01:00", "verdict": "pass", "summary": "Colour-blind mode works in both themes and is checked by simulation; 4 notes, no minor findings"}
+{"at": "2026-11-24T20:56:19+01:00", "verdict": "fail", "summary": "Faithful port, checks pass; progress.md not updated; drive-letter plot names escape plots/ on Windows"}
+{"at": "2026-11-24T21:21:29+01:00", "verdict": "pass", "summary": "F1 meets the spec; review-1 fixes in place; 13/13 checks pass; 4 notes"}

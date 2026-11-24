@@ -57,6 +57,16 @@
       "name": "Colour-blind mode",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/colour_blind.py; else python3 checks/colour_blind.py; fi",
       "timeout": 240
+    },
+    {
+      "name": "Rust core",
+      "cmd": "cd app && PATH=\"$HOME/.cargo/bin:$PATH\" cargo test --quiet",
+      "timeout": 600
+    },
+    {
+      "name": "Same answers as before",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi",
+      "timeout": 600
     }
   ]
 }

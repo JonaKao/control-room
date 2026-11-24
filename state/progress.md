@@ -2,6 +2,27 @@
 
 ## Current state
 
+- **Desktop app F1: Rust core (2026-11-24)**, from `specs/desktop-app.md`. Rust (rustup, stable MSVC) and the
+  Microsoft C++ Build Tools are installed on this machine (the human approved both); the human turned off Windows
+  Smart App Control, which blocked every program cargo builds (os error 4551).
+  `app/` is a Cargo package (`control-room`) that ports all of `server.py`: `records.rs` (reading `state/`, tail
+  reads, trend, plan, plots), `activity.rs` (the feed's steps and waits), `reasons.rs` (review themes, DONE.md items),
+  `aaf.rs` (Python lookup: settings path, `python3`, `python`, `py -3`; task_stats, estimate, Git info/files/push/pull
+  through `aaf.py` with server.py's caches and single-run Git fetch; timestamps parsed like `fromisoformat`),
+  `api.rs` (the router: `Core::get`/`Core::post`, write guards, axum over 127.0.0.1), `py.rs` (Python's truthiness,
+  `str()`, `int()`, `==`, `strip()` and text-mode newlines, so records read exactly as before), `workspaces.rs`
+  (settings folder), `main.rs` (`control-room serve --root <ws> [--port N] [--clock ISO] [--config DIR]`, prints
+  "Serving on http://127.0.0.1:<port>"). `index.html` is built into the program. For a workspace without
+  `aaf.py` (the fixtures) the timeline and estimate use the `aaf.py` of the workspace the program runs from or was
+  built in, as server.py did. One deliberate difference: plot names must be one plain file name (a name with a
+  drive, `C:x.png`, read outside `plots/` in both servers; the core refuses it; decision recorded).
+  New checks: **Rust core** (`cargo test`: 45 tests: every ActivityStepsTest case, themes, tail reads, caches with
+  fake runners, traversal, write guards, raw HTTP bad lengths) and **Same answers as before** (`checks/parity.py`:
+  212 GET requests on fixtures, first-run, a long-log copy and a Git workspace, pinned clock, no differences
+  allowed; push/pull on twin Git workspaces as `tests/test_git.py` expects; the drive-name refusal; no
+  `Command::new("git")` in `app/src`). `checks/app_server.py` builds the app once per process and starts
+  `serve` on a free port with a temporary `--config`. The checks now need Rust installed (`~/.cargo/bin`).
+  Review 1 FAIL (this note was missing; drive-letter plot names), fixed in iteration 2.
 - **Colour-blind mode (2026-10-30)**: an eye button in the rail, next to the theme switch (`#palette`,
   `aria-pressed`, remembered as `aaf.palette`), sets `data-palette="cb"` on `<html>`. Two token blocks in
   `index.html` (dark and light) swap only the seven state colours and the accent; surfaces, text and lines
@@ -219,6 +240,10 @@
 
 ## Next
 
+- Desktop app, next feature F2: every page check and test against `control-room serve` (`checks/app_server.py`),
+  none importing `server.py`. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+  the README does not mention `app/` or that checks need Rust yet (feature 9); broken UTF-8 in a record is read
+  with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,
   so "Agent Control Room" wraps onto three lines and the sub-line is cut ("9 projects in this wo…"), also with
   the mode off; (2) in the mode, `--accent` (teal, used for "needs you") becomes pale grey under deuteranopia and sits

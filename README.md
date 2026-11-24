@@ -124,6 +124,11 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   polling stays cheap. The only thing it
   changes is Git, and only through `aaf.py git push|pull`, only for requests from the page
   itself on this machine.
+- `app/`: the desktop app being built (see `specs/desktop-app.md`). So far it holds the Rust
+  core, a port of `server.py` that answers the same questions in the same way.
+  `control-room serve --root <workspace>` runs it on this computer only, for the checks. The
+  checks build it with Rust (`rustup`, then `cargo`), so Rust must be installed to run them.
+  `checks/parity.py` confirms the core gives the same answers as `server.py`.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
   changed. Its colours and fonts are the tokens from the approved design.
@@ -174,6 +179,8 @@ Every change must pass these before it is committed:
 - **Instrument-panel layout**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/layout.py; else python3 checks/layout.py; fi`
 - **Time estimate**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/estimate.py; else python3 checks/estimate.py; fi`
 - **Colour-blind mode**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/colour_blind.py; else python3 checks/colour_blind.py; fi`
+- **Rust core**: `cd app && PATH="$HOME/.cargo/bin:$PATH" cargo test --quiet`
+- **Same answers as before**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -181,7 +188,8 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
-- 2026-10-30: Create a colour-blind mode (first try, review passed)
+- 2026-11-24: F1: Rust core gives the same answers as server.py (2 attempts, review passed)
+- 2026-11-24: Create a colour-blind mode (first try, review passed, a follow-up fix is waiting for a decision)
 - 2026-10-19: Use framework updates: per-commit pushed flag, done/you/error activity records, per-test durations (review passed)
 - 2026-10-19: Roadmap 7: show how far along a running task is and how long is left (time estimate) (first try, review passed)
 - 2026-10-17: Roadmap 6: redesign the page as an instrument panel (design/DESIGN.md): rail with workspace numbers, hero, 12-column panel grid, dark by default (first try, review passed)

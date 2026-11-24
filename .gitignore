@@ -26,3 +26,10 @@ state/usage.jsonl
 
 # Added by the Agentic AI Framework
 state/mirror/
+
+# The desktop app (Rust): build output and installers
+app/target/
+dist/
+
+# Added by the Agentic AI Framework
+state/run.json
