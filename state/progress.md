@@ -2,6 +2,21 @@
 
 ## Current state
 
+- **Desktop app F3: its own window (2026-11-24)**: `app/` is now a Tauri 2 app. `control-room` (no `serve`) opens
+  one window, "Agent Control Room", 1280 x 800 the first time, showing the page from the app's own protocol
+  (`http://app.localhost/`, `desktop.rs` answers with the same `Core::get`/`Core::post` as `serve`; writes need the
+  page's header). No TCP port. Size and position are remembered (`<config>/window-state.json`, window-state plugin);
+  theme and colour-blind mode live in WebView2's storage in `<config>/webview`. Options: `--root` (until feature 4,
+  else the workspace it runs from or was built in) and `--config`. `app/icons` is a generated placeholder until F7.
+  New check **Desktop window** (`checks/desktop.py`, Windows only): starts the real app with WebView2 remote debugging
+  and a temporary config, connects Playwright over CDP; one titled window of the app's own process whose page fills
+  the client area, at least 1280 x 800, no listening port (netstat, shown to see `serve`'s port), all nine fixtures
+  opened by clicking the rail without JS errors, Push/Pull buttons in the window on a Git workspace (plus 403 without
+  the header, 409 while working), and theme, colour-blind mode, size and position kept across a WM_CLOSE + restart.
+  Fails when the app has no window. Review minor fixed: the README's `app/` paragraph now describes the window
+  (guarded by `test_describes_the_desktop_window`). Also: `checks/app_server.py` stops every core it started when
+  the check exits, so a crashing check no longer leaves a `serve` that locks the program for the next build.
+  Screenshots looked at: `render-desktop-{window,web-scraper,image-classifier,git,after-restart}.png`.
 - **Desktop app F2: checks and tests on the Rust core (2026-11-24)**: every page check (render, glance, Git,
   activity, timeline, change map, track record, layout, estimate, colour-blind) starts `control-room serve` through
   `checks/app_server.py` (`Served(root, clock=...)`, `.base`, `.shutdown()`, `get_json`); render serves
@@ -255,8 +270,8 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F3: its own window (Tauri). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
-  the README does not mention `app/` or that checks need Rust yet (feature 9); broken UTF-8 in a record is read
+- Desktop app, next feature F4: several workspaces (welcome screen, switcher, settings). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+  broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,
   so "Agent Control Room" wraps onto three lines and the sub-line is cut ("9 projects in this wo…"), also with

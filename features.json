@@ -25,10 +25,10 @@
       "title": "Its own window",
       "criteria": "App opens a window 'Agent Control Room' with no browser UI, size/position remembered, no listening TCP port; checks/desktop.py drives the real WebView2 window over CDP: all nine fixtures without JS errors, push/pull, theme and colour-blind kept across restart; plots/render-desktop-*.png",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:28+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-24T23:05:08+01:00",
+      "evidence": "checks/desktop.py (Desktop window): real WebView2 window over CDP - one titled window of the app's process filling its client area, >=1280x800, no listening port (netstat), nine fixtures via the rail without JS errors, Push/Pull buttons on a Git workspace, 403/409 refusals, theme/colour-blind/size/position kept across restart; desktop.rs unit tests; 14/14 checks; review PASS"
     },
     {
       "id": "F4",

@@ -7,6 +7,7 @@ Builds the app once per process (`cargo build`, incremental, so quick when nothi
 then runs `control-room serve --root <root> --port 0 [--clock ISO] --config <temporary folder>`,
 so a check never touches the real settings. The process ends when the block ends.
 """
+import atexit
 import contextlib
 import os
 import re
@@ -20,6 +21,13 @@ PROJECT = os.path.dirname(HERE)
 APP = os.path.join(PROJECT, "app")
 EXE = os.path.join(APP, "target", "debug", "control-room" + (".exe" if os.name == "nt" else ""))
 _built = False
+_running = set()  # cores started by this process, stopped when it exits (also after a crash)
+
+
+@atexit.register
+def _stop_all():
+    for s in list(_running):
+        s.stop()
 
 
 def cargo():
@@ -94,10 +102,12 @@ class Served:
             err = self.proc.stderr.read() if self.proc.poll() is not None else ""
             self.stop()
             raise RuntimeError("control-room serve did not start: %r %s" % (line, err))
+        _running.add(self)
         self.base = line[len("Serving on "):]
         self.port = int(self.base.rsplit(":", 1)[1])
 
     def stop(self):
+        _running.discard(self)
         if self.proc.poll() is None:
             self.proc.kill()
         self.proc.wait()

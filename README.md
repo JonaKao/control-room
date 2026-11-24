@@ -124,11 +124,14 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   polling stays cheap. The only thing it
   changes is Git, and only through `aaf.py git push|pull`, only for requests from the page
   itself on this machine.
-- `app/`: the desktop app being built (see `specs/desktop-app.md`). So far it holds the Rust
-  core, a port of `server.py` that answers the same questions in the same way.
-  `control-room serve --root <workspace>` runs it on this computer only, for the checks. The
-  checks build it with Rust (`rustup`, then `cargo`), so Rust must be installed to run them.
-  `checks/parity.py` confirms the core gives the same answers as `server.py`.
+- `app/`: the desktop app being built (see `specs/desktop-app.md`), in Rust with Tauri. Its core is a
+  port of `server.py` that answers the same questions in the same way. Run without arguments,
+  `control-room` opens its own window, "Agent Control Room", which shows the page without a
+  browser and without opening a network port; it remembers its size and position.
+  `control-room serve --root <workspace>` runs the same core on this computer only, with no
+  window, for the checks. The checks build it with Rust (`rustup`, then `cargo`), so Rust must be
+  installed to run them. `checks/parity.py` confirms the core gives the same answers as
+  `server.py`, and `checks/desktop.py` opens the real window (on Windows) and checks it.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
   changed. Its colours and fonts are the tokens from the approved design.
@@ -181,6 +184,7 @@ Every change must pass these before it is committed:
 - **Colour-blind mode**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/colour_blind.py; else python3 checks/colour_blind.py; fi`
 - **Rust core**: `cd app && PATH="$HOME/.cargo/bin:$PATH" cargo test --quiet`
 - **Same answers as before**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi`
+- **Desktop window**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -188,6 +192,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-24: F3: Its own window (first try, review passed)
 - 2026-11-24: F2: All existing checks run against the Rust core (first try, review passed)
 - 2026-11-24: F1: Rust core gives the same answers as server.py (2 attempts, review passed)
 - 2026-11-24: Create a colour-blind mode (first try, review passed, a follow-up fix is waiting for a decision)

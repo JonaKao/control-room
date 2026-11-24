@@ -1,44 +1,64 @@
-//! `control-room serve --root <workspace> [--port N] [--clock ISO] [--config DIR]`: the core's
-//! router over HTTP on 127.0.0.1, with no window (for the checks and GitHub Actions).
+//! `control-room`: the desktop app (a window showing the page, served by the core without a
+//! network port), or `control-room serve ...`: the same core over HTTP on 127.0.0.1, with no
+//! window, for the checks and GitHub Actions.
+//!
+//!   control-room [--root <workspace>] [--config DIR]
+//!   control-room serve --root <workspace> [--port N] [--clock ISO] [--config DIR]
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use control_room::aaf::{Aaf, PythonRunner};
-use control_room::{api, fallback_aaf, workspaces, Core};
+use control_room::{api, desktop, fallback_aaf, workspaces, Core};
 
 fn usage() -> ! {
-    eprintln!("usage: control-room serve --root <workspace> [--port N] [--clock ISO] [--config DIR]");
+    eprintln!("usage: control-room [--root <workspace>] [--config DIR]\n       control-room serve --root <workspace> [--port N] [--clock ISO] [--config DIR]");
     std::process::exit(2);
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.first().map(|s| s.as_str()) != Some("serve") {
-        usage();
+struct Args {
+    serve: bool,
+    root: Option<PathBuf>,
+    port: u16,
+    clock: Option<String>,
+    config: Option<PathBuf>,
+}
+
+fn parse() -> Args {
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let serve = args.first().map(|s| s == "serve").unwrap_or(false);
+    if serve {
+        args.remove(0);
     }
-    let mut root: Option<PathBuf> = None;
-    let mut port: u16 = 8765;
-    let mut clock: Option<String> = None;
-    let mut config: Option<PathBuf> = None;
-    let mut it = args.iter().skip(1);
-    while let Some(a) = it.next() {
-        let mut val = || it.next().cloned().unwrap_or_else(|| usage());
-        match a.as_str() {
-            "--root" => root = Some(PathBuf::from(val())),
-            "--port" => port = val().parse().unwrap_or_else(|_| usage()),
-            "--clock" => clock = Some(val()),
-            "--config" => config = Some(PathBuf::from(val())),
+    let mut a = Args { serve, root: None, port: 8765, clock: None, config: None };
+    let mut it = args.into_iter();
+    while let Some(flag) = it.next() {
+        let mut val = || it.next().unwrap_or_else(|| usage());
+        match flag.as_str() {
+            "--root" => a.root = Some(PathBuf::from(val())),
+            "--port" if serve => a.port = val().parse().unwrap_or_else(|_| usage()),
+            "--clock" if serve => a.clock = Some(val()),
+            "--config" => a.config = Some(PathBuf::from(val())),
             _ => usage(),
         }
     }
-    let Some(root) = root else { usage() };
-    let config = config.unwrap_or_else(workspaces::default_config_dir);
+    a
+}
+
+fn main() {
+    let a = parse();
+    let config = a.config.unwrap_or_else(workspaces::default_config_dir);
+    if !a.serve {
+        desktop::run(desktop::Options { root: a.root, config });
+        return;
+    }
+    let Some(root) = a.root else { usage() };
     let settings = workspaces::load_settings(&config);
     let runner = PythonRunner::new(workspaces::python_path(&settings));
-    let core = Arc::new(Core::new(root, Aaf::new(Box::new(runner), clock, fallback_aaf()), config));
+    let core = Arc::new(Core::new(root, Aaf::new(Box::new(runner), a.clock, fallback_aaf()), config));
     let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
-    if let Err(e) = rt.block_on(api::serve(core, port)) {
+    if let Err(e) = rt.block_on(api::serve(core, a.port)) {
         eprintln!("control-room serve: {}", e);
         std::process::exit(1);
     }

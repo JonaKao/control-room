@@ -8,6 +8,7 @@
 pub mod aaf;
 pub mod activity;
 pub mod api;
+pub mod desktop;
 pub mod py;
 pub mod reasons;
 pub mod records;
