@@ -1,6 +1,6 @@
 """Check the time estimate ("How far along" in the hero, and how often estimates held in the track record).
 
-Data: framework/aaf.py estimate() for the served workspace, with the server's clock pinned (server.CLOCK)
+Data: framework/aaf.py estimate() for the served workspace, with the core's clock pinned (`control-room serve --clock`)
 and the browser clock pinned to the same moment. For every fixture, in a headless browser:
 - a running task shows a range, never a single number: "38–56%" ([data-est-range]), a bar whose solid
   part ends at progress_low and whose shaded band ([data-est-band]) runs from progress_low to
@@ -21,13 +21,11 @@ Screenshots: plots/render-estimate-*.png.
 import os
 import re
 import sys
-import threading
 from datetime import datetime
-from http.server import ThreadingHTTPServer
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT)
-import server  # noqa: E402
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
+import app_server  # noqa: E402
 
 try:
     from playwright.sync_api import sync_playwright
@@ -51,12 +49,8 @@ UNIT = {"second": 1, "seconds": 1, "minute": 60, "minutes": 60, "min": 60, "hour
 
 
 def serve(root):
-    server.set_root(root)
-    server.CLOCK = NOW
-    server._estimate_cache.clear()
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    return httpd, "http://127.0.0.1:%d" % httpd.server_address[1]
+    httpd = app_server.Served(root, clock=NOW)
+    return httpd, httpd.base
 
 
 def open_page(browser, base, name, w, h, scheme):
@@ -183,7 +177,7 @@ def run(browser, root, names, problems):
     httpd, base = serve(root)
     try:
         for name in names:
-            est = server.detail(name)["estimate"]
+            est = app_server.get_json(base, "/api/project?name=" + name)["estimate"]
             if not est.get("available"):
                 problems.append("%s: no estimate from the server" % name)
                 continue

@@ -2,6 +2,17 @@
 
 ## Current state
 
+- **Desktop app F2: checks and tests on the Rust core (2026-11-24)**: every page check (render, glance, Git,
+  activity, timeline, change map, track record, layout, estimate, colour-blind) starts `control-room serve` through
+  `checks/app_server.py` (`Served(root, clock=...)`, `.base`, `.shutdown()`, `get_json`); render serves
+  `fixtures/first-run` with a second core instead of switching roots. `tests/test_api.py` and `tests/test_git.py` talk
+  to `serve` over HTTP; what needed server.py's insides is a named Rust unit test (`rust_test`, one `cargo test` per
+  process), plus an HTTP version where it keeps its meaning (decision recorded). New `tests/test_core_only.py`: nothing
+  in checks/ or tests/ imports server.py (only `checks/parity.py`, until F10), every page check starts the core, and no
+  file has fewer assertions than before the move (Rust asserts counted where they went); it fails on the pre-F2 files.
+  Screenshots compared with the ones server.py rendered: 39 of 86 byte-identical; the rest differ only where the real
+  clock or a fresh Git workspace shows (running times, progress percent, commit time and hash), checked by eye on
+  parser, example-done Git and data-pipeline.
 - **Desktop app F1: Rust core (2026-11-24)**, from `specs/desktop-app.md`. Rust (rustup, stable MSVC) and the
   Microsoft C++ Build Tools are installed on this machine (the human approved both); the human turned off Windows
   Smart App Control, which blocked every program cargo builds (os error 4551).
@@ -240,8 +251,11 @@
 
 ## Next
 
-- Desktop app, next feature F2: every page check and test against `control-room serve` (`checks/app_server.py`),
-  none importing `server.py`. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+- F2 review notes, for the human to decide: `ChangeMapApiTest.test_cached_unless_fresh` commits to the shared
+  scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
+  a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
+  the core's output after its first line (would stall if the core ever logged every request).
+- Desktop app, next feature F3: its own window (Tauri). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   the README does not mention `app/` or that checks need Rust yet (feature 9); broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,
@@ -263,6 +277,9 @@ Roadmap items 1 to 8 are all done; no roadmap item is left.
 
 ## Known issues
 
+- The render check uses the real clock, so data-pipeline's running task is now over 1000 hours long and the
+  timeline's hour axis under it crowds its labels into one another (seen before and after F2; the timeline check
+  pins the clock and does not see it).
 - Redesign: the first-screen fit is checked on the fixtures. A real project with long texts can still grow row 2
   (step texts and test names are cut to one line, at most 5 tests show, but a "gone quiet" note or an opened fold
   makes a panel taller) and push row 3 partly below 900 px.

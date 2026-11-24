@@ -64,8 +64,11 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
 ## How to check
 
 `python3 framework/aaf.py check control-room` runs:
-1. **Server API**: unit tests against the fixture workspace (`tests/test_api.py`), the
+1. **Server API**: tests of the Rust core over HTTP (`control-room serve`, started by
+   `checks/app_server.py`) against the fixture workspace (`tests/test_api.py`), the
    Git endpoints against a temporary workspace with real repositories (`tests/test_git.py`),
+   that no check or test still imports `server.py` and no assertion was lost moving them to the
+   core (`tests/test_core_only.py`),
    that each test file runs fully on its own (`tests/test_layout.py`), that built roadmap items
    stay marked done (`tests/test_roadmap.py`) and that `README.md` follows the template, names
    every part of the page and only points to files that exist (`tests/test_readme.py`), and that every

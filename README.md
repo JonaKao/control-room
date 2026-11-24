@@ -188,6 +188,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-24: F2: All existing checks run against the Rust core (first try, review passed)
 - 2026-11-24: F1: Rust core gives the same answers as server.py (2 attempts, review passed)
 - 2026-11-24: Create a colour-blind mode (first try, review passed, a follow-up fix is waiting for a decision)
 - 2026-10-19: Use framework updates: per-commit pushed flag, done/you/error activity records, per-test durations (review passed)

@@ -24,15 +24,13 @@ Screenshots: plots/render-layout-*.png (compare with design/mockup-dark.png).
 import json
 import os
 import sys
-import threading
 from datetime import datetime
-from http.server import ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(HERE)
-sys.path.insert(0, PROJECT)
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
 sys.path.insert(0, HERE)
-import server  # noqa: E402
+import app_server  # noqa: E402
 import git_workspace as gw  # noqa: E402
 
 try:
@@ -308,10 +306,8 @@ def check_git(browser):
     bad = []
     root, _ = gw.make_workspace()
     gw.code_repo(root, "scheduler")
-    server.set_root(root)
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    base = "http://127.0.0.1:%d" % httpd.server_address[1]
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    httpd = app_server.Served(root)
+    base = httpd.base
     try:
         for name in ("scheduler", "example-done", "parser"):
             ctx, page, errors = open_page(browser, base, name)
@@ -334,10 +330,8 @@ def check_git(browser):
 
 
 def main():
-    server.set_root(FIXTURES)
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    base = "http://127.0.0.1:%d" % httpd.server_address[1]
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    httpd = app_server.Served(FIXTURES)
+    base = httpd.base
     os.makedirs(PLOTS, exist_ok=True)
     names = sorted(n for n in os.listdir(os.path.join(FIXTURES, "projects")) if not n.startswith("."))
     problems = []

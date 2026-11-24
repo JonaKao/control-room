@@ -9,6 +9,7 @@ so a check never touches the real settings. The process ends when the block ends
 """
 import contextlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,39 @@ def build():
     return EXE
 
 
+_rust_results = None
+
+
+def rust_test(name):
+    """Did the Rust unit test `name` (e.g. "aaf::tests::unavailable_without_aaf") pass? Runs
+    `cargo test` once per process and reads its list of results. Returns (passed, detail)."""
+    global _rust_results
+    if _rust_results is None:
+        proc = subprocess.run([cargo(), "test", "--lib", "--", "--test-threads=4"], cwd=APP, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace")
+        _rust_results = {}
+        for line in proc.stdout.splitlines():
+            m = re.match(r"^test (\S+) \.\.\. (ok|FAILED|ignored)$", line.strip())
+            if m:
+                _rust_results[m.group(1)] = m.group(2)
+        _rust_results["__output__"] = (proc.stdout + proc.stderr)[-3000:]
+    status = _rust_results.get(name)
+    if status == "ok":
+        return True, "ok"
+    if status is None:
+        return False, "no such Rust test (renamed or removed?)\n" + _rust_results["__output__"]
+    return False, status + "\n" + _rust_results["__output__"]
+
+
+
+def get_json(base, path):
+    """GET a JSON answer from a running core."""
+    import json
+    import urllib.request
+    with urllib.request.urlopen(base + path, timeout=120) as r:
+        return json.loads(r.read())
+
+
 class Served:
     """A running `control-room serve`."""
 
@@ -72,6 +106,8 @@ class Served:
                 f.close()
         if self.own_config:
             shutil.rmtree(self.config, ignore_errors=True)
+
+    shutdown = stop  # the name ThreadingHTTPServer used, so the checks read the same
 
 
 @contextlib.contextmanager

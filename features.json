@@ -15,10 +15,10 @@
       "title": "All existing checks run against the Rust core",
       "criteria": "checks/app_server.py starts 'control-room serve'; no check or test imports server.py; all eleven checks plus Rust core pass with no assertion removed or loosened; screenshots compared by eye",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:28+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-24T21:59:57+01:00",
+      "evidence": "tests/test_core_only.py (no import of server.py outside parity, every page check starts app_server.Served, assertion counts >= pre-F2 baseline); all 13 checks pass on control-room serve; screenshots compared by eye; review PASS"
     },
     {
       "id": "F3",

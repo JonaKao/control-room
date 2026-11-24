@@ -1,28 +1,28 @@
-"""Git endpoints: data comes from `aaf.py git info`, push/pull go through `aaf.py git push|pull`,
-and only the page itself (localhost, custom header) may ask for a push or pull.
+"""Git endpoints of the Rust core (`control-room serve`): data comes from `aaf.py git info`, push/pull
+go through `aaf.py git push|pull`, and only the page itself (localhost, custom header) may ask for a
+push or pull.
 
 Tests run against temporary workspaces with real repositories (checks/git_workspace.py):
 one shared by the read-only tests, a fresh one for each test that pushes, pulls or changes
-a phase. Nothing Git-related is stored in the fixtures.
+a phase. Nothing Git-related is stored in the fixtures. What needs the core's insides (requests
+sharing one fetch, counting aaf.py runs) is a Rust unit test; the tests naming one check that it
+passed in this run of `cargo test` (checks/app_server.py rust_test).
 """
 import http.client
 import json
 import os
 import re
 import sys
-import threading
-import time
 import unittest
-from http.server import ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(HERE)
-sys.path.insert(0, PROJECT)
 sys.path.insert(0, os.path.join(PROJECT, "checks"))
-import server  # noqa: E402
+import app_server  # noqa: E402
 import git_workspace as gw  # noqa: E402
 
 HEADER = {"X-AAF-Request": "control-room", "Content-Type": "application/json"}
+FIXTURES = os.path.join(PROJECT, "fixtures", "workspace")
 
 
 class GitServer:
@@ -30,20 +30,13 @@ class GitServer:
 
     @classmethod
     def start_workspace(cls):
-        cls.old_root = server.ROOT
         cls.root, cls.expect = gw.make_workspace()
-        server.set_root(cls.root)
-        server._git_cache.clear()
-        cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-        cls.port = cls.httpd.server_address[1]
-        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+        cls.srv = app_server.Served(cls.root)
+        cls.port = cls.srv.port
 
     @classmethod
     def stop_workspace(cls):
-        cls.httpd.shutdown()
-        cls.httpd.server_close()
-        server.set_root(cls.old_root)
-        server._git_cache.clear()
+        cls.srv.stop()
         gw.remove_workspace(cls.root)
 
     def request(self, method, path, body=None, headers=None):
@@ -204,94 +197,52 @@ class GitTestOrderTest(unittest.TestCase):
 
 
 class GitInfoSingleFlightTest(unittest.TestCase):
-    """When the cache runs out, simultaneous requests share one `aaf.py git info --fetch`."""
+    """When the cache runs out, simultaneous requests share one `aaf.py git info --fetch` (aaf.rs)."""
 
-    def setUp(self):
-        self.old_root, self.old_aaf, self.old_life = server.ROOT, server.aaf, server.GIT_CACHE_S
-        self.root, _ = gw.make_workspace(projects=())
-        self.calls = []
-        self.fetch_s = 0.5
-
-        def slow_aaf(*args, timeout=60):
-            self.calls.append(args)
-            n = len(self.calls)
-            time.sleep(self.fetch_s)
-            return 0, json.dumps({"repo": False, "run": n}), ""
-        server.set_root(self.root)
-        server.aaf = slow_aaf
-        server._git_cache.clear()
-
-    def tearDown(self):
-        server.aaf, server.GIT_CACHE_S = self.old_aaf, self.old_life
-        server.set_root(self.old_root)
-        server._git_cache.clear()
-        gw.remove_workspace(self.root)
-
-    def ask(self, results, key, fresh=False, delay=0):
-        def run():
-            time.sleep(delay)
-            results[key] = server.git_info("example-done", fresh=fresh)
-        t = threading.Thread(target=run)
-        t.start()
-        return t
+    def assertRustPassed(self, name):
+        ok, detail = app_server.rust_test(name)
+        self.assertTrue(ok, "Rust unit test %s: %s" % (name, detail))
 
     def test_concurrent_requests_run_aaf_once(self):
-        results = {}
-        for t in [self.ask(results, i) for i in range(5)]:
-            t.join()
-        self.assertEqual(len(self.calls), 1,
-                         "aaf.py git info ran %d times for 5 simultaneous requests" % len(self.calls))
+        self.assertRustPassed("aaf::tests::concurrent_git_info_requests_run_aaf_once")
 
     def test_fetch_slower_than_cache_life_still_runs_once(self):
-        server.GIT_CACHE_S = 0.2  # shorter than the 0.5 s fetch
-        results = {}
-        started = time.time()
-        for t in [self.ask(results, i) for i in range(5)]:
-            t.join()
-        self.assertEqual(len(self.calls), 1,
-                         "aaf.py git info ran %d times for 5 simultaneous requests" % len(self.calls))
-        self.assertLess(time.time() - started, 1.5, "waiting requests were served one after another")
+        self.assertRustPassed("aaf::tests::fetch_slower_than_cache_life_still_runs_once")
 
     def test_fresh_request_does_not_reuse_a_run_that_started_before_it(self):
-        results = {}
-        a = self.ask(results, "a")
-        b = self.ask(results, "b", fresh=True, delay=0.15)
-        a.join()
-        b.join()
-        self.assertEqual(len(self.calls), 2)
-        self.assertEqual(results["a"]["run"], 1)
-        self.assertEqual(results["b"]["run"], 2, "fresh request got data fetched before it asked")
+        self.assertRustPassed("aaf::tests::fresh_request_does_not_reuse_a_run_that_started_before_it")
 
     def test_fresh_request_reuses_a_run_that_started_after_it(self):
-        results = {}
-        a = self.ask(results, "a")
-        b = self.ask(results, "b", fresh=True, delay=0.15)
-        c = self.ask(results, "c", fresh=True, delay=0.25)
-        for t in (a, b, c):
-            t.join()
-        self.assertEqual(len(self.calls), 2, "fresh requests waiting together should share one run")
-        self.assertEqual(results["b"]["run"], 2)
-        self.assertEqual(results["c"]["run"], 2)
+        self.assertRustPassed("aaf::tests::fresh_request_reuses_a_run_that_started_after_it")
 
 
 class GitWithoutFrameworkTest(unittest.TestCase):
     """A workspace without framework/aaf.py (like the plain fixtures) has no Git data."""
 
     def test_unavailable(self):
-        old = server.ROOT
-        server.set_root(os.path.join(PROJECT, "fixtures", "workspace"))
+        srv = app_server.Served(FIXTURES)
         try:
-            d = server.git_info("example-done")
+            conn = http.client.HTTPConnection("127.0.0.1", srv.port, timeout=60)
+            conn.request("GET", "/api/git?name=example-done")
+            d = json.loads(conn.getresponse().read())
+            conn.close()
         finally:
-            server.set_root(old)
+            srv.stop()
         self.assertFalse(d.get("available", True))
 
 
 class NoDirectGitTest(unittest.TestCase):
-    def test_server_never_runs_git_itself(self):
-        src = open(os.path.join(PROJECT, "server.py"), encoding="utf-8").read()
-        self.assertIsNone(re.search(r"""\[\s*["']git["']""", src), "server.py must go through aaf.py, not git")
-        self.assertIn("aaf.py", src)
+    def test_core_never_runs_git_itself(self):
+        src_dir = os.path.join(PROJECT, "app", "src")
+        files = [os.path.join(src_dir, f) for f in os.listdir(src_dir) if f.endswith(".rs")]
+        self.assertTrue(files)
+        for path in files:
+            with open(path, encoding="utf-8") as f:
+                src = f.read()
+            self.assertIsNone(re.search(r'Command::new\(\s*"git(\.exe)?"\s*\)', src),
+                              "%s must go through aaf.py, not git" % os.path.basename(path))
+        with open(os.path.join(src_dir, "aaf.rs"), encoding="utf-8") as f:
+            self.assertIn("aaf.py", f.read())
 
 
 class ChangeMapApiTest(GitServer, unittest.TestCase):
@@ -301,11 +252,9 @@ class ChangeMapApiTest(GitServer, unittest.TestCase):
     def setUpClass(cls):
         cls.start_workspace()
         cls.want = gw.code_repo(cls.root, "scheduler")
-        server._files_cache.clear()
 
     @classmethod
     def tearDownClass(cls):
-        server._files_cache.clear()
         cls.stop_workspace()
 
     def test_same_as_aaf_git_files(self):
@@ -333,27 +282,26 @@ class ChangeMapApiTest(GitServer, unittest.TestCase):
             self.assertEqual(code, 404, name)
 
     def test_cached_unless_fresh(self):
-        calls = []
-        real = server.aaf
-        server.aaf = lambda *a, **k: calls.append(a) or real(*a, **k)
-        try:
-            server._files_cache.clear()
-            self.request("GET", "/api/files?name=scheduler")
-            self.request("GET", "/api/files?name=scheduler")
-            self.assertEqual(len(calls), 1)
-            self.request("GET", "/api/files?name=scheduler&fresh=1")
-            self.assertEqual(len(calls), 2)
-            self.assertEqual(calls[0], ("git", "files", "scheduler"))
-        finally:
-            server.aaf = real
+        ok, detail = app_server.rust_test("aaf::tests::files_cached_unless_fresh_and_failures_not_cached")
+        self.assertTrue(ok, detail)
+        paths = lambda d: [f["path"] for f in d["files"]]
+        _, first = self.request("GET", "/api/files?name=scheduler&fresh=1")
+        gw.commit(os.path.join(self.root, "projects", "scheduler"), "Add a new module", touch="scheduler/extra.py")
+        _, again = self.request("GET", "/api/files?name=scheduler")
+        self.assertEqual(paths(again), paths(first), "asked again at once: from the cache")
+        self.assertNotIn("scheduler/extra.py", paths(again))
+        _, fresh = self.request("GET", "/api/files?name=scheduler&fresh=1")
+        self.assertIn("scheduler/extra.py", paths(fresh), "a fresh request runs aaf.py git files again")
 
     def test_unavailable_without_framework(self):
-        old = server.ROOT
-        server.set_root(os.path.join(PROJECT, "fixtures", "workspace"))
+        srv = app_server.Served(FIXTURES)
         try:
-            d = server.git_files("example-done")
+            conn = http.client.HTTPConnection("127.0.0.1", srv.port, timeout=60)
+            conn.request("GET", "/api/files?name=example-done")
+            d = json.loads(conn.getresponse().read())
+            conn.close()
         finally:
-            server.set_root(old)
+            srv.stop()
         self.assertFalse(d["available"])
         self.assertEqual(d["files"], [])
 

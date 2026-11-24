@@ -9,12 +9,10 @@ First-time setup (from this project folder):
 """
 import os
 import sys
-import threading
-from http.server import ThreadingHTTPServer
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT)
-import server  # noqa: E402
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
+import app_server  # noqa: E402
 
 try:
     from playwright.sync_api import sync_playwright
@@ -58,10 +56,8 @@ def render_project(browser, base, name, problems):
 
 
 def main():
-    server.set_root(FIXTURES)
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    base = "http://127.0.0.1:%d" % httpd.server_address[1]
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    httpd = app_server.Served(FIXTURES)
+    base = httpd.base
     os.makedirs(PLOTS, exist_ok=True)
     projects = sorted(os.listdir(os.path.join(FIXTURES, "projects")))
     problems = []
@@ -89,7 +85,9 @@ def main():
             page.screenshot(path=os.path.join(PLOTS, "render-workspace-%s.png" % label), full_page=(label != "phone"))
             page.close()
         # A workspace where no task has finished yet (the time estimate has no history to go on).
-        server.set_root(FIRST_RUN)
+        httpd.shutdown()
+        httpd = app_server.Served(FIRST_RUN)
+        base = httpd.base
         for name in sorted(os.listdir(os.path.join(FIRST_RUN, "projects"))):
             render_project(browser, base, name, problems)
         browser.close()

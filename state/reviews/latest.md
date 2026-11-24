@@ -1,10 +1,11 @@
-# Review: F1 Rust core gives the same answers as server.py (iteration 2)
+# Review: F2 All existing checks run against the Rust core
 
 VERDICT: PASS
-SUMMARY: F1 meets the spec; both review-1 fixes are in place; 13/13 checks pass (cargo test 45, parity.py).
+SUMMARY: The ten page checks and both test files run against control-room serve, nothing outside parity imports server.py, moved assertions are matching Rust tests, 13/13 checks pass.
 
 ## Findings
-- [note] The no-git scan only matches Command::new("git"/"git.exe"); git started another way would not be caught (none exists today).
-- [note] plain_file_name refuses drive names (C:probe.png); the one recorded difference from server.py, asserted in parity.py.
-- [note] README does not yet mention app/, control-room serve, or that the checks need Rust (feature 9).
-- [note] Still open from review 1: broken UTF-8 read with replacement characters; parse_iso is a hand-written fromisoformat.
+- [note] tests/test_git.py ChangeMapApiTest.test_cached_unless_fresh adds a commit to the shared scheduler repo; the class's tests now depend on each other (all still pass).
+- [note] tests/test_core_only.py counts a Rust test twice when a file names it twice (test_api 149 counted, 139 without repeats; baseline 110).
+- [note] All counted Rust tests were written in F1; each removed Python test matches its Rust test's inputs and assertions.
+- [note] checks/app_server.py Served never reads stdout/stderr after the first line; harmless now, could stall if the core logs per request.
+- [note] README.md still describes server.py (feature 9).

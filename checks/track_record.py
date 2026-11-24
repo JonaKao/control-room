@@ -28,13 +28,11 @@ import re
 import shutil
 import sys
 import tempfile
-import threading
 from datetime import datetime
-from http.server import ThreadingHTTPServer
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT)
-import server  # noqa: E402
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
+import app_server  # noqa: E402
 
 try:
     from playwright.sync_api import sync_playwright
@@ -53,10 +51,21 @@ REASONS = {"api-client": [("progress", 3), ("weakened", 1), ("coverage", 1), ("b
 
 
 def serve(root):
-    server.set_root(root)
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    return httpd, "http://127.0.0.1:%d" % httpd.server_address[1]
+    httpd = app_server.Served(root)
+    SERVED["base"] = httpd.base
+    return httpd, httpd.base
+
+
+SERVED = {}  # the address of the core last started by serve()
+
+
+def task_stats(name):
+    """The task timeline as the core sends it with /api/project (aaf.py task_stats)."""
+    return app_server.get_json(SERVED["base"], "/api/project?name=" + name)["tasks"]
+
+
+def project_names():
+    return [p["name"] for p in app_server.get_json(SERVED["base"], "/api/projects")]
 
 
 def open_page(browser, base, name, w=1440, h=900, scheme="light", wait='[data-section="record"]'):
@@ -97,7 +106,7 @@ def reasons_in(page, scope):
 
 def check_project(browser, base, name, colours):
     bad = []
-    st = server.task_stats(name)
+    st = task_stats(name)
     tasks, s = st.get("tasks") or [], st.get("summary") or {}
     page, errors = open_page(browser, base, name)
     order = page.eval_on_selector_all("main [data-section]",
@@ -186,7 +195,7 @@ def check_tap(browser, base):
     """Tapping a bar shows the task and why the review said no during it; tapping again closes it."""
     bad = []
     page, _ = open_page(browser, base, "api-client")
-    t = [x for x in server.task_stats("api-client")["tasks"] if x["task"] == "Async client"][0]
+    t = [x for x in task_stats("api-client")["tasks"] if x["task"] == "Async client"][0]
     col = '[data-trend-col][data-start="%s"]' % t["start"]
     if page.query_selector("[data-trend-detail]"):
         bad.append("tap: detail shown before anything was tapped")
@@ -216,8 +225,8 @@ def check_tap(browser, base):
 
 def check_workspace(browser, base):
     bad = []
-    names = server.project_names()
-    stats = {n: server.task_stats(n) for n in names}
+    names = project_names()
+    stats = {n: task_stats(n) for n in names}
     page, errors = open_page(browser, base, "parser")
     ws = page.query_selector("#projects [data-workspace]")
     if not ws:
@@ -349,9 +358,9 @@ def screenshots(browser, base):
 def main():
     httpd, base = serve(FIXTURES)
     os.makedirs(PLOTS, exist_ok=True)
-    names = server.project_names()
+    names = project_names()
     problems, colours = [], {}
-    if not any(server.task_stats(n)["summary"].get("review_fails") for n in names):
+    if not any(task_stats(n)["summary"].get("review_fails") for n in names):
         problems.append("fixtures: no project where the review said no")
     with sync_playwright() as p:
         browser = p.chromium.launch()

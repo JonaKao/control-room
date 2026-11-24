@@ -1,36 +1,66 @@
-"""The server's API returns what the page needs, for every fixture state."""
+"""The Rust core's API (`control-room serve`) returns what the page needs, for every fixture state.
+
+Tests that need the core's insides (reading only the end of a log, the feed's wait rules, the
+caches, the review themes) are Rust unit tests now; each test below that names one checks that it
+passed in this run of `cargo test` (checks/app_server.py rust_test)."""
 import json
 import os
+import shutil
 import sys
-import threading
+import tempfile
+import time
 import unittest
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(HERE)
-sys.path.insert(0, PROJECT)
-import server  # noqa: E402
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
+import app_server  # noqa: E402
 
 FIXTURES = os.path.join(PROJECT, "fixtures", "workspace")
+NAMES = ("api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser",
+         "scheduler", "web-scraper")
+TASK_KEYS = ("task", "start", "end", "outcome", "attempts", "first_try", "reviews", "drafts", "times_stuck")
+ACTIVITY_LAST = 30
+
+
+def get(base, path):
+    with urllib.request.urlopen(base + path, timeout=60) as r:
+        return r.status, r.headers.get("Content-Type", ""), r.read()
+
+
+def get_json(base, path):
+    return json.loads(get(base, path)[2])
+
+
+def load_aaf(name):
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.dirname(PROJECT)), "framework", "aaf.py")
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class RustTest:
+    def assertRustPassed(self, name):
+        ok, detail = app_server.rust_test(name)
+        self.assertTrue(ok, "Rust unit test %s: %s" % (name, detail))
 
 
 class ApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        server.set_root(FIXTURES)
-        cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-        cls.base = "http://127.0.0.1:%d" % cls.httpd.server_address[1]
-        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+        cls.srv = app_server.Served(FIXTURES)
+        cls.base = cls.srv.base
 
     @classmethod
     def tearDownClass(cls):
-        cls.httpd.shutdown()
+        cls.srv.stop()
 
     def get(self, path):
-        with urllib.request.urlopen(self.base + path, timeout=5) as r:
-            return r.status, r.headers.get("Content-Type", ""), r.read()
+        return get(self.base, path)
 
     def status_of(self, path):
         try:
@@ -46,12 +76,10 @@ class ApiTest(unittest.TestCase):
 
     def test_lists_every_fixture_project(self):
         names = {p["name"] for p in json.loads(self.get("/api/projects")[2])}
-        self.assertEqual(names, {"api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser", "scheduler",
-                   "web-scraper"})
+        self.assertEqual(names, set(NAMES))
 
     def test_detail_has_all_sections(self):
-        for name in ("api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser", "scheduler",
-                   "web-scraper"):
+        for name in NAMES:
             d = json.loads(self.get("/api/project?name=" + name)[2])
             for key in ("summary", "meta", "status", "checks", "check_history", "review",
                         "decisions", "progress", "events", "plots", "drafts", "activity", "record", "estimate"):
@@ -112,203 +140,99 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(self.status_of("/api/project?name=nope"), 404)
 
 
-
-class ActivityTailTest(unittest.TestCase):
-    """The activity log can grow to about 1 MB; the server reads only its end, every poll."""
-
-    def setUp(self):
-        import tempfile
-        self.dir = tempfile.mkdtemp()
-        self.path = os.path.join(self.dir, "activity.jsonl")
-
-    def tearDown(self):
-        import shutil
-        shutil.rmtree(self.dir)
+class ActivityTailTest(RustTest, unittest.TestCase):
+    """The activity log can grow to about 1 MB; the core reads only its end, every poll (records.rs)."""
 
     def test_returns_the_newest_entries_in_order(self):
-        with open(self.path, "w", encoding="utf-8") as f:
-            for i in range(20000):
-                f.write(json.dumps({"ts": "t", "kind": "read", "text": "step %d %s" % (i, "x" * 30)}) + "\n")
-        rows = server.read_jsonl_tail(self.path, 30)
-        self.assertEqual(len(rows), 30)
-        self.assertEqual(rows[-1]["text"].split()[1], "19999")
-        self.assertEqual(rows[0]["text"].split()[1], "19970")
+        self.assertRustPassed("records::tests::tail_returns_the_newest_entries_in_order")
 
     def test_reads_only_the_end_of_a_big_file(self):
-        with open(self.path, "w", encoding="utf-8") as f:
-            f.write("x" * 2_000_000 + "\n")
-            f.write(json.dumps({"kind": "edit", "text": "last"}) + "\n")
-        read = []
-        real_open = open
-
-        class Counting:
-            def __init__(self, fh):
-                self.fh = fh
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *exc):
-                self.fh.close()
-
-            def read(self, *a):
-                data = self.fh.read(*a)
-                read.append(len(data))
-                return data
-
-            def __getattr__(self, name):
-                return getattr(self.fh, name)
-        server.open = lambda *a, **k: Counting(real_open(*a, **k))
-        try:
-            rows = server.read_jsonl_tail(self.path, 30)
-        finally:
-            del server.open
-        self.assertEqual(rows, [{"kind": "edit", "text": "last"}])
-        self.assertLess(sum(read), 300_000, "read %d bytes of a 2 MB log to get its last line" % sum(read))
+        self.assertRustPassed("records::tests::tail_reads_only_the_end_of_a_big_file")
 
     def test_skips_broken_lines_and_missing_file(self):
-        with open(self.path, "w", encoding="utf-8") as f:
-            f.write('{"kind": "read"}\nnot json\n["a list"]\n{"kind": "edit"')
-        self.assertEqual(server.read_jsonl_tail(self.path, 30), [{"kind": "read"}])
-        self.assertEqual(server.read_jsonl_tail(os.path.join(self.dir, "missing.jsonl"), 30), [])
+        self.assertRustPassed("records::tests::tail_skips_broken_lines_and_missing_file")
 
 
-class ActivityStepsTest(unittest.TestCase):
+class ActivityStepsTest(RustTest, unittest.TestCase):
     """The hook also writes quiet "done" records, "error" and "you" records and a tool_use_id per step
-    (framework update 2026-10-19). Quiet records are not steps; they and "you" resolve a wait."""
-
-    def steps(self, rows):
-        return server.activity_steps(rows)
+    (framework update 2026-10-19). Quiet records are not steps; they and "you" resolve a wait (activity.rs)."""
 
     def test_quiet_records_are_not_steps(self):
-        rows = [{"ts": "1", "kind": "read", "text": "Reading a", "tool_use_id": "t1"},
-                {"ts": "2", "kind": "done", "text": "Finished: reading a", "tool_use_id": "t1", "quiet": True},
-                {"ts": "3", "kind": "edit", "text": "Editing a", "tool_use_id": "t2"}]
-        self.assertEqual([r["kind"] for r in self.steps(rows)], ["read", "edit"])
+        self.assertRustPassed("activity::tests::quiet_records_are_not_steps")
 
     def test_done_for_the_same_step_resolves_a_permission_wait(self):
-        rows = [{"ts": "1", "kind": "command", "text": "Run it", "tool_use_id": "t1"},
-                {"ts": "2", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
-                {"ts": "3", "kind": "waiting", "text": "Waiting for your permission in Claude Code"},
-                {"ts": "4", "kind": "done", "text": "Finished: run it", "tool_use_id": "t1", "quiet": True}]
-        out = self.steps(rows)
-        # The notification without an id is the same prompt, not a second wait.
-        self.assertEqual([r["kind"] for r in out], ["command", "waiting"])
-        self.assertEqual(out[-1]["tool_use_id"], "t1")
-        self.assertEqual(out[-1]["resolved"], "done")
-        self.assertEqual(out[-1]["resolved_ts"], "4")
+        self.assertRustPassed("activity::tests::done_for_the_same_step_resolves_a_permission_wait")
 
     def test_a_wait_without_an_id_is_resolved_with_the_waits_before_it(self):
-        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
-                {"ts": "2", "kind": "waiting", "text": "Waiting for your reply in Claude Code"},
-                {"ts": "3", "kind": "done", "text": "Finished", "tool_use_id": "t1", "quiet": True}]
-        self.assertEqual([r.get("resolved") for r in self.steps(rows)], ["done", "done"])
+        self.assertRustPassed("activity::tests::a_wait_without_an_id_is_resolved_with_the_waits_before_it")
 
     def test_done_for_another_step_does_not_resolve_it(self):
-        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
-                {"ts": "2", "kind": "done", "text": "Finished: other", "tool_use_id": "t9", "quiet": True}]
-        self.assertNotIn("resolved", self.steps(rows)[-1])
+        self.assertRustPassed("activity::tests::done_for_another_step_does_not_resolve_it")
 
     def test_error_reply_and_next_step_resolve_waits(self):
-        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"},
-                {"ts": "2", "kind": "error", "text": "A step did not work: run it", "tool_use_id": "t1", "detail": "exit 1"},
-                {"ts": "3", "kind": "waiting", "text": "Waiting for your reply in Claude Code"},
-                {"ts": "4", "kind": "you", "text": "You sent a message in Claude Code"},
-                {"ts": "5", "kind": "waiting", "text": "Waiting for your reply in Claude Code"},
-                {"ts": "6", "kind": "read", "text": "Reading b"}]
-        out = self.steps(rows)
-        self.assertEqual([r["kind"] for r in out], ["waiting", "error", "waiting", "you", "waiting", "read"])
-        self.assertEqual([out[i].get("resolved") for i in (0, 2, 4)], ["error", "you", "step"])
-        self.assertEqual(out[1]["detail"], "exit 1")
+        self.assertRustPassed("activity::tests::error_reply_and_next_step_resolve_waits")
 
     def test_the_duplicate_prompt_counts_once_in_either_order(self):
-        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code"},
-                {"ts": "2", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"}]
-        out = self.steps(rows)
-        self.assertEqual(len(out), 1)
-        self.assertEqual(out[0]["tool_use_id"], "t1")
+        self.assertRustPassed("activity::tests::the_duplicate_prompt_counts_once_in_either_order")
 
     def test_notes_turns_and_other_agents_are_no_answer(self):
-        for later in ({"ts": "2", "kind": "turn", "text": "Finished its turn"},
-                      {"ts": "2", "kind": "note", "text": "Notification"},
-                      {"ts": "2", "kind": "read", "text": "Reading b", "subagent": "reviewer"}):
-            rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your permission in Claude Code", "tool_use_id": "t1"}, later]
-            self.assertNotIn("resolved", self.steps(rows)[0], later)
-        rows = [{"ts": "1", "kind": "waiting", "text": "Waiting for your reply in Claude Code", "subagent": "reviewer"},
-                {"ts": "2", "kind": "read", "text": "Reading b", "subagent": "reviewer"}]
-        self.assertEqual(self.steps(rows)[0]["resolved"], "step")
+        self.assertRustPassed("activity::tests::notes_turns_and_other_agents_are_no_answer")
 
     def test_feed_keeps_thirty_steps_however_many_quiet_records(self):
-        import tempfile
-        d = tempfile.mkdtemp()
-        path = os.path.join(d, "activity.jsonl")
-        with open(path, "w", encoding="utf-8") as f:
-            for i in range(100):
-                f.write(json.dumps({"ts": str(i), "kind": "read", "text": "step %d" % i, "tool_use_id": "t%d" % i}) + "\n")
-                f.write(json.dumps({"ts": str(i), "kind": "done", "text": "done", "tool_use_id": "t%d" % i, "quiet": True}) + "\n")
+        self.assertRustPassed("records::tests::feed_keeps_thirty_steps_however_many_quiet_records")
+        # And through the API: a long log with quiet records still gives thirty steps.
+        tmp = tempfile.mkdtemp()
         try:
-            rows = server.read_activity(path, server.ACTIVITY_LAST)
+            shutil.copytree(os.path.join(FIXTURES, "projects", "brand-new"), os.path.join(tmp, "projects", "brand-new"))
+            with open(os.path.join(tmp, "projects", "brand-new", "state", "activity.jsonl"), "w", encoding="utf-8") as f:
+                for i in range(100):
+                    f.write(json.dumps({"ts": str(i), "kind": "read", "text": "step %d" % i, "tool_use_id": "t%d" % i}) + "\n")
+                    f.write(json.dumps({"ts": str(i), "kind": "done", "text": "done", "tool_use_id": "t%d" % i, "quiet": True}) + "\n")
+            with app_server.serve(tmp) as base:
+                rows = get_json(base, "/api/project?name=brand-new")["activity"]
         finally:
-            import shutil
-            shutil.rmtree(d)
-        self.assertEqual(len(rows), server.ACTIVITY_LAST)
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(len(rows), ACTIVITY_LAST)
         self.assertEqual(rows[-1]["text"], "step 99")
         self.assertFalse(any(r.get("quiet") for r in rows))
 
 
-class TimelineTest(unittest.TestCase):
+class TimelineTest(RustTest, unittest.TestCase):
     """/api/project carries the task timeline: exactly what aaf.py's task_stats derives, cached until
     the event log changes."""
 
     @classmethod
     def setUpClass(cls):
-        import importlib.util
-        path = os.path.join(os.path.dirname(os.path.dirname(PROJECT)), "framework", "aaf.py")
-        spec = importlib.util.spec_from_file_location("aaf_for_test", path)
-        cls.aaf = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(cls.aaf)
+        cls.aaf = load_aaf("aaf_for_test")
 
     def setUp(self):
-        import shutil
-        import tempfile
-        self.old_root = server.ROOT
         self.tmp = tempfile.mkdtemp()
         shutil.copytree(os.path.join(FIXTURES, "projects"), os.path.join(self.tmp, "projects"))
-        server.set_root(self.tmp)
-        server._stats_cache.clear()
+        self.srv = app_server.Served(self.tmp)
 
     def tearDown(self):
-        import shutil
-        server.set_root(self.old_root)
-        server._stats_cache.clear()
+        self.srv.stop()
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+    def detail(self, name):
+        return get_json(self.srv.base, "/api/project?name=" + name)
+
     def test_same_as_aaf_stats(self):
-        for name in ("api-client", "brand-new", "data-pipeline", "example-done", "image-classifier", "notes-app", "parser", "scheduler",
-                   "web-scraper"):
-            d = server.detail(name)
+        for name in NAMES:
+            d = self.detail(name)
             self.assertIn("tasks", d, name)
             want = self.aaf.task_stats(os.path.join(self.tmp, "projects", name))
             self.assertEqual(d["tasks"]["tasks"], want["tasks"], name)
             self.assertTrue(d["tasks"]["available"], name)
-        self.assertEqual(server.detail("brand-new")["tasks"]["tasks"], [])
+        self.assertEqual(self.detail("brand-new")["tasks"]["tasks"], [])
 
     def test_cached_until_the_event_log_changes(self):
-        runs = []
-        real = server._stats_run
-        server._stats_run = lambda pdir: runs.append(pdir) or real(pdir)
-        try:
-            server.task_stats("parser")
-            server.task_stats("parser")
-            self.assertEqual(len(runs), 1)
-            with open(os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl"), "a", encoding="utf-8") as f:
-                f.write(json.dumps({"ts": "2026-10-14T14:00:00+02:00", "kind": "status", "text": "Planning: Next",
-                                    "phase": "planning", "iteration": 0, "task": "Next"}) + "\n")
-            d = server.task_stats("parser")
-            self.assertEqual(len(runs), 2)
-            self.assertEqual(d["tasks"][-1]["task"], "Next")
-        finally:
-            server._stats_run = real
+        self.assertRustPassed("aaf::tests::stats_cached_until_the_event_log_changes_and_failures_retried")
+        self.detail("parser")
+        with open(os.path.join(self.tmp, "projects", "parser", "state", "events.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": "2026-10-14T14:00:00+02:00", "kind": "status", "text": "Planning: Next",
+                                "phase": "planning", "iteration": 0, "task": "Next"}) + "\n")
+        self.assertEqual(self.detail("parser")["tasks"]["tasks"][-1]["task"], "Next")
 
     def test_events_filtered_by_time_not_text(self):
         # 13 tasks; the oldest shown starts 10:00+02:00. An event at 09:30+01:00 (= 10:30+02:00) belongs to it.
@@ -319,125 +243,87 @@ class TimelineTest(unittest.TestCase):
                                     "phase": "planning", "iteration": 0, "task": "T%d" % h}) + "\n")
                 if h == 1:
                     f.write(json.dumps({"ts": "2026-10-14T09:30:00+01:00", "kind": "decision", "text": "Mixed offset"}) + "\n")
-        d = server.task_stats("parser")
+        d = self.detail("parser")["tasks"]
         self.assertIn("Mixed offset", [e["text"] for e in d["events"]])
         self.assertNotIn("Planning: T0", [e["text"] for e in d["events"]])
 
     def test_failed_run_is_not_cached(self):
-        real = server._stats_run
-        calls = []
-        def flaky(pdir):
-            calls.append(1)
-            return {"available": False, "summary": {}, "tasks": [], "error": "boom"} if len(calls) == 1 else real(pdir)
-        server._stats_run = flaky
-        try:
-            self.assertFalse(server.task_stats("parser")["available"])
-            self.assertTrue(server.task_stats("parser")["available"])
-        finally:
-            server._stats_run = real
+        self.assertRustPassed("aaf::tests::stats_cached_until_the_event_log_changes_and_failures_retried")
 
     def test_unavailable_without_aaf(self):
-        real = server.stats_aaf_path
-        server.stats_aaf_path = lambda: None
-        try:
-            d = server.task_stats("parser")
-        finally:
-            server.stats_aaf_path = real
-        self.assertFalse(d["available"])
-        self.assertEqual(d["tasks"], [])
+        self.assertRustPassed("aaf::tests::unavailable_without_aaf")
 
 
-class TrackRecordTest(unittest.TestCase):
+class TrackRecordTest(RustTest, unittest.TestCase):
     """Why reviews said no, grouped by theme; /api/project carries it per project, /api/record for all."""
 
-    def setUp(self):
-        self.old_root = server.ROOT
-        server.set_root(FIXTURES)
+    @classmethod
+    def setUpClass(cls):
+        cls.srv = app_server.Served(FIXTURES)
 
-    def tearDown(self):
-        server.set_root(self.old_root)
+    @classmethod
+    def tearDownClass(cls):
+        cls.srv.stop()
 
     def test_groups_failed_reviews_most_common_first_other_last(self):
-        rows = [{"at": "1", "verdict": "fail", "summary": "Strange edge in the parser"},
-                {"at": "2", "verdict": "fail", "summary": "progress.md not updated"},
-                {"at": "3", "verdict": "pass", "summary": "progress.md not updated"},
-                {"at": "4", "verdict": "FAIL", "summary": "Bug: crash on empty input; progress note stale"},
-                {"at": "5", "verdict": "fail", "summary": ""}]
-        got = [(g["key"], g["count"]) for g in server.review_reasons(rows)]
-        self.assertEqual(got, [("progress", 2), ("bug", 1), ("other", 2)])
-        progress = server.review_reasons(rows)[0]
-        self.assertEqual([e["at"] for e in progress["examples"]], ["4", "2"])  # newest first
+        self.assertRustPassed("reasons::tests::groups_failed_reviews_most_common_first_other_last")
 
     def test_matches_the_definition_of_done(self):
-        items = ["Every check passes", "`state/progress.md` says what changed"]
-        groups = {g["key"]: g for g in server.review_reasons(
-            [{"verdict": "fail", "summary": "progress note missing"}, {"verdict": "fail", "summary": "a race"}], items)}
-        self.assertEqual(groups["progress"]["done_item"], "`state/progress.md` says what changed")
-        self.assertIsNone(groups["bug"]["done_item"])
-        self.assertTrue(groups["bug"]["advice"])
-        self.assertIn("state/progress.md says what changed and what is next", server.done_items("api-client"))
+        self.assertRustPassed("reasons::tests::matches_the_definition_of_done")
+        groups = {g["key"]: g for g in get_json(self.srv.base, "/api/project?name=api-client")["record"]["reasons"]}
+        self.assertEqual(groups["progress"]["done_item"], "state/progress.md says what changed and what is next")
 
     def test_project_record(self):
-        rec = server.detail("api-client")["record"]
+        rec = get_json(self.srv.base, "/api/project?name=api-client")["record"]
         self.assertEqual(len(rec["reviews"]), 15)
         self.assertEqual([(g["key"], g["count"]) for g in rec["reasons"]],
                          [("progress", 3), ("weakened", 1), ("coverage", 1), ("bug", 1)])
-        self.assertEqual(server.record("brand-new"), {"reviews": [], "reasons": []})
+        self.assertEqual(get_json(self.srv.base, "/api/project?name=brand-new")["record"], {"reviews": [], "reasons": []})
 
     def test_workspace_record(self):
-        w = server.workspace_record()
+        w = get_json(self.srv.base, "/api/record")
         self.assertTrue(w["available"])
-        self.assertEqual([p["name"] for p in w["projects"]], server.project_names())
+        self.assertEqual([p["name"] for p in w["projects"]], [p["name"] for p in get_json(self.srv.base, "/api/projects")])
         api = [p for p in w["projects"] if p["name"] == "api-client"][0]
         self.assertEqual(api["summary"]["review_fails"], 6)
         self.assertEqual(len(api["tasks"]), 9)
-        self.assertEqual(set(api["tasks"][0]), set(server.TASK_KEYS))
+        self.assertEqual(set(api["tasks"][0]), set(TASK_KEYS))
         self.assertEqual([(g["key"], g["projects"]) for g in w["reasons"]][-1], ("other", ["parser"]))
 
     def test_workspace_reasons_know_each_definition_of_done(self):
-        groups = {g["key"]: g for g in server.workspace_record()["reasons"]}
+        groups = {g["key"]: g for g in get_json(self.srv.base, "/api/record")["reasons"]}
         # api-client's DONE.md has an item for the progress note; nothing covers a bug.
         self.assertEqual(groups["progress"]["covered_in"], ["api-client"])
         self.assertEqual(groups["bug"]["covered_in"], [])
 
     def test_overlapping_themes_are_counted_per_rejection(self):
-        rows = [{"verdict": "fail", "summary": "progress note missing and a crash"}, {"verdict": "fail", "summary": "a race"}]
-        self.assertEqual(server.review_reasons(rows)[0]["rejections"], 2)
+        self.assertRustPassed("reasons::tests::overlapping_themes_are_counted_per_rejection")
 
 
-
-class EstimateTest(unittest.TestCase):
+class EstimateTest(RustTest, unittest.TestCase):
     """/api/project carries the time estimate: exactly what aaf.py's estimate() gives for the served
-    workspace at the server's clock, plus aaf's calibration (how often past ranges held), cached briefly."""
+    workspace at the core's clock (`serve --clock`), plus aaf's calibration (how often past ranges held),
+    cached briefly."""
     NOW = "2026-10-14T14:50:00+02:00"
 
     @classmethod
     def setUpClass(cls):
-        import importlib.util
-        path = os.path.join(os.path.dirname(os.path.dirname(PROJECT)), "framework", "aaf.py")
-        spec = importlib.util.spec_from_file_location("aaf_for_estimate", path)
-        cls.aaf = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(cls.aaf)
+        cls.aaf = load_aaf("aaf_for_estimate")
 
     def setUp(self):
-        import shutil
-        import tempfile
-        self.old_root, self.old_clock = server.ROOT, server.CLOCK
         self.tmp = tempfile.mkdtemp()
         shutil.copytree(os.path.join(FIXTURES, "projects"), os.path.join(self.tmp, "projects"))
-        server.set_root(self.tmp)
-        server.CLOCK = self.NOW
-        server._estimate_cache.clear()
+        self.srv = app_server.Served(self.tmp, clock=self.NOW)
 
     def tearDown(self):
-        import shutil
-        server.set_root(self.old_root)
-        server.CLOCK = self.old_clock
-        server._estimate_cache.clear()
+        self.srv.stop()
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+    def estimate(self, name, base=None):
+        return get_json(base or self.srv.base, "/api/project?name=" + name)["estimate"]
+
     def expected(self, root, name):
-        """aaf.estimate() on <root>/projects/<name> with the clock at NOW (written here, not taken from server.py)."""
+        """aaf.estimate() on <root>/projects/<name> with the clock at NOW (written here, not taken from the core)."""
         import datetime as real
         import types
         now = real.datetime.fromisoformat(self.NOW)
@@ -458,7 +344,7 @@ class EstimateTest(unittest.TestCase):
     def test_same_as_aaf_estimate(self):
         active = 0
         for name in sorted(os.listdir(os.path.join(self.tmp, "projects"))):
-            got = server.detail(name)["estimate"]
+            got = self.estimate(name)
             want, cal = self.expected(self.tmp, name)
             self.assertTrue(got.pop("available"), name)
             self.assertEqual(got.pop("held"), cal, name)
@@ -467,22 +353,22 @@ class EstimateTest(unittest.TestCase):
         self.assertEqual(active, 4)  # data-pipeline, image-classifier, notes-app, web-scraper
 
     def test_scenarios(self):
-        e = server.detail("image-classifier")["estimate"]
+        e = self.estimate("image-classifier")
         self.assertEqual(e["plan"], {"steps": 5, "done": 2, "current": "Retrain and compare validation accuracy"})
         self.assertLess(e["progress_low"], e["progress_high"])
-        self.assertIn("past review and fixing", server.detail("notes-app")["estimate"]["basis"])
-        self.assertIn("longer than almost every", server.detail("data-pipeline")["estimate"]["basis"])
+        self.assertIn("past review and fixing", self.estimate("notes-app")["basis"])
+        self.assertIn("longer than almost every", self.estimate("data-pipeline")["basis"])
         longest = max(t["duration_s"] or 0 for n in os.listdir(os.path.join(self.tmp, "projects"))
                       for t in self.aaf.task_stats(os.path.join(self.tmp, "projects", n))["tasks"] if t["outcome"] != "running")
-        self.assertGreater(server.detail("data-pipeline")["estimate"]["elapsed_s"], longest,
+        self.assertGreater(self.estimate("data-pipeline")["elapsed_s"], longest,
                            "data-pipeline runs longer than any task before it")
-        held = server.detail("brand-new")["estimate"]["held"]
+        held = self.estimate("brand-new")["held"]
         self.assertEqual((held["predictions_checked"], held["coverage"]), (10, 0.7))
 
     def test_no_history(self):
         root = os.path.join(PROJECT, "fixtures", "first-run")
-        server.set_root(root)
-        got = server.detail("first-project")["estimate"]
+        with app_server.serve(root, clock=self.NOW) as base:
+            got = self.estimate("first-project", base)
         want, cal = self.expected(root, "first-project")
         self.assertEqual(got["remaining_low_s"], None)
         self.assertEqual(got["basis"], "too little history")
@@ -491,43 +377,22 @@ class EstimateTest(unittest.TestCase):
         self.assertEqual(got, want)
 
     def test_cached_briefly(self):
-        first = server.detail("notes-app")["estimate"]
+        first = self.estimate("notes-app")
         path = os.path.join(self.tmp, "projects", "notes-app", "state", "status.json")
         with open(path, encoding="utf-8") as f:
             st = json.load(f)
         st["phase"] = "done"
         with open(path, "w", encoding="utf-8") as f:
             json.dump(st, f)
-        self.assertEqual(server.detail("notes-app")["estimate"], first, "asked again at once: from the cache")
-        key = (server.ROOT, "notes-app")
-        server._estimate_cache[key] = (server._estimate_cache[key][0] - server.ESTIMATE_CACHE_S - 1,
-                                       server._estimate_cache[key][1])
-        self.assertEqual(server.detail("notes-app")["estimate"]["active"], False, "after the cache time: fresh")
+        self.assertEqual(self.estimate("notes-app"), first, "asked again at once: from the cache")
+        time.sleep(15.5)  # the cache time (15 s)
+        self.assertEqual(self.estimate("notes-app")["active"], False, "after the cache time: fresh")
 
     def test_failed_run_is_not_repeated_on_every_poll(self):
-        calls = []
-        real = server.subprocess.run
-
-        def failing(*a, **k):
-            calls.append(1)
-            return real([sys.executable, "-c", "import sys; sys.exit(1)"], capture_output=True, text=True)
-        server.subprocess.run = failing
-        try:
-            first = server.estimate("notes-app")
-            second = server.estimate("notes-app")
-        finally:
-            server.subprocess.run = real
-        self.assertFalse(first["available"])
-        self.assertEqual(second, first)
-        self.assertEqual(len(calls), 1, "a failed estimate is kept briefly, not retried on every request")
+        self.assertRustPassed("aaf::tests::failed_estimate_is_cached_briefly_not_retried_on_every_poll")
 
     def test_unavailable_without_aaf(self):
-        old = server.stats_aaf_path
-        server.stats_aaf_path = lambda: None
-        try:
-            self.assertEqual(server.detail("notes-app")["estimate"], {"available": False})
-        finally:
-            server.stats_aaf_path = old
+        self.assertRustPassed("aaf::tests::unavailable_without_aaf")
 
 
 if __name__ == "__main__":

@@ -22,14 +22,12 @@ import re
 import statistics
 import subprocess
 import sys
-import threading
-from http.server import ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(HERE)
-sys.path.insert(0, PROJECT)
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
 sys.path.insert(0, HERE)
-import server  # noqa: E402
+import app_server  # noqa: E402
 import git_workspace as gw  # noqa: E402
 
 try:
@@ -274,10 +272,8 @@ def check_empty(browser, base, name, needle, label):
 
 
 def serve(root):
-    server.set_root(root)
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    return httpd, "http://127.0.0.1:%d" % httpd.server_address[1]
+    httpd = app_server.Served(root)
+    return httpd, httpd.base
 
 
 def main():

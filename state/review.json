@@ -1,6 +1,6 @@
 {
-  "at": "2026-11-24T21:21:29+01:00",
+  "at": "2026-11-24T21:59:57+01:00",
   "verdict": "pass",
-  "summary": "F1 meets the spec; review-1 fixes in place; 13/13 checks pass; 4 notes",
-  "report": "# Review: F1 Rust core gives the same answers as server.py (iteration 2)\n\nVERDICT: PASS\nSUMMARY: F1 meets the spec; both review-1 fixes are in place; 13/13 checks pass (cargo test 45, parity.py).\n\n## Findings\n- [note] The no-git scan only matches Command::new(\"git\"/\"git.exe\"); git started another way would not be caught (none exists today).\n- [note] plain_file_name refuses drive names (C:probe.png); the one recorded difference from server.py, asserted in parity.py.\n- [note] README does not yet mention app/, control-room serve, or that the checks need Rust (feature 9).\n- [note] Still open from review 1: broken UTF-8 read with replacement characters; parse_iso is a hand-written fromisoformat.\n"
+  "summary": "Checks and tests run on the Rust core, nothing imports server.py, no assertion lost; 13/13; 5 notes",
+  "report": "# Review: F2 All existing checks run against the Rust core\n\nVERDICT: PASS\nSUMMARY: The ten page checks and both test files run against control-room serve, nothing outside parity imports server.py, moved assertions are matching Rust tests, 13/13 checks pass.\n\n## Findings\n- [note] tests/test_git.py ChangeMapApiTest.test_cached_unless_fresh adds a commit to the shared scheduler repo; the class's tests now depend on each other (all still pass).\n- [note] tests/test_core_only.py counts a Rust test twice when a file names it twice (test_api 149 counted, 139 without repeats; baseline 110).\n- [note] All counted Rust tests were written in F1; each removed Python test matches its Rust test's inputs and assertions.\n- [note] checks/app_server.py Served never reads stdout/stderr after the first line; harmless now, could stall if the core logs per request.\n- [note] README.md still describes server.py (feature 9).\n"
 }

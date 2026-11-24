@@ -18,12 +18,10 @@ import json
 import os
 import re
 import sys
-import threading
-from http.server import ThreadingHTTPServer
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT)
-import server  # noqa: E402
+sys.path.insert(0, os.path.join(PROJECT, "checks"))
+import app_server  # noqa: E402
 
 try:
     from playwright.sync_api import sync_playwright
@@ -198,10 +196,8 @@ def check_many_projects(browser, base):
 
 
 def main():
-    server.set_root(FIXTURES)
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
-    base = "http://127.0.0.1:%d" % httpd.server_address[1]
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    httpd = app_server.Served(FIXTURES)
+    base = httpd.base
     problems = []
     pdir = os.path.join(FIXTURES, "projects")
     on_disk = {n for n in os.listdir(pdir) if not n.startswith(".") and os.path.isdir(os.path.join(pdir, n))}
