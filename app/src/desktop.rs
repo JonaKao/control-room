@@ -361,9 +361,14 @@ pub fn run(opts: Options) {
                 .icon(icons.0.clone())
                 .tooltip(TITLE)
                 .menu(&menu)
-                .show_menu_on_left_click(false)
+                // Windows: a left click opens the window, the menu is on the right button. A Mac's menu bar
+                // opens an icon's menu on any click.
+                .show_menu_on_left_click(cfg!(target_os = "macos"))
                 .on_menu_event(move |app, event| tray_choice(app, &menu_core, event.id().as_ref()))
                 .on_tray_icon_event(|tray, event| {
+                    if cfg!(target_os = "macos") {
+                        return;
+                    }
                     if let tauri::tray::TrayIconEvent::Click {
                         button: tauri::tray::MouseButton::Left,
                         button_state: tauri::tray::MouseButtonState::Up,

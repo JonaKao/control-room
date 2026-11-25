@@ -1,0 +1,48 @@
+# Builds the Agent Control Room on Windows and macOS on every push: the Rust tests, the app and its
+# installer (.exe on Windows, .dmg on a Mac), and a smoke check of the core on the fixtures. Only the
+# control-room repository is here (no framework/aaf.py), so the full checks run on the developer's machine.
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundle: nsis
+            artifact: app/target/release/bundle/nsis/*.exe
+            program: app/target/release/control-room.exe
+          - os: macos-latest
+            bundle: dmg
+            artifact: app/target/release/bundle/dmg/*.dmg
+            program: app/target/release/control-room
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rust tests
+        working-directory: app
+        run: cargo test
+      - name: Install the Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+      - name: Build the app and its installer
+        working-directory: app
+        run: cargo tauri build --bundles ${{ matrix.bundle }}
+      - name: Smoke check of the core on the fixtures
+        run: python checks/smoke.py ${{ matrix.program }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-control-room-${{ matrix.os }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error

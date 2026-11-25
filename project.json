@@ -87,6 +87,11 @@
       "name": "Installer",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/installer.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/installer.py; else python3 checks/installer.py; fi",
       "timeout": 60
+    },
+    {
+      "name": "Smoke check",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/smoke.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/smoke.py; else python3 checks/smoke.py; fi",
+      "timeout": 300
     }
   ]
 }

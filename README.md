@@ -208,6 +208,7 @@ Every change must pass these before it is committed:
 - **Workspaces**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/workspaces.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/workspaces.py; else python3 checks/workspaces.py; fi`
 - **Notifications**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/notifications.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/notifications.py; else python3 checks/notifications.py; fi`
 - **Installer**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/installer.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/installer.py; else python3 checks/installer.py; fi`
+- **Smoke check**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/smoke.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/smoke.py; else python3 checks/smoke.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
