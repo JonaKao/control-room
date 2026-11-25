@@ -2,6 +2,18 @@
 
 ## Current state
 
+- **Desktop app F5: tray and background (2026-11-25)**: closing the window hides it to the tray; "Quit" ends the app
+  (saving size and position). Tray menu: "Open Agent Control Room", one entry per workspace ("name — 2 need you",
+  "nothing needs you", "folder not found"; choosing it shows that workspace) and "Quit"; the icon gets an amber dot
+  exactly while anything in any workspace needs you (`watch.rs`, the page's own rule, recounted every 5 s). A second
+  start shows the running window and ends (lock file in the settings folder). "Start when I log in" in the settings
+  (window only), off by default; the login entry starts the app hidden in the tray (`--hidden`). Debug builds answer
+  `/api/debug/tray` for the checks. `checks/desktop.py` now also checks: close keeps the app in the tray, menu and dot
+  both ways on a temporary workspace (caught a planted "dot only above 1"), a second start brings the window back to
+  the front, the tray's workspace entry and "Open" show the window, a hidden start, Quit, and the login switch through
+  the plugin's status and the Windows Run entry (machine entries restored afterwards). Rust tests for the rule (the
+  fixtures: parser, scheduler, web-scraper) and the tray model. Screenshots looked at: `render-desktop-settings.png`,
+  `render-desktop-tray-back.png`. Not seen by a check: how the tray icon and its dot look on the taskbar.
 - **Desktop app F4: several workspaces (2026-11-24)**: `workspaces.rs` keeps the list in `settings.json` (config
   folder); the core shows the current one (`Core::with_workspaces`; `--root` only for the run). Endpoints
   `/api/workspaces` (+ `add`, `select`, `rename`, `remove`, `pick` in the window) and `/api/settings` (Python path and
@@ -287,6 +299,9 @@
 
 ## Next
 
+- F5 review notes: choosing a workspace in the tray changes it on the core and the page follows on its next poll
+  (F6's open-from-notification route will reload the page instead); the login check would misjudge "off by default" if
+  an installed release later keeps its own Run entry under the same name.
 - F4 review notes, for the human to decide: the welcome text says a workspace holds both
   framework and projects although only projects is required; unit-test cores read %TEMP%/settings.json if one exists;
   the rail sub-line and long workspace names are cut off at 1440 px.
@@ -294,7 +309,7 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F5: tray and background (close to tray, tray menu, single instance, start at login). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+- Desktop app, next feature F6: notifications (events from file changes, all workspaces, system notification, per-kind switches). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,

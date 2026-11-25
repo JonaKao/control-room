@@ -11,6 +11,7 @@ pub mod api;
 pub mod desktop;
 pub mod py;
 pub mod reasons;
+pub mod watch;
 pub mod records;
 pub mod workspaces;
 

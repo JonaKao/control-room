@@ -1,12 +1,11 @@
-# Review: F4 Several workspaces (iteration 3)
+# Review: F5 Tray and background
 
 VERDICT: PASS
-SUMMARY: F4 meets the spec; 15/15 on the second full run (the first had a Windows file-write error in render.py that did not repeat); the page works on server.py again; README updated.
+SUMMARY: F5 meets every acceptance criterion; 15/15 checks pass; the desktop check drives tray, single instance and login; nothing weakened.
 
 ## Findings
-- [note] checks/render.py: OSError [Errno 22] writing plots/render-brand-new-phone.png in one full run (file lock by indexer/antivirus?), not repeated.
-- [note] check_folder accepts any folder with projects/ (decision recorded) while the welcome text says a workspace holds both folders.
-- [note] POST /api/settings lets the page choose the executable run as Python (behind the write guard).
-- [note] Test cores use std::env::temp_dir() as config folder and would read a settings.json there.
-- [note] The native folder picker itself is not tested (button and can_pick are).
-- [note] Rail subtitle and long workspace names are cut off at 1440 px.
+- [note] tray_choice selects the workspace on the core only; the page notices on its next poll without afterWorkspaceChange(), so Git/change-map data of a same-named project could stay stale until the next refresh. Only one workspace is tested end to end.
+- [note] The multi-workspace tray menu is covered by the Rust unit test only.
+- [note] check_login skips "off by default" if the Run key already points at the debug exe; could misfire if an installed release writes the same name with another path.
+- [note] Dot and menu lag by up to 5 s (recounted every 5 s; recorded).
+- [note] watch.rs needs_you matches index.html toneOf/waitingNeedsYou; fixtures count 3 matches the rail.

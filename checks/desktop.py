@@ -13,7 +13,12 @@ connects Playwright with connect_over_cdp, so what is checked is the window itse
   works, and a write without the page's header is refused (403);
 - the theme and colour-blind choices, and the window's size and position, survive closing and
   restarting the app;
-- with no workspace yet, the window welcomes and offers the system folder picker ("Choose a folder…").
+- with no workspace yet, the window welcomes and offers the system folder picker ("Choose a folder…");
+- closing the window keeps the app in the tray; the tray menu lists each workspace with how many projects
+  need you and its icon has the dot exactly while that is above zero (read through the debug build's test
+  hook); a second start shows the running window and ends; "Quit" in the tray ends the app;
+- "Start when I log in" is off by default and switches the login entry on and off (plugin status and the
+  Windows Run entry), and the machine's own entries are put back afterwards.
 Screenshots: plots/render-desktop-*.png.
 """
 import ctypes
@@ -93,10 +98,10 @@ def listening_ports(pid):
 class App:
     """The running app, its window and its page over CDP."""
 
-    def __init__(self, pw, root, config, first_start=False):
+    def __init__(self, pw, root, config, first_start=False, extra=()):
         self.port = free_port()
         env = dict(os.environ, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=%d" % self.port)
-        args = [app_server.EXE, "--config", config] + (["--root", root] if root else [])
+        args = [app_server.EXE, "--config", config] + (["--root", root] if root else []) + list(extra)
         self.proc = subprocess.Popen(args, env=env,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.time() + 40
@@ -128,7 +133,7 @@ class App:
             except Exception:
                 problems.append("the window showed the project list but no project in 30 s")
         self.page.wait_for_timeout(500)
-        deadline = time.time() + 10
+        deadline = time.time() + (3 if "--hidden" in extra else 10)
         while not self.windows() and time.time() < deadline:
             time.sleep(0.2)
 
@@ -151,15 +156,30 @@ class App:
     def current(self):
         return self.page.evaluate("(document.querySelector('#projects .proj[aria-current=\"true\"]') || {dataset: {}}).dataset.p")
 
+    def close_window(self):
+        """Close the window like a person would (WM_CLOSE): the app keeps running in the tray."""
+        for w in self.windows():  # only the app's window; Tao's hidden event window must stay
+            user32.PostMessageW(w[0], 0x0010, 0, 0)  # WM_CLOSE
+
+    def tray(self):
+        """The tray's menu and icon, from the debug build's test hook."""
+        return self.page.evaluate("fetch('/api/debug/tray').then(r => r.json())")
+
+    def tray_choose(self, item):
+        return self.page.evaluate("""id => fetch('/api/debug/tray', {method: 'POST', headers: {'Content-Type': 'application/json',
+            'X-AAF-Request': 'control-room'}, body: JSON.stringify({id})}).then(r => r.status)""", item)
+
     def close(self, gracefully=True):
-        """Close the window like a person would (WM_CLOSE), so the app saves its state; kill if it hangs."""
+        """End the app the way a person does: "Quit" in the tray (it saves its state); kill if it hangs."""
         if self.proc.poll() is None and gracefully:
-            for w in self.windows():  # only the app's window; Tao's hidden event window must stay
-                user32.PostMessageW(w[0], 0x0010, 0, 0)  # WM_CLOSE
+            try:
+                self.tray_choose("quit")
+            except Exception:
+                pass
             try:
                 self.proc.wait(15)
             except subprocess.TimeoutExpired:
-                problems.append("the app did not end within 15 s of closing its window")
+                problems.append("the app did not end within 15 s of Quit in the tray")
         if self.proc.poll() is None:
             self.proc.kill()
             self.proc.wait()
@@ -306,6 +326,178 @@ def check_restart(pw, config, first):
         second.close()
 
 
+def visible(hwnd):
+    return bool(user32.IsWindowVisible(hwnd))
+
+
+def wait_tray(app, cond, seconds=12):
+    """The tray is recounted every 5 s: wait until `cond(tray)` holds; return the last tray seen."""
+    deadline, t = time.time() + seconds, None
+    while time.time() < deadline:
+        t = app.tray()
+        if cond(t):
+            return t
+        time.sleep(0.5)
+    return t
+
+
+def check_tray(pw):
+    """Closing hides to the tray; the tray lists each workspace with how many projects need you, and its
+    icon carries the dot exactly while that number is above zero; a second start shows the window; Quit ends."""
+    tmp = tempfile.mkdtemp(prefix="aaf-tray-")
+    root, config = os.path.join(tmp, "calm"), os.path.join(tmp, "config")
+    shutil.copytree(os.path.join(FIXTURES, "projects", "brand-new"), os.path.join(root, "projects", "brand-new"))
+    status = os.path.join(root, "projects", "brand-new", "state", "status.json")
+    os.makedirs(os.path.dirname(status), exist_ok=True)
+
+    def set_phase(phase):
+        with open(status, "w", encoding="utf-8") as f:
+            json.dump({"phase": phase, "task": "Tray test", "updated": "2026-10-14T12:00:00+02:00"}, f)
+    set_phase("idle")
+    app = None
+    try:
+        app = App(pw, root, config)
+        hwnd = app.windows()[0][0]
+        t = wait_tray(app, lambda t: any("calm" in i["label"] for i in t["items"]))
+        labels = [i["label"] for i in t["items"]]
+        if labels != ["Open Agent Control Room", "calm — nothing needs you", "Quit"] or t["dot"]:
+            problems.append("tray: with nothing needing you the menu is %r and the dot is %r" % (labels, t["dot"]))
+        set_phase("waiting")
+        t = wait_tray(app, lambda t: t["dot"])
+        if not t["dot"] or "calm — 1 needs you" not in [i["label"] for i in t["items"]]:
+            problems.append("tray: a project waiting for a decision did not show (dot %r, menu %r)" % (t["dot"], t["items"]))
+        set_phase("idle")
+        t = wait_tray(app, lambda t: not t["dot"])
+        if t["dot"]:
+            problems.append("tray: the dot stayed after nothing needed you any more")
+        # Closing the window keeps the app running, hidden in the tray.
+        app.close_window()
+        time.sleep(1.5)
+        if app.proc.poll() is not None:
+            problems.append("tray: closing the window ended the app (exit code %s)" % app.proc.poll())
+            return
+        if visible(hwnd):
+            problems.append("tray: the window is still visible after closing it")
+        # Starting the app again shows the running one instead of a second app.
+        env = dict(os.environ)
+        second = subprocess.Popen([app_server.EXE, "--root", root, "--config", config], env=env,
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            code = second.wait(15)
+        except subprocess.TimeoutExpired:
+            second.kill()
+            code = "still running after 15 s"
+        if code != 0:
+            problems.append("second start: it did not hand over and end (%s)" % code)
+        deadline = time.time() + 5
+        while time.time() < deadline and not visible(hwnd):
+            time.sleep(0.2)
+        if not visible(hwnd):
+            problems.append("second start: the running app's window did not come back")
+        elif user32.GetForegroundWindow() != hwnd:
+            problems.append("second start: the window came back but not to the front")
+        app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-tray-back.png"))
+        # The tray's workspace entry opens the window on that workspace.
+        app.close_window()
+        time.sleep(1)
+        app.tray_choose("ws:0")
+        time.sleep(1.5)
+        if not visible(hwnd):
+            problems.append("tray: choosing the workspace in the tray menu did not open the window")
+        app.close()
+        if app.proc.poll() is None:
+            problems.append("tray: Quit did not end the app")
+    finally:
+        if app:
+            app.close(gracefully=False)
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+
+def run_entries():
+    import winreg
+    out = {}
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
+        i = 0
+        while True:
+            try:
+                name, value, kind = winreg.EnumValue(k, i)
+            except OSError:
+                return out
+            out[name] = (value, kind)
+            i += 1
+
+
+def restore_run_entries(before):
+    import winreg
+    after = run_entries()
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as k:
+        for name in after:
+            if name not in before:
+                winreg.DeleteValue(k, name)
+        for name, (value, kind) in before.items():
+            if after.get(name) != (value, kind):
+                winreg.SetValueEx(k, name, 0, kind, value)
+
+
+def check_login(pw):
+    """"Start when I log in": off by default, the switch turns the login entry on and off (the autostart
+    plugin's own status, and the Windows Run entry it writes); the machine's entries are restored after."""
+    before = run_entries()
+    config = tempfile.mkdtemp(prefix="aaf-login-")
+    app = None
+    try:
+        app = App(pw, FIXTURES, config)
+        app.page.click("#gear")
+        app.page.wait_for_selector("#settings[open] [data-settings=login]:not([hidden])", timeout=15000)
+        state = lambda: app.page.evaluate("fetch('/api/settings').then(r => r.json()).then(d => d.start_at_login)")
+        ours = lambda: [n for n, (v, _) in run_entries().items() if os.path.normcase(app_server.EXE) in os.path.normcase(v)]
+        mine_before = [n for n, (v, _) in before.items() if os.path.normcase(app_server.EXE) in os.path.normcase(v)]
+        if not mine_before:
+            if state() is not False or app.page.is_checked("[data-login]"):
+                problems.append("login: 'Start when I log in' is not off by default")
+        app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-settings.png"))
+        app.page.click("[data-login]")
+        app.page.wait_for_timeout(800)
+        if state() is not True or not ours():
+            problems.append("login: switching it on did not add the login entry (plugin %r, Run entries %r)" % (state(), ours()))
+        elif not all("--hidden" in run_entries()[n][0] for n in ours()):
+            problems.append("login: the login entry does not start the app hidden in the tray: %r" % [run_entries()[n][0] for n in ours()])
+        app.page.click("[data-login]")
+        app.page.wait_for_timeout(800)
+        if state() is not False or ours():
+            problems.append("login: switching it off did not remove the login entry (plugin %r, Run entries %r)" % (state(), ours()))
+        if app.errors:
+            problems.append("login: JavaScript errors: %s" % app.errors[:3])
+    finally:
+        if app:
+            app.close()
+        restore_run_entries(before)
+        shutil.rmtree(config, ignore_errors=True)
+
+
+def check_hidden_start(pw):
+    """Started by the login entry (--hidden): no window until it is opened from the tray."""
+    config = tempfile.mkdtemp(prefix="aaf-hidden-")
+    app = None
+    try:
+        app = App(pw, FIXTURES, config, extra=["--hidden"])
+        if app.windows():
+            problems.append("hidden start: the window is shown although the app was started for the tray")
+        app.tray_choose("open")
+        deadline = time.time() + 5
+        while time.time() < deadline and not app.windows():
+            time.sleep(0.2)
+        if not app.windows():
+            problems.append("hidden start: 'Open Agent Control Room' in the tray did not show the window")
+    finally:
+        if app:
+            app.close()
+        shutil.rmtree(config, ignore_errors=True)
+
+
 def check_first_start(pw):
     """No workspace yet: the window welcomes and offers the system folder picker ("Choose a folder…")."""
     config = tempfile.mkdtemp(prefix="aaf-desktop-")
@@ -351,6 +543,9 @@ def main():
                 app.close()
             check_git(pw)
             check_first_start(pw)
+            check_tray(pw)
+            check_hidden_start(pw)
+            check_login(pw)
     except Exception as e:
         problems.append("the window check stopped: %s" % str(e).splitlines()[0])
     finally:
@@ -360,7 +555,7 @@ def main():
         for p in problems:
             print("  -", p)
         return 1
-    print("OK: the app's own window (no browser, no network port) shows all nine fixtures without errors, "
+    print("OK: the app's own window (no browser, no network port) shows all nine fixtures without errors, closes to the tray, "
           "Push and Pull work through it, and theme, colour-blind mode, size and position survive a restart")
     return 0
 

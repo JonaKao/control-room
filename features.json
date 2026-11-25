@@ -45,10 +45,10 @@
       "title": "Tray and background",
       "criteria": "Closing hides to tray, Quit ends; tray menu per workspace with needs-you count; dot icon exactly while count > 0; second launch focuses the running window; start-at-login switch, off by default, verified via the autostart plugin",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:28+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T02:04:33+01:00",
+      "evidence": "checks/desktop.py: close keeps the app in the tray, tray menu and dot both ways via debug hook (planted fault caught), second start brings the window to the front and exits, hidden start, Quit ends, login switch via plugin status and Run entry (restored); Rust tests for needs-you rule and tray model; 15/15; review PASS"
     },
     {
       "id": "F6",

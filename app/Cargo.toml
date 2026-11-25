@@ -20,9 +20,13 @@ serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 regex = "1"
 form_urlencoded = "1"
 wait-timeout = "0.2"
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-window-state = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

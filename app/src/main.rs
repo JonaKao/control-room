@@ -2,7 +2,7 @@
 //! network port), or `control-room serve ...`: the same core over HTTP on 127.0.0.1, with no
 //! window, for the checks and GitHub Actions.
 //!
-//!   control-room [--root <workspace>] [--config DIR]
+//!   control-room [--root <workspace>] [--config DIR] [--hidden]
 //!   control-room serve [--root <workspace>] [--port N] [--clock ISO] [--config DIR]
 //!
 //! Without --root both show the workspaces saved in the settings (a welcome screen when there are none);
@@ -26,6 +26,7 @@ struct Args {
     port: u16,
     clock: Option<String>,
     config: Option<PathBuf>,
+    hidden: bool,
 }
 
 fn parse() -> Args {
@@ -34,7 +35,7 @@ fn parse() -> Args {
     if serve {
         args.remove(0);
     }
-    let mut a = Args { serve, root: None, port: 8765, clock: None, config: None };
+    let mut a = Args { serve, root: None, port: 8765, clock: None, config: None, hidden: false };
     let mut it = args.into_iter();
     while let Some(flag) = it.next() {
         let mut val = || it.next().unwrap_or_else(|| usage());
@@ -43,6 +44,7 @@ fn parse() -> Args {
             "--port" if serve => a.port = val().parse().unwrap_or_else(|_| usage()),
             "--clock" if serve => a.clock = Some(val()),
             "--config" => a.config = Some(PathBuf::from(val())),
+            "--hidden" if !serve => a.hidden = true,
             _ => usage(),
         }
     }
@@ -53,7 +55,7 @@ fn main() {
     let a = parse();
     let config = a.config.unwrap_or_else(workspaces::default_config_dir);
     if !a.serve {
-        desktop::run(desktop::Options { root: a.root, config });
+        desktop::run(desktop::Options { root: a.root, config, hidden: a.hidden });
         return;
     }
     let settings = workspaces::load_settings(&config);

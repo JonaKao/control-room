@@ -127,7 +127,11 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
 - `app/`: the desktop app being built (see `specs/desktop-app.md`), in Rust with Tauri. Its core is a
   port of `server.py` that answers the same questions in the same way. Run without arguments,
   `control-room` opens its own window, "Agent Control Room", which shows the page without a
-  browser and without opening a network port; it remembers its size and position. It can show
+  browser and without opening a network port; it remembers its size and position. Closing the
+  window keeps the app running in the tray (the notification area), whose icon gets a dot while a
+  project needs you and whose menu lists each workspace with how many projects need you; "Quit"
+  there ends it. Starting it a second time brings the running window back, and it can start when you
+  log in (a switch in the settings, off at first). It can show
   several workspaces, one at a time: on the first start a welcome screen asks for the workspace
   folder ("Choose a folder…"), a switcher at the top of the list on the left changes between them,
   and the gear opens the settings (add, rename and remove workspaces; which Python to use). The
@@ -199,6 +203,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F5: Tray and background (first try, review passed)
 - 2026-11-25: F4: Several workspaces (3 attempts, review passed)
 - 2026-11-24: F3: Its own window (first try, review passed)
 - 2026-11-24: F2: All existing checks run against the Rust core (first try, review passed)

@@ -79,7 +79,8 @@ class ReadmeTest(unittest.TestCase):
         built = self.section("How it is built")
         self.assertNotIn("So far it holds the Rust", built, "'## How it is built' still says app/ is only the core")
         for part in ("app/", "control-room serve", "window", "checks/desktop.py",
-                     "workspace", "switcher", "settings", "--config", "checks/workspaces.py"):
+                     "workspace", "switcher", "settings", "--config", "checks/workspaces.py",
+                     "tray", "Quit", "log in"):
             self.assertIn(part, built, "'## How it is built' should mention %s" % part)
 
     def test_paths_it_names_exist(self):
