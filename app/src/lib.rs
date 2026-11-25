@@ -26,6 +26,8 @@ use crate::records as rec;
 /// The core: the workspace list (one shown at a time), and aaf.py with its caches.
 pub struct Core {
     pub workspaces: workspaces::Workspaces,
+    /// What became true in any workspace (notifications, /api/events).
+    pub watcher: std::sync::Mutex<watch::Watcher>,
     /// The app window has a system folder picker; `serve` has not.
     pub can_pick: bool,
     pub aaf: Aaf,
@@ -56,7 +58,19 @@ impl Core {
     /// A core showing the workspaces of the settings in `config`, and `root` first if given.
     pub fn with_workspaces(root: Option<PathBuf>, aaf: Aaf, config: PathBuf) -> Self {
         let workspaces = workspaces::Workspaces::new(config.clone(), root.map(|r| absolute(&r)));
-        Core { workspaces, can_pick: false, aaf, config }
+        Core { workspaces, watcher: Default::default(), can_pick: false, aaf, config }
+    }
+
+    /// Is this kind of notification switched on in the settings? All are, unless switched off.
+    pub fn notify_on(&self, kind: &str) -> bool {
+        self.workspaces.get("notify").and_then(|n| n.get(kind).and_then(|v| v.as_bool())).unwrap_or(true)
+    }
+
+    /// Look at every workspace once (not only the one shown); returns what became true since the last look.
+    pub fn watch_once(&self) -> Vec<watch::Event> {
+        let list: Vec<(PathBuf, String)> = self.workspaces.list().into_iter().map(|e| (e.path, e.name)).collect();
+        let on = |k: &str| self.notify_on(k);
+        self.watcher.lock().unwrap().scan(&list, &on)
     }
 
     /// The workspace shown now. With none (first start), an empty folder name that holds no projects.

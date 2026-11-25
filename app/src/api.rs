@@ -80,6 +80,7 @@ impl Core {
             "/api/record" => Resp::json(&self.workspace_record(), 200),
             "/api/workspaces" => Resp::json(&self.workspaces_json(), 200),
             "/api/settings" => Resp::json(&self.settings_json(), 200),
+            "/api/events" => Resp::json(&self.watcher.lock().unwrap().events_json(), 200),
             "/api/project" => {
                 if !known() {
                     return unknown();
@@ -136,6 +137,17 @@ impl Core {
             return Resp::json(&result, code);
         }
         if path == "/api/settings" {
+            if let Some(Value::Object(kinds)) = parsed.get("notify") {
+                let mut notify = self.workspaces.get("notify").and_then(|v| v.as_object().cloned()).unwrap_or_default();
+                for (k, v) in kinds {
+                    if let (true, Some(on)) = (crate::watch::KINDS.contains(&k.as_str()), v.as_bool()) {
+                        notify.insert(k.clone(), json!(on));
+                    }
+                }
+                if let Err(e) = self.workspaces.set("notify", Value::Object(notify)) {
+                    return Resp::json(&json!({"ok": false, "message": e}), 500);
+                }
+            }
             if let Some(p) = text("python") {
                 if let Err(e) = self.workspaces.set_python(&p) {
                     return Resp::json(&json!({"ok": false, "message": e}), 500);
@@ -176,7 +188,8 @@ impl Core {
 
     /// The settings the page shows: the Python path and which Python was found.
     pub fn settings_json(&self) -> Value {
-        json!({"python": self.workspaces.python().unwrap_or_default(), "python_found": self.aaf.runner.describe()})
+        let notify: serde_json::Map<String, Value> = crate::watch::KINDS.iter().map(|k| (k.to_string(), json!(self.notify_on(k)))).collect();
+        json!({"python": self.workspaces.python().unwrap_or_default(), "python_found": self.aaf.runner.describe(), "notify": notify})
     }
 }
 

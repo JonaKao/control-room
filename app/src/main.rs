@@ -61,6 +61,12 @@ fn main() {
     let settings = workspaces::load_settings(&config);
     let runner = PythonRunner::new(workspaces::python_path(&settings));
     let core = Arc::new(Core::with_workspaces(a.root, Aaf::new(Box::new(runner), a.clock, fallback_aaf()), config));
+    // Watch every workspace every 5 s, as the app does, so /api/events works without a window.
+    let watcher = core.clone();
+    std::thread::spawn(move || loop {
+        watcher.watch_once();
+        std::thread::sleep(std::time::Duration::from_secs(5));
+    });
     let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
     if let Err(e) = rt.block_on(api::serve(core, a.port)) {
         eprintln!("control-room serve: {}", e);

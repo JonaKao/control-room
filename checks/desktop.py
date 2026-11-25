@@ -18,7 +18,9 @@ connects Playwright with connect_over_cdp, so what is checked is the window itse
   need you and its icon has the dot exactly while that is above zero (read through the debug build's test
   hook); a second start shows the running window and ends; "Quit" in the tray ends the app;
 - "Start when I log in" is off by default and switches the login entry on and off (plugin status and the
-  Windows Run entry), and the machine's own entries are put back afterwards.
+  Windows Run entry), and the machine's own entries are put back afterwards;
+- the route a notification click takes opens the hidden window on another workspace's project, and the
+  window's settings have one switch per kind of notification.
 Screenshots: plots/render-desktop-*.png.
 """
 import ctypes
@@ -498,6 +500,57 @@ def check_hidden_start(pw):
         shutil.rmtree(config, ignore_errors=True)
 
 
+def check_open_route(pw):
+    """The route a notification click takes: from the tray (window hidden), open another workspace's
+    project. Also: the window's settings have one switch per kind of notification."""
+    tmp = tempfile.mkdtemp(prefix="aaf-open-")
+    beta, config = os.path.join(tmp, "beta"), os.path.join(tmp, "config")
+    shutil.copytree(FIXTURES, beta)
+    app = None
+    try:
+        app = App(pw, FIXTURES, config)
+        post = lambda path, body: app.page.evaluate("""([p, b]) => fetch(p, {method: 'POST', headers: {'Content-Type': 'application/json',
+            'X-AAF-Request': 'control-room'}, body: JSON.stringify(b)}).then(r => r.status)""", [path, body])
+        if post("/api/workspaces/add", {"path": beta}) != 200 or post("/api/workspaces/select", {"path": FIXTURES}) != 200:
+            problems.append("open: could not set up two workspaces")
+        app.page.wait_for_timeout(3000)
+        app.close_window()
+        time.sleep(1)
+        if app.windows():
+            problems.append("open: the window did not hide")
+        if post("/api/debug/open", {"workspace": beta, "project": "notes-app"}) != 200:
+            problems.append("open: the test hook did not answer")
+        try:
+            app.page.wait_for_function("""() => {
+                const c = document.querySelector('#projects .proj[aria-current="true"]');
+                return c && c.dataset.p === 'notes-app' && (document.querySelector('#ws-switch .wsn') || {}).textContent === 'beta'
+                    && document.querySelector('main').innerText.includes('notes-app'); }""", timeout=20000)
+        except Exception:
+            problems.append("open: the window does not show beta / notes-app (switcher %r, project %r)"
+                            % (app.page.evaluate("(document.querySelector('#ws-switch .wsn') || {}).textContent"), app.current()))
+        if not app.windows():
+            problems.append("open: the window did not come back")
+        app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-opened-from-notification.png"))
+        # One switch per kind, in the window's settings; switching one off is kept.
+        app.page.click("#gear")
+        app.page.wait_for_selector("#settings[open] [data-settings=notify]:not([hidden])", timeout=10000)
+        kinds = app.page.eval_on_selector_all("#settings [data-notify]", "els => els.map(e => [e.dataset.notify, e.checked])")
+        if kinds != [[k, True] for k in ("waiting", "decision", "stuck", "finished", "failing")]:
+            problems.append("notify switches: %r, expected five switches, all on" % kinds)
+        app.page.click('#settings [data-notify="stuck"]')
+        app.page.wait_for_timeout(800)
+        notify = app.page.evaluate("fetch('/api/settings').then(r => r.json()).then(d => d.notify)")
+        if notify.get("stuck") is not False or notify.get("waiting") is not True:
+            problems.append("notify switches: switching 'stuck' off gave %r" % notify)
+        app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-settings-notify.png"))
+        if app.errors:
+            problems.append("open: JavaScript errors: %s" % app.errors[:3])
+    finally:
+        if app:
+            app.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def check_first_start(pw):
     """No workspace yet: the window welcomes and offers the system folder picker ("Choose a folder…")."""
     config = tempfile.mkdtemp(prefix="aaf-desktop-")
@@ -545,6 +598,7 @@ def main():
             check_first_start(pw)
             check_tray(pw)
             check_hidden_start(pw)
+            check_open_route(pw)
             check_login(pw)
     except Exception as e:
         problems.append("the window check stopped: %s" % str(e).splitlines()[0])

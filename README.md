@@ -131,7 +131,10 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   window keeps the app running in the tray (the notification area), whose icon gets a dot while a
   project needs you and whose menu lists each workspace with how many projects need you; "Quit"
   there ends it. Starting it a second time brings the running window back, and it can start when you
-  log in (a switch in the settings, off at first). It can show
+  log in (a switch in the settings, off at first). While it runs it watches every workspace and sends
+  a notification from your computer when a project waits for you in Claude Code, a fix waits for your
+  decision, a project is stuck, a task finished with the review approving it, or tests that passed
+  start failing; clicking it opens that project. Each kind can be switched off in the settings. It can show
   several workspaces, one at a time: on the first start a welcome screen asks for the workspace
   folder ("Choose a folder…"), a switcher at the top of the list on the left changes between them,
   and the gear opens the settings (add, rename and remove workspaces; which Python to use). The
@@ -141,7 +144,8 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   window, for the checks. The checks build it with Rust (`rustup`, then `cargo`), so Rust must be
   installed to run them. `checks/parity.py` confirms the core gives the same answers as
   `server.py`, `checks/desktop.py` opens the real window (on Windows) and checks it, and
-  `checks/workspaces.py` goes through adding, switching, renaming and removing workspaces.
+  `checks/workspaces.py` goes through adding, switching, renaming and removing workspaces, and
+  `checks/notifications.py` changes project files the way the agent does and expects one notification each.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
   changed. Its colours and fonts are the tokens from the approved design.
@@ -196,6 +200,7 @@ Every change must pass these before it is committed:
 - **Same answers as before**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi`
 - **Desktop window**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi`
 - **Workspaces**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/workspaces.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/workspaces.py; else python3 checks/workspaces.py; fi`
+- **Notifications**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/notifications.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/notifications.py; else python3 checks/notifications.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -203,6 +208,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F6: Notifications (2 attempts, review passed)
 - 2026-11-25: F5: Tray and background (first try, review passed)
 - 2026-11-25: F4: Several workspaces (3 attempts, review passed)
 - 2026-11-24: F3: Its own window (first try, review passed)

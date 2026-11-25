@@ -2,6 +2,22 @@
 
 ## Current state
 
+- **Desktop app F6: notifications (2026-11-25)**: `watch.rs` looks at every project of every workspace in the settings
+  every 5 s (in the app and in `serve`) and raises an event when something becomes true: an unanswered wait that needs
+  you (the page's rule), a new draft or the phase becoming waiting with drafts, stuck, done with a passed review, a test
+  run failing right after a passing one. Each event has a key (workspace, project, kind, step/draft/time) and is
+  raised once; the first look at a project (also at the start) raises nothing. `/api/events` lists them newest first.
+  Settings: one switch per kind (`notify` in settings.json; the window's settings show them); a kind switched off is
+  listed with `notify: false` and sends nothing. In the app each event with notify becomes a Windows notification in
+  plain words ("notes-app is stuck and needs your help", "Workspace: demo. Click to open it."); clicking it selects the
+  workspace and reloads the window on that project (Mac: the notification plugin, without the click). Choosing a
+  workspace in the tray now takes the same route (F5 note). New check **Notifications** (`checks/notifications.py`):
+  two fixture copies, five changes, exactly five events, none at start, none twice, the switch, none after a restart
+  (caught a planted "no finished events"). `checks/desktop.py` also checks the click route from the hidden window to
+  another workspace's project and the five switches. A real notification was shown once and captured, cropped to the
+  notification (`plots/render-desktop-notification.png`). Not seen by a check: clicking a real notification.
+  Review minor fixed (second attempt): a draft and the later waiting phase of one /fix give one decision notification;
+  drafts are keyed per save (id, created, rounds) because ids come back.
 - **Desktop app F5: tray and background (2026-11-25)**: closing the window hides it to the tray; "Quit" ends the app
   (saving size and position). Tray menu: "Open Agent Control Room", one entry per workspace ("name — 2 need you",
   "nothing needs you", "folder not found"; choosing it shows that workspace) and "Quit"; the icon gets an amber dot
@@ -299,6 +315,9 @@
 
 ## Next
 
+- F6 review notes: clicking a notification works while the app runs (not from Action Center later, and the installed
+  app's own notification id comes with F7's Start-menu entry); Mac notifications have no click route; a project whose
+  phase turns waiting for a question while an already-announced draft is open raises no second decision.
 - F5 review notes: choosing a workspace in the tray changes it on the core and the page follows on its next poll
   (F6's open-from-notification route will reload the page instead); the login check would misjudge "off by default" if
   an installed release later keeps its own Run entry under the same name.
@@ -309,7 +328,7 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F6: notifications (events from file changes, all workspaces, system notification, per-kind switches). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+- Desktop app, next feature F7: icon (design/icon.svg, shown to the human for approval) and the Windows installer. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,

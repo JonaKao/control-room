@@ -24,9 +24,11 @@ tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-window-state = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-notification = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }
+tauri-winrt-notification = "0.8"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

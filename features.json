@@ -55,10 +55,10 @@
       "title": "Notifications",
       "criteria": "Notifications check: one event per change (waiting, decision, stuck, finished, failing) in /api/events from file changes on copied fixtures, none for states true at start, none twice; all workspaces watched; plain-words system notification, click opens workspace and project; per-kind switch suppresses the notification",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:29+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T03:29:19+01:00",
+      "evidence": "checks/notifications.py: five file changes in two workspaces give exactly five events in /api/events, none at start, none twice, none after restart, switched-off kind listed with notify false; Rust watcher tests incl. one decision per draft save; desktop.py click route and switches; real toast captured; 16/16; review PASS"
     },
     {
       "id": "F7",

@@ -565,7 +565,7 @@ dialog.settings { background: var(--panel); color: var(--ink); width: min(600px,
 .ws-edit { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 8px 0; border-top: 1px solid var(--grid); }
 .ws-edit .ws-path, .ws-edit .ws-error { grid-column: 1 / -1; }
 .ws-edit label { display: flex; min-width: 0; }
-.settings .check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.settings .check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 2px 0; }
 .settings section[hidden] { display: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .welcome { grid-column: 1 / -1; max-width: 60ch; padding-top: 10vh; }
@@ -1957,10 +1957,18 @@ function pythonLine(s) {
   return !s ? "Looking for Python…" : s.python_found ? `Found: ${esc(s.python_found)}`
     : `<span class="ws-missing">No Python 3 found.</span> Install Python 3, or type where python is above.`;
 }
+// The kinds of notification, in the order and words the settings show them.
+const NOTIFY_KINDS = [["waiting", "Claude Code waits for your permission or your reply"],
+  ["decision", "A fix waits for your decision"], ["stuck", "A project is stuck and needs your help"],
+  ["finished", "A task finished and the review approved it"], ["failing", "Tests that passed start failing"]];
+
 function renderPython() {
   const line = $("#settings [data-python-found]"), input = $("#settings [data-python-path]");
   if (line) line.innerHTML = pythonLine(settingsData);
   if (input && document.activeElement !== input) input.value = settingsData ? settingsData.python : "";
+  document.querySelectorAll("#settings [data-notify]").forEach(c => {
+    c.checked = !(settingsData && settingsData.notify && settingsData.notify[c.dataset.notify] === false);
+  });
   const login = $("#settings [data-settings=login]");
   if (login) {
     login.hidden = !(settingsData && settingsData.start_at_login != null);
@@ -1968,6 +1976,11 @@ function renderPython() {
   }
 }
 document.addEventListener("change", async e => {
+  if (e.target.matches("[data-notify]")) {
+    const r = await wsPost("/api/settings", { notify: { [e.target.dataset.notify]: e.target.checked } });
+    if (r.ok) settingsData = r.d;
+    return renderPython();
+  }
   if (!e.target.matches("[data-login]")) return;
   const r = await wsPost("/api/settings", { start_at_login: e.target.checked });
   if (r.ok) settingsData = r.d;
@@ -1993,6 +2006,10 @@ function renderSettings() {
         <input type="text" id="python-path" data-python-path value="${esc(s ? s.python : "")}" placeholder="Found by itself" spellcheck="false">
         <button type="button" class="btn" data-python-go>Save</button></div>
       <p data-python-found>${pythonLine(s)}</p></section>
+    <section data-settings="notify" ${wsInfo && wsInfo.can_pick ? "" : "hidden"}><h3>Notifications</h3>
+      <p class="hint">The app tells you, with a notification from your computer, when one of these happens in any workspace.
+      Clicking the notification opens that project.</p>
+      ${NOTIFY_KINDS.map(([k, words]) => `<label class="check"><input type="checkbox" data-notify="${k}" ${!s || !s.notify || s.notify[k] !== false ? "checked" : ""}> ${words}</label>`).join("")}</section>
     <section data-settings="login" ${s && s.start_at_login != null ? "" : "hidden"}><h3>When you log in</h3>
       <label class="check"><input type="checkbox" data-login ${s && s.start_at_login ? "checked" : ""}> Start when I log in</label>
       <p class="hint">The app then starts in the tray each time you log in to this computer, so it can tell you when a project needs you.</p></section>`;

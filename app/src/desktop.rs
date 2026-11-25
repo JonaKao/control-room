@@ -91,6 +91,49 @@ pub fn show_main(app: &tauri::AppHandle) {
     }
 }
 
+/// Show a workspace and one of its projects: the route a notification click takes. The page reads
+/// the project from the address when it loads, so the window loads it again on that project.
+pub fn open_project(app: &tauri::AppHandle, core: &Core, workspace: &std::path::Path, project: Option<&str>) {
+    let _ = core.workspaces.select(workspace);
+    let hash: String = project.map(|p| format!("#p={}", p.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.".contains(&b) {
+        (b as char).to_string() } else { format!("%{:02X}", b) }).collect::<String>())).unwrap_or_default();
+    let a = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(w) = a.get_webview_window("main") {
+            let _ = w.eval(&format!("try {{ localStorage.removeItem('aaf.project'); }} catch (e) {{}} location.replace('/{hash}'); location.reload();"));
+        }
+        show_main(&a);
+    });
+}
+
+/// A system notification for an event; clicking it opens that workspace and project.
+fn notify(app: &tauri::AppHandle, core: &Arc<Core>, e: &crate::watch::Event) {
+    #[cfg(windows)]
+    {
+        use tauri_winrt_notification::Toast;
+        // The installed app has its own id (its Start-menu entry); a development build borrows PowerShell's.
+        let dev = std::env::current_exe().ok().and_then(|x| x.parent().map(|d| d.to_path_buf()))
+            .map(|d| d.ends_with("target/debug") || d.ends_with("target/release") || d.ends_with("target\\debug") || d.ends_with("target\\release"))
+            .unwrap_or(true);
+        let id = if dev { Toast::POWERSHELL_APP_ID.to_string() } else { app.config().identifier.clone() };
+        let (a, c, ws, p) = (app.clone(), core.clone(), e.workspace.clone(), e.project.clone());
+        let _ = Toast::new(&id)
+            .title(&e.text)
+            .text1(&format!("Workspace: {}. Click to open it.", e.workspace_name))
+            .on_activated(move |_| {
+                open_project(&a, &c, &ws, Some(&p));
+                Ok(())
+            })
+            .show();
+    }
+    #[cfg(not(windows))]
+    {
+        use tauri_plugin_notification::NotificationExt;
+        let _ = core;
+        let _ = app.notification().builder().title(&e.text).body(format!("Workspace: {}", e.workspace_name)).show();
+    }
+}
+
 /// Save the window's size and position, then end the app ("Quit" in the tray).
 pub fn quit(app: &tauri::AppHandle) {
     use tauri_plugin_window_state::AppHandleExt;
@@ -143,7 +186,8 @@ fn tray_choice(app: &tauri::AppHandle, core: &Core, id: &str) {
     }
     if let Some(i) = id.strip_prefix(crate::watch::WS_PREFIX).and_then(|i| i.parse::<usize>().ok()) {
         if let Some(e) = core.workspaces.list().get(i) {
-            let _ = core.workspaces.select(&e.path);
+            open_project(app, core, &e.path, None);
+            return;
         }
     }
     let a = app.clone();
@@ -224,6 +268,13 @@ fn settings(app: &tauri::AppHandle, core: &Core, req: &Request<Vec<u8>>) -> Resp
 fn debug_hook(app: &tauri::AppHandle, core: &Core, shared: &TrayShared, req: &Request<Vec<u8>>) -> Option<Resp> {
     match (req.method().as_str(), req.uri().path()) {
         ("GET", "/api/debug/tray") => Some(Resp::json(&crate::watch::tray_json(&shared.lock().unwrap()), 200)),
+        ("POST", "/api/debug/open") if has_header(req) => {
+            // The route a notification click takes.
+            let body: serde_json::Value = serde_json::from_slice(req.body()).unwrap_or_default();
+            let ws = std::path::PathBuf::from(body.get("workspace").and_then(|v| v.as_str()).unwrap_or(""));
+            open_project(app, core, &ws, body.get("project").and_then(|v| v.as_str()));
+            Some(Resp::json(&serde_json::json!({"ok": true}), 200))
+        }
         ("POST", "/api/debug/tray") if has_header(req) => {
             let body: serde_json::Value = serde_json::from_slice(req.body()).unwrap_or_default();
             let id = body.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -264,6 +315,7 @@ pub fn run(opts: Options) {
             .with_state_flags(state_flags())
             .build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--hidden"])))
         .register_asynchronous_uri_scheme_protocol("app", move |ctx, req, responder| {
             let (core, shared) = (proto_core.clone(), proto_shared.clone());
@@ -324,6 +376,11 @@ pub fn run(opts: Options) {
                 let mut last: Option<std::time::Instant> = None;
                 loop {
                     if last.map(|t| t.elapsed() >= std::time::Duration::from_secs(5)).unwrap_or(true) {
+                        for e in core_t.watch_once() {
+                            if e.notify {
+                                notify(&app_h, &core_t, &e);
+                            }
+                        }
                         refresh_tray(&app_h, &core_t, &shared_t, &icons);
                         last = Some(std::time::Instant::now());
                     }
