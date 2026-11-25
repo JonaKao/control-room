@@ -64,14 +64,22 @@ class ReadmeTest(unittest.TestCase):
             self.assertIn(part, what, "'## What it does' does not explain '%s'" % part)
 
     def test_says_how_to_start_it(self):
+        # The desktop app (feature 9): getting it, installing, the first start, the first-open warnings of
+        # an unsigned app, the tray, notifications, the settings, updating, and serve for the checks.
         run = self.section("How to run")
-        for needed in ("python3 dashboard/server.py", "http://localhost:8765", "--root"):
+        for needed in ("build.py", "Agent Control Room_", "SmartScreen", "More info", "Run anyway", "Gatekeeper",
+                       "Choose a folder", "tray", "Quit", "notification", "settings", "Start when I log in",
+                       "control-room serve", "--root", "--config"):
             self.assertIn(needed, run, "'## How to run' should mention %s" % needed)
+        self.assertNotIn("http://localhost:8765", run, "'## How to run' still sends people to the browser version")
 
     def test_says_how_it_is_built(self):
         built = self.section("How it is built")
-        for part in ("server.py", "index.html", "fixtures/", "checks/", "tests/", "framework/aaf.py"):
+        for part in ("app/", "control-room serve", "router", "index.html", "fixtures/", "checks/", "tests/",
+                     "framework/aaf.py", "build.py"):
             self.assertIn(part, built, "'## How it is built' should mention %s" % part)
+        # One router, two ways in: the window (no network port) and serve (127.0.0.1, for the checks).
+        self.assertRegex(built, r"(?is)one router.*two ways in", "'## How it is built' should say the one router has two ways in")
         self.assertIn("Agentic AI Framework", self.text)
 
     def test_describes_the_desktop_window(self):

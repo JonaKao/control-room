@@ -1,7 +1,7 @@
 # control-room
 
-The Agent Control Room: one web page that shows, live, what the coding agent in each
-project of this workspace is doing and whether its work can be trusted.
+The Agent Control Room: a desktop app that shows, live, what the coding agent in each
+project of this workspace is doing and whether its work can be trusted, and tells you when one needs you.
 
 ## What it does
 
@@ -88,71 +88,97 @@ order, with the summary first and the project list as one row of chips.
 
 ## How to run
 
-From the workspace root:
+The control room is a desktop app for Windows (and, untested so far, the Mac). It opens in its own
+window, keeps watching from the tray and tells you with a notification when a project needs you.
+
+**Get the installer.** Either take it from GitHub: open the repository's Actions tab, click the newest
+"build" run and download `agent-control-room-windows-latest` (or `agent-control-room-macos-latest`)
+under Artifacts; or build it yourself on Windows, from this folder:
 
 ```
-python3 dashboard/server.py
+python3 build.py
 ```
 
-then open http://localhost:8765. On a Mac you can instead double-click
-`Open Dashboard.command`, which also opens the browser. `dashboard/server.py` is only a
-shim that starts `server.py` in this folder, which takes `--port` (default 8765),
-`--host` (default 127.0.0.1) and `--root` (the workspace to show).
+That needs Rust (from rustup.rs) and, once, the Tauri tool (`cargo install tauri-cli --version "^2" --locked`).
+It leaves `Agent Control Room_<version>_x64-setup.exe` in the dist folder.
 
-To look at the made-up example projects instead of the real ones:
+**Install on Windows.** Run `Agent Control Room_<version>_x64-setup.exe`. It installs for you only, without
+admin rights, and puts the app in the Start menu and on the desktop. The installer is not signed, so the
+first time Windows may show "Windows protected your PC" (SmartScreen): click **More info**, then
+**Run anyway**.
 
-```
-python3 projects/control-room/server.py --root projects/control-room/fixtures/workspace --port 8770
-```
+**Install on a Mac** (Apple silicon). Open the `.dmg` and drag the app into Applications. The app is not
+signed, so the first time macOS refuses to open it (Gatekeeper): right-click (or Control-click) the app,
+choose **Open**, then **Open** again. After that it opens normally.
 
-Nothing to install for the page itself: it needs only Python 3. The checks that open the
-page in a browser need Playwright once:
+**First start.** The app asks for your workspace: the folder of the Agentic AI Framework, the one that holds
+the folders `framework` and `projects`. Click **Choose a folder…** and pick it (or type where it is). The list
+on the left then shows every project; the top of the page says what the agent is doing and whether anything
+needs you.
+
+**Every day.**
+- Closing the window does not end the app: it keeps running in the tray (the notification area next to the
+  clock; the menu bar on a Mac). Its icon gets a dot while a project needs you. Click the icon to open the
+  window; its menu lists each workspace with how many projects need you, and **Quit** ends the app.
+- A notification appears when Claude Code waits for your permission or reply, a fix waits for your decision,
+  a project is stuck, a task finished and the review approved it, or tests that passed start failing.
+  Clicking it opens that project (on Windows).
+- Opening the app again (Start menu, desktop) brings its window back instead of starting a second one.
+
+**Settings** (the gear at the top of the list on the left):
+- Workspaces: add more (each is a folder of the framework), rename them, remove them from the list (the
+  folders stay as they are). The switcher at the top of the list on the left changes between them.
+- Python: the timeline, the time estimate, Git and the change map come from the framework's own tool, which
+  needs Python 3. The app finds it by itself; if it cannot, type where Python is.
+- Notifications: one switch per kind.
+- **Start when I log in**: off at first; when on, the app starts in the tray each time you log in.
+
+**Updating.** Install a newer installer over the old one; your workspaces and settings are kept (they live
+in the folder Agent Control Room inside %APPDATA% on Windows, and inside Library/Application Support in your home
+folder on a Mac).
+
+**Without a window** (for the checks and for development): `control-room serve --root <workspace>` answers
+the page's questions on this computer only (http://127.0.0.1, port 8765 or `--port`), with no window;
+`--config <folder>` uses another settings folder, `--clock <time>` pins "now" for the time estimate. The
+checks need Rust and, once, Playwright:
 
 ```
 cd projects/control-room
 python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwright install chromium
 ```
 
+(On Windows the programs are in .venv\Scripts instead of .venv/bin.) Until it is retired, the older browser
+version still starts from the workspace root with `python3 dashboard/server.py`.
+
 ## How it is built
 
-- `server.py`: a small HTTP server using only Python's standard library. It reads each
-  project's `state/` and `plots/` folders and answers the page's questions as JSON. It
-  never writes project files and refuses paths outside the workspace. Derived data comes
-  from the framework rather than being recomputed: the task timeline and track record
-  from `framework/aaf.py stats`, the time estimate from `aaf.py estimate`, the change map
-  from `aaf.py git files`, the Git section from `aaf.py git info`; results are cached so
-  polling stays cheap. The only thing it
-  changes is Git, and only through `aaf.py git push|pull`, only for requests from the page
-  itself on this machine.
-- `app/`: the desktop app being built (see `specs/desktop-app.md`), in Rust with Tauri. Its core is a
-  port of `server.py` that answers the same questions in the same way. Run without arguments,
-  `control-room` opens its own window, "Agent Control Room", which shows the page without a
-  browser and without opening a network port; it remembers its size and position. Closing the
-  window keeps the app running in the tray (the notification area), whose icon gets a dot while a
-  project needs you and whose menu lists each workspace with how many projects need you; "Quit"
-  there ends it. Starting it a second time brings the running window back, and it can start when you
-  log in (a switch in the settings, off at first). While it runs it watches every workspace and sends
-  a notification from your computer when a project waits for you in Claude Code, a fix waits for your
-  decision, a project is stuck, a task finished with the review approving it, or tests that passed
-  start failing; clicking it opens that project. Each kind can be switched off in the settings. It can show
-  several workspaces, one at a time: on the first start a welcome screen asks for the workspace
-  folder ("Choose a folder…"), a switcher at the top of the list on the left changes between them,
-  and the gear opens the settings (add, rename and remove workspaces; which Python to use). The
-  list is kept in the app's own settings file, `settings.json` in its settings folder
-  (`--config <folder>` points it elsewhere, which the checks use).
-  `python3 build.py` (in this folder) builds the app and puts its Windows installer in the dist folder
-  (`Agent Control Room_<version>_x64-setup.exe`, for your user only, without admin rights, with a
-  Start-menu entry and a desktop icon); every build gets a higher version, and the icons in
-  `app/icons/` are made from `design/icon.svg`. It needs the Tauri tool once:
-  `cargo install tauri-cli --version "^2" --locked`.
-  `control-room serve [--root <workspace>]` runs the same core on this computer only, with no
-  window, for the checks. The checks build it with Rust (`rustup`, then `cargo`), so Rust must be
-  installed to run them. `checks/parity.py` confirms the core gives the same answers as
-  `server.py`, `checks/desktop.py` opens the real window (on Windows) and checks it, and
-  `checks/workspaces.py` goes through adding, switching, renaming and removing workspaces, and
-  `checks/notifications.py` changes project files the way the agent does and expects one notification each;
-  `checks/installer.py` checks the newest installer in the dist folder, and `checks/smoke.py` checks the
-  core without the framework tool.
+- `app/`: the desktop app, in Rust with Tauri (see `specs/desktop-app.md` for how it was planned). Its core
+  reads each project's `state/` and `plots/` folders and answers the page's questions as JSON. It never
+  writes project files and refuses paths outside the workspace. Derived data comes from the framework rather
+  than being recomputed: the task timeline and track record from `framework/aaf.py stats`, the time estimate
+  from `aaf.py estimate`, the change map from `aaf.py git files`, the Git section from `aaf.py git info`
+  (run with Python, cached so polling stays cheap). The only thing it changes in a project is Git, and only
+  through `aaf.py git push|pull`, only for the page itself. The parts, in `app/src/`: reading the records
+  (`records.rs`), the live feed's steps (`activity.rs`), why reviews said no (`reasons.rs`), the framework tool
+  and its caches (`aaf.rs`), the router (`api.rs`), the workspace list and settings (`workspaces.rs`), what
+  needs you and what changed, for the tray and notifications (`watch.rs`), and the window, tray, notifications,
+  single instance and start at login (`desktop.rs`).
+  **One router, two ways in**: the same answers reach the window through the app's own protocol (no network
+  port, so nothing else on the computer can push or pull), and reach the checks through
+  `control-room serve`, over HTTP on 127.0.0.1, with the page's own header required for any change.
+  `python3 build.py` makes the icons in `app/icons/` from `design/icon.svg`, raises the version and builds the
+  installer into the dist folder (`Agent Control Room_<version>_x64-setup.exe`, per user, with a Start-menu
+  entry and a desktop icon).
+  What the app adds around the page: its own window, the tray (with Quit), a workspace switcher and the
+  settings (workspaces, Python, notifications, start when you log in), kept in `settings.json` in the app's
+  settings folder (`--config <folder>` points it elsewhere, which the checks use). Its own checks:
+  `checks/desktop.py` drives the real window on Windows (window, tray, second start, start at login, the route
+  a notification click takes), `checks/workspaces.py` adds, switches, renames and removes workspaces,
+  `checks/notifications.py` changes project files the way the agent does and expects one notification each,
+  `checks/installer.py` checks the newest installer in the dist folder, and `checks/smoke.py` checks the core
+  without the framework tool.
+- `server.py`: the earlier browser version (a standard-library Python server for the same page), kept until it
+  is retired; `checks/parity.py` confirms the app's core answers exactly as it did.
 - `.github/workflows/build.yml`: on every push to GitHub, Windows and macOS machines there run the Rust
   tests, build the app (the Windows installer and a Mac `.dmg`), run `checks/smoke.py` on it and keep the
   installer and the `.dmg` (for Macs with Apple silicon) as downloads of that run. Only this project is on GitHub, without the framework,
@@ -170,7 +196,7 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   waiting for a decision, waiting for permission, finished, never started, a long track
   record), and `fixtures/first-run`, a workspace where no task has finished yet. Git repositories are never stored there; the checks
   build them in a temporary folder with `checks/git_workspace.py`.
-- `tests/`: unit tests for the server's answers, its Git safety rules, this README, and that every colour
+- `tests/`: tests of the core's answers over HTTP, its Git safety rules, this README, and that every colour
   comes from the design's tokens.
 - `checks/`: scripts that open the page in a headless browser for every fixture (desktop
   light, desktop dark, phone), fail on errors or sideways scrolling, test each section's
@@ -183,8 +209,8 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   and, by simulating the three common kinds of colour blindness, that every pair of colours stays
   clearly apart. Its screenshots include the page as someone with deuteranopia sees it.
 - `ROADMAP.md`: the planned features (activity feed, task timeline, change map, track record,
-  README, the instrument-panel redesign, the time estimate and the use of the framework's 2026-10-19
-  updates) and their status. See
+  README, the instrument-panel redesign, the time estimate, the use of the framework's 2026-10-19
+  updates and the desktop app) and their status. See
   [ROADMAP.md](ROADMAP.md).
 
 How it fits into the Agentic AI Framework: agents record their progress only through
@@ -224,6 +250,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F9: Plain README for the app (first try, review passed)
 - 2026-11-25: F8: Mac build on GitHub (first try, review passed)
 - 2026-11-25: F7: Icon and installer (first try, review passed)
 - 2026-11-25: F6: Notifications (2 attempts, review passed)

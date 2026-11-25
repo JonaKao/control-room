@@ -2,6 +2,15 @@
 
 ## Current state
 
+- **Desktop app F9: plain README for the app (2026-11-25)**: README "How to run" now explains the app for someone
+  new: getting the installer (GitHub Actions artifacts or `python3 build.py`), installing on Windows (SmartScreen:
+  More info, Run anyway) and on a Mac (Gatekeeper: right-click, Open), the first start (Choose a folder…), the tray,
+  notifications, the settings (workspaces, Python, notifications, Start when I log in), updating (settings kept),
+  and `control-room serve` for the checks; the browser version is mentioned only as "until it is retired". "How it
+  is built" leads with `app/` (its parts, one router with two ways in: the window's own protocol and `serve`),
+  `build.py`, the app's checks and the GitHub workflow; `server.py` is the earlier version kept for the parity check.
+  `tests/test_readme.py` asks for these names (failed on the old README); `tests/test_roadmap.py` asks for item 9.
+  `control-room.md` describes the core, the app, how to run it and all 18 checks; ROADMAP item 9 "Desktop app" Done.
 - **Desktop app F8: Mac build on GitHub (2026-11-25)**: `.github/workflows/build.yml` runs on every push on
   windows-latest and macos-latest: `cargo test`, the Tauri CLI, `cargo tauri build` (NSIS / dmg), `checks/smoke.py` on
   the release program, and uploads the installer and the `.dmg`. First run green on both:
@@ -343,6 +352,7 @@
 
 ## Next
 
+- F9 review note: the README says a click on the tray icon opens the window; on a Mac it opens the menu.
 - F8 review notes: on a Mac a Dock-icon click while the window is hidden probably does nothing (RunEvent::Reopen is not
   handled; first thing to try on a real Mac); checks/smoke.py, like app_server.py, never reads the core's stderr.
 - F7 review notes: the Installer check reads build output outside Git (fails on a fresh clone until build.py ran); the
@@ -361,7 +371,7 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F9: plain README for the app (install, first start, SmartScreen/Gatekeeper, tray, notifications, settings).
+- Desktop app, next feature F10: retire the browser version (server.py, dashboard/, Open Dashboard.command; workspace README and framework/REFERENCE.md point to the app; parity check removed).
 - GitHub warns that actions/checkout@v4, setup-python@v5 and upload-artifact@v4 still target Node.js 20 (forced to 24); newer major versions would silence it. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.

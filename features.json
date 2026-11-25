@@ -85,10 +85,10 @@
       "title": "Plain README for the app",
       "criteria": "README How to run covers install, first start, SmartScreen/Gatekeeper, tray, notifications, settings; How it is built covers app/, one router two ways in, checks; tests/test_readme.py updated to the new names and still fails when one is missing; control-room.md updated; ROADMAP item 9 Desktop app Done",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:29+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T16:18:29+01:00",
+      "evidence": "tests/test_readme.py (How to run: install, SmartScreen/Gatekeeper, first start, tray, notifications, settings, serve; How it is built: app/, one router two ways in, checks; fails when a name is missing, mutation-tested by the reviewer), tests/test_roadmap.py item 9; control-room.md updated; 18/18; review PASS"
     },
     {
       "id": "F10",

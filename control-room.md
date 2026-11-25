@@ -1,6 +1,7 @@
 # control-room
 
-The Agent Control Room: the live dashboard for every project in this workspace.
+The Agent Control Room: a desktop app (Windows, and built for the Mac) with the live dashboard for every
+project in this workspace.
 
 ## Purpose
 
@@ -11,7 +12,8 @@ includes people who do not know the code behind it.
 
 ## How it works
 
-- `server.py`: a small standard-library HTTP server. It reads files from
+- The core (`app/src/`, Rust; the router is `api.rs`; the earlier Python `server.py` answers the same until it
+  is retired, and `checks/parity.py` compares them). It reads files from
   `<workspace>/projects/*/state/` and `*/plots/` and never writes them itself. Endpoints:
   `/` (the page), `/api/projects`, `/api/project?name=`, `/plot?project=&file=`,
   `/api/git?name=[&fresh=1]` (runs `framework/aaf.py git info <name> --fetch`, cached 15 s),
@@ -29,20 +31,34 @@ includes people who do not know the code behind it.
   workspace's aaf.py (or this workspace's, for a workspace without one, like the fixtures), cached
   until `state/events.jsonl` changes (a failed run is not cached), plus the events of the shown tasks for the segment details.
   `/api/project` also carries `record`: `state/review_history.jsonl` and the failed reviews grouped by
-  theme (`REASONS` in server.py: keywords in the one-line summary), each matched to the project's
+  theme (`REASONS` in `app/src/reasons.rs`: keywords in the one-line summary), each matched to the project's
   `DONE.md` item that covers it. `/api/record` is the workspace view ("All projects"): every project's
   task_stats summary and tasks (from the same cache) and the reasons across all projects.
   `/api/project` also carries `estimate`: `estimate()` from `framework/aaf.py` (what `aaf.py estimate <name>`
   prints: active, phase, elapsed_s, plan, progress_low/high, remaining_low_s/high_s, basis, history_tasks,
   history_scope, calibration) plus `held` (aaf's `_calibration()`, i.e. `estimate_accuracy` in `aaf.py stats`)
   and `available`, run in a subprocess with `aaf.PROJECTS` set to the served workspace, cached 15 s (a failed run too).
-  `server.CLOCK` (None: real time) pins "now" inside that subprocess, so checks get fixed numbers.
+  `control-room serve --clock <time>` pins "now" inside that subprocess, so checks get fixed numbers.
+  More endpoints of the app: `/api/workspaces` (+ `POST add|select|rename|remove`, and `pick` in the window),
+  `/api/settings` (Python path, notification switches; in the window also start at login) and `/api/events`
+  (what became true in any workspace, newest first).
 - **Git is the one exception to read-only.** Push and Pull run
   `<workspace>/framework/aaf.py git push|pull <name>`, never `git` directly. Writes are
   accepted only from the page itself: the request must come from this machine, carry the
   header `X-AAF-Request: control-room`, use a localhost `Host`, and any `Origin` must be
   this server. Pull is refused (409) while the project's agent is planning, implementing,
   checking, reviewing or fixing.
+- **The app** (`app/src/desktop.rs`, Tauri 2): one window, "Agent Control Room", showing the page through the
+  app's own protocol (`http://app.localhost/`, the same router, no network port). Closing it hides it to the tray
+  (dot on the icon while anything needs you, a menu per workspace, Quit); a second start shows the running
+  window (lock file in the settings folder); start at login via the autostart plugin (off by default).
+  `watch.rs` looks at every workspace every 5 s and raises events (waiting, decision, stuck, finished, failing),
+  each once; in the window they become system notifications whose click opens that project. Settings and the
+  workspace list live in `settings.json` in the app's settings folder (`%APPDATA%/Agent Control Room`;
+  `--config` for checks). Debug builds answer `/api/debug/tray` and `/api/debug/open` for `checks/desktop.py`.
+  `control-room serve [--root W] [--port N] [--clock ISO] [--config DIR]` is the same router over HTTP on
+  127.0.0.1, for the checks and GitHub Actions. `python3 build.py` makes the icons from `design/icon.svg`
+  (approved), raises the version and builds the per-user NSIS installer into `dist/`.
 - `index.html`: the whole front end in one file (HTML, CSS, vanilla JS). It polls the
   API every 2.5 s and re-renders only when the data changed. Layout and look follow the approved
   design in `design/DESIGN.md` (reference: `design/mockup.html`, `design/mockup-dark.png`): a left
@@ -57,9 +73,12 @@ includes people who do not know the code behind it.
 
 ## How to run
 
-From the workspace root: `python3 dashboard/server.py` (a shim that starts this one),
-or double-click `Open Dashboard.command`. Then http://localhost:8765.
-To view the fixtures: `python3 projects/control-room/server.py --root projects/control-room/fixtures/workspace --port 8770`.
+Install the app from the newest installer (`python3 build.py`, then `dist/Agent Control Room_<version>_x64-setup.exe`)
+and open it from the Start menu. For development: `cd app && cargo run` opens the window (add `-- --root <workspace>`
+to show one workspace for this run); `cargo run -- serve --root ../fixtures/workspace --port 8770` serves the fixtures
+at http://127.0.0.1:8770. Rust (rustup) is needed; `build.py` also needs the Tauri CLI
+(`cargo install tauri-cli --version "^2" --locked`). Until it is retired, `python3 dashboard/server.py` from the
+workspace root still starts the browser version.
 
 ## How to check
 
@@ -117,6 +136,23 @@ To view the fixtures: `python3 projects/control-room/server.py --root projects/c
    (`:root[data-palette="cb"]`), that the loop, live steps and timeline use them, and, simulating protanopia,
    deuteranopia and tritanopia, that every pair of the seven state colours is at least 12 apart (CIEDE2000)
    and 3:1 against the panel. It saves `plots/render-colourblind-*.png`, including deuteranopia simulations.
+12. **Rust core**: `cargo test` in `app/` (records, feed, reasons, caches with fake runners, the router and
+   write guards, workspaces and settings, the needs-you rule, tray model, events).
+13. **Same answers as before**: `checks/parity.py` compares every GET of `control-room serve` with `server.py` on
+   four workspaces, push and pull, the page on `server.py`, and scans `app/src` for a `git` command (until the
+   browser version is retired).
+14. **Desktop window**: `checks/desktop.py` (Windows) drives the real window over CDP: window and no port, all
+   fixtures, Push/Pull, restart memory, tray and dot, second start, hidden start, start at login, the
+   notification-click route, sideways scrolling in the real window. Saves `plots/render-desktop-*.png`.
+15. **Workspaces**: `checks/workspaces.py`: welcome, refusal, add, switch, rename, remove, restart, missing
+   folder, Python line, switcher and gear fit the rail.
+16. **Notifications**: `checks/notifications.py`: file changes on two workspace copies give one event each.
+17. **Installer**: `checks/installer.py`: the newest installer in `dist/` for the current version, per user,
+   Start-menu entry and desktop-icon hook, icons from `design/icon.svg` (run `python3 build.py` first).
+18. **Smoke check**: `checks/smoke.py`: `serve` on the fixtures without the framework tool (also on GitHub).
+
+GitHub Actions (`.github/workflows/build.yml`) runs the Rust tests, the build and the smoke check on Windows
+and macOS on every push and keeps the installer and the `.dmg`.
 
 The page is dark by default and ignores the browser's colour preference, so checks that need the
 light theme store the switch's choice first (`localStorage aaf.theme = light`).
@@ -170,7 +206,9 @@ sits in as the workspace, so this needs no changes to aaf.py.
 
 ## Do not touch
 
-- `server.py` must not write project files itself and must keep rejecting path traversal.
-  Its only change to a project is Git push/pull through `aaf.py`, behind the page-only checks.
-  Never call `git` from the server.
+- The app's core must not write project files itself (it writes only its own settings folder) and must
+  keep rejecting path traversal. Its only change to a project is Git push/pull through `aaf.py`, behind the
+  page-only checks. Never run `git` from the core (no `Command::new("git")` in `app/src`). The same holds
+  for `server.py` until it is retired.
+- Use the icon in `design/icon.svg` only as approved; a new design needs the human's approval again.
 - `framework/aaf.py` is outside this project; ask before changing the data model.

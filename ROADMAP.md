@@ -1,6 +1,6 @@
 # Control room roadmap
 
-Features agreed on 2026-10-14, 2026-10-15 and 2026-10-17. Each one is its own `/task`, in this order. All
+Features agreed on 2026-10-14, 2026-10-15, 2026-10-17 and 2026-11-24 (the desktop app). Each one is its own `/task`, in this order. All
 of them are to be built. When one is finished, mark it here (Status column), so the next session
 knows where to continue.
 
@@ -14,6 +14,7 @@ knows where to continue.
 | 6 | Instrument-panel redesign | Does everything important fit on one laptop screen? | `design/DESIGN.md`, `design/mockup.html`, `design/mockup-dark.png` (approved 2026-10-17) | Done (2026-10-17) |
 | 7 | Time estimate | How far along is the task, and how long is left? | `python3 framework/aaf.py estimate <project>`; plan steps in `state/plan.json`; accuracy in `aaf.py stats` → `estimate_accuracy` | Done (2026-10-19) |
 | 8 | Framework updates | Is a version on GitHub? Did I already answer Claude Code? How long did each test take? | `FRAMEWORK-UPDATES.md` (2026-10-19): `pushed` per commit in `aaf.py git info`; `done` / `error` / `you` records and `tool_use_id` in `state/activity.jsonl`; `duration_s` in `state/checks.json` | Done (2026-10-19) |
+| 9 | Desktop app | Can I keep an eye on the agents without a browser, and hear when one needs me? | `specs/desktop-app.md` (agreed 2026-11-24): the core of `server.py` in Rust (`app/`), its own window, workspaces, tray, notifications, installer, Mac build | Done (2026-11-25) |
 
 Shared requirements for all features: plain language, as visual as possible, calm and
 consistent with the existing design, detail on demand. Each feature gets fixtures for
