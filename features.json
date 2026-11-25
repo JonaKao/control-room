@@ -35,10 +35,10 @@
       "title": "Several workspaces",
       "criteria": "Welcome screen with folder picker on first start; non-workspace refused with a reason; switcher in the rail; add/rename/remove in settings; survives restart; missing folder shown as not found; Python path in settings; Workspaces check passes and layout.py still passes",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:28+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T00:55:58+01:00",
+      "evidence": "checks/workspaces.py (Workspaces): welcome, refusal with reason, add, switch within one poll, rename, remove, restart, missing folder as not found, Python line; desktop.py first start offers Choose a folder; layout.py passes; parity.py page on server.py; Rust tests in workspaces.rs/api.rs; 15/15; review PASS"
     },
     {
       "id": "F5",

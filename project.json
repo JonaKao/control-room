@@ -72,6 +72,11 @@
       "name": "Desktop window",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi",
       "timeout": 600
+    },
+    {
+      "name": "Workspaces",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/workspaces.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/workspaces.py; else python3 checks/workspaces.py; fi",
+      "timeout": 600
     }
   ]
 }

@@ -127,11 +127,17 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
 - `app/`: the desktop app being built (see `specs/desktop-app.md`), in Rust with Tauri. Its core is a
   port of `server.py` that answers the same questions in the same way. Run without arguments,
   `control-room` opens its own window, "Agent Control Room", which shows the page without a
-  browser and without opening a network port; it remembers its size and position.
-  `control-room serve --root <workspace>` runs the same core on this computer only, with no
+  browser and without opening a network port; it remembers its size and position. It can show
+  several workspaces, one at a time: on the first start a welcome screen asks for the workspace
+  folder ("Choose a folder…"), a switcher at the top of the list on the left changes between them,
+  and the gear opens the settings (add, rename and remove workspaces; which Python to use). The
+  list is kept in the app's own settings file, `settings.json` in its settings folder
+  (`--config <folder>` points it elsewhere, which the checks use).
+  `control-room serve [--root <workspace>]` runs the same core on this computer only, with no
   window, for the checks. The checks build it with Rust (`rustup`, then `cargo`), so Rust must be
   installed to run them. `checks/parity.py` confirms the core gives the same answers as
-  `server.py`, and `checks/desktop.py` opens the real window (on Windows) and checks it.
+  `server.py`, `checks/desktop.py` opens the real window (on Windows) and checks it, and
+  `checks/workspaces.py` goes through adding, switching, renaming and removing workspaces.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
   changed. Its colours and fonts are the tokens from the approved design.
@@ -185,6 +191,7 @@ Every change must pass these before it is committed:
 - **Rust core**: `cd app && PATH="$HOME/.cargo/bin:$PATH" cargo test --quiet`
 - **Same answers as before**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi`
 - **Desktop window**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi`
+- **Workspaces**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/workspaces.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/workspaces.py; else python3 checks/workspaces.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -192,6 +199,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F4: Several workspaces (3 attempts, review passed)
 - 2026-11-24: F3: Its own window (first try, review passed)
 - 2026-11-24: F2: All existing checks run against the Rust core (first try, review passed)
 - 2026-11-24: F1: Rust core gives the same answers as server.py (2 attempts, review passed)

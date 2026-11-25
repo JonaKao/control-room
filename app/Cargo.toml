@@ -22,6 +22,7 @@ form_urlencoded = "1"
 wait-timeout = "0.2"
 tauri = { version = "2", features = [] }
 tauri-plugin-window-state = "2"
+tauri-plugin-dialog = "2"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

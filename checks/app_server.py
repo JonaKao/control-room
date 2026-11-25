@@ -77,6 +77,45 @@ def rust_test(name):
 
 
 
+def write_file(path, data, tries=40, wait=0.25):
+    """Write bytes, waiting while another program briefly holds the file. On Windows a file that an
+    indexer, a virus scan or a picture preview has mapped cannot be truncated for a moment
+    (OSError, errno 22 or 13); the screenshots in plots/ hit that now and then."""
+    import time
+    for i in range(tries):
+        try:
+            with open(path, "wb") as f:
+                f.write(data)
+            return
+        except OSError as e:
+            if e.errno not in (13, 22) or i == tries - 1:
+                raise
+            time.sleep(wait)
+
+
+def _patch_screenshots():
+    """Every check imports this module: route Playwright's screenshot(path=...) through write_file."""
+    try:
+        from playwright.sync_api import ElementHandle, Locator, Page
+    except ImportError:
+        return
+    for cls in (Page, Locator, ElementHandle):
+        original = cls.screenshot
+        if getattr(original, "_waits_for_file", False):
+            continue
+
+        def screenshot(self, *args, _original=original, path=None, **kwargs):
+            data = _original(self, *args, **kwargs)
+            if path is not None:
+                write_file(os.fspath(path), data)
+            return data
+        screenshot._waits_for_file = True
+        cls.screenshot = screenshot
+
+
+_patch_screenshots()
+
+
 def get_json(base, path):
     """GET a JSON answer from a running core."""
     import json
@@ -92,7 +131,7 @@ class Served:
         exe = build()
         self.own_config = config is None
         self.config = config or tempfile.mkdtemp(prefix="aaf-config-")
-        args = [exe, "serve", "--root", root, "--port", "0", "--config", self.config] + list(extra)
+        args = [exe, "serve", "--port", "0", "--config", self.config] + (["--root", root] if root else []) + list(extra)
         if clock:
             args += ["--clock", clock]
         self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,

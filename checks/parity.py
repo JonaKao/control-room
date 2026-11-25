@@ -11,7 +11,8 @@ the page's header or from a foreign Origin or Host, 404 for unknown actions and 
 bad Content-Length, 409 for Pull while the agent works, and a working Push and Pull otherwise (the
 same codes and messages as server.py on a twin workspace).
 
-Finally, the core must never run git itself: no `Command::new("git")` in app/src.
+Finally, the core must never run git itself: no `Command::new("git")` in app/src; and the page, which
+the browser version still serves, must still work on server.py (no workspace list there).
 
 Allowed differences: none (ALLOWED below lists any, each recorded as a decision).
 Only until feature 10 (the browser version retired): it needs server.py.
@@ -310,6 +311,41 @@ def check_drive_names():
         shutil.rmtree(cwd, ignore_errors=True)
 
 
+def check_page_on_server_py():
+    """Until the browser version is retired (feature 10), the same page must still work on server.py,
+    which has no workspace list: it shows the projects, no switcher, and no JavaScript errors."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        problems.append("page on server.py: Playwright is not installed")
+        return
+    root = os.path.join(PROJECT, "fixtures", "workspace")
+    httpd, base = python_server(root)
+    want = sorted(n for n in os.listdir(os.path.join(root, "projects")) if not n.startswith("."))
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(base)
+            try:
+                page.wait_for_selector("main [data-section]", timeout=15000)
+            except Exception:
+                pass
+            got = sorted(page.eval_on_selector_all("#projects .proj[data-p]:not([data-workspace])", "els => els.map(e => e.dataset.p)"))
+            if got != want:
+                problems.append("page on server.py: the rail lists %s, expected the fixtures (%s)" % (got, page.inner_text("main")[:120]))
+            if page.is_visible("[data-ws-bar]"):
+                problems.append("page on server.py: a workspace switcher is shown, but server.py has no workspace list")
+            if errors:
+                problems.append("page on server.py: JavaScript errors: %s" % errors[:3])
+            browser.close()
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+
+
 def main():
     try:
         app_server.build()
@@ -331,6 +367,7 @@ def main():
         gw.remove_workspace(root)
     w = check_writes()
     check_drive_names()
+    check_page_on_server_py()
     f = check_no_git()
     if problems:
         print("FAIL: %d difference(s) between server.py and the Rust core:" % len(problems))

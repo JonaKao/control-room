@@ -2,6 +2,27 @@
 
 ## Current state
 
+- **Desktop app F4: several workspaces (2026-11-24)**: `workspaces.rs` keeps the list in `settings.json` (config
+  folder); the core shows the current one (`Core::with_workspaces`; `--root` only for the run). Endpoints
+  `/api/workspaces` (+ `add`, `select`, `rename`, `remove`, `pick` in the window) and `/api/settings` (Python path and
+  "Found: Python 3.x at ..."). Page: a workspace switcher at the top of the rail (name, list with "not found", "Add,
+  rename or remove…"), a gear opening the settings dialog (rename, remove, add by path or "Choose a folder…" in the app,
+  Python), a welcome screen on first start (what a workspace is), and a "folder was not found" screen. `serve` runs
+  without `--root` too. A folder counts as a workspace when it has `projects/` (decision: the fixtures have no aaf.py).
+  New check **Workspaces** (`checks/workspaces.py`, serve + page, two fixture copies): welcome, refusal, add, switch
+  within one poll, rename, remove, restart, missing folder, Python line and its contrast, switcher and gear fit the
+  rail at 1440 and 390 px; fails on the pre-F4 page. `checks/desktop.py` also checks the window's first start offers
+  "Choose a folder…". Fixed on the way: stale polls drawing the previous project after a click; the picture viewer's
+  dark text rule leaking into the settings dialog. Screenshots looked at: `render-workspaces-{welcome,switcher,settings,
+  missing,phone}.png`, `render-desktop-first-start.png`. Not automated: the system folder picker itself (a native
+  dialog); the button and `can_pick` are checked.
+  Review 2 FAIL: the page needed `/api/workspaces`, so on `server.py` (the browser version, live until F10) it stayed on
+  the welcome screen. Fixed in iteration 3: a 404 there means one workspace and no switcher; `checks/parity.py` now
+  opens the page on `server.py` and expects the nine fixtures and no switcher (failed before the fix). README updated
+  for F4 (its test asks for the switcher, settings, `--config` and `checks/workspaces.py`).
+  Also: screenshot writes in every check now wait up to 10 s when Windows briefly holds the PNG (OSError errno
+  22/13 broke three full runs); `checks/app_server.py` routes Playwright's `screenshot(path=...)` through
+  `write_file` (decision recorded, reviewed PASS).
 - **Desktop app F3: its own window (2026-11-24)**: `app/` is now a Tauri 2 app. `control-room` (no `serve`) opens
   one window, "Agent Control Room", 1280 x 800 the first time, showing the page from the app's own protocol
   (`http://app.localhost/`, `desktop.rs` answers with the same `Core::get`/`Core::post` as `serve`; writes need the
@@ -266,11 +287,14 @@
 
 ## Next
 
+- F4 review notes, for the human to decide: the welcome text says a workspace holds both
+  framework and projects although only projects is required; unit-test cores read %TEMP%/settings.json if one exists;
+  the rail sub-line and long workspace names are cut off at 1440 px.
 - F2 review notes, for the human to decide: `ChangeMapApiTest.test_cached_unless_fresh` commits to the shared
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F4: several workspaces (welcome screen, switcher, settings). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+- Desktop app, next feature F5: tray and background (close to tray, tray menu, single instance, start at login). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,

@@ -8,7 +8,7 @@ use tauri::http::{header, Request, Response, StatusCode};
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 
 use crate::aaf::{Aaf, PythonRunner};
-use crate::api::{post_action, Resp, MAX_BODY, WRITE_HEADER};
+use crate::api::{is_write_path, Resp, MAX_BODY, WRITE_HEADER};
 use crate::{fallback_aaf, workspaces, Core};
 
 pub const TITLE: &str = "Agent Control Room";
@@ -28,6 +28,30 @@ fn to_response(r: Resp) -> Response<Vec<u8>> {
         .unwrap()
 }
 
+fn has_header(req: &Request<Vec<u8>>) -> bool {
+    req.headers().get(WRITE_HEADER.0).and_then(|v| v.to_str().ok()) == Some(WRITE_HEADER.1)
+}
+
+/// "Choose a folder…": the system folder picker; the chosen folder is added and shown.
+fn pick_folder(app: &tauri::AppHandle, core: &Core) -> Resp {
+    use tauri_plugin_dialog::DialogExt;
+    let Some(folder) = app.dialog().file().set_title("Choose your workspace folder").blocking_pick_folder() else {
+        return Resp::json(&serde_json::json!({"ok": false, "cancelled": true}), 200);
+    };
+    let path = match folder.into_path() {
+        Ok(p) => p,
+        Err(_) => return Resp::json(&serde_json::json!({"ok": false, "message": "That folder cannot be used."}), 400),
+    };
+    match core.workspaces.add(&path, None) {
+        Ok(_) => {
+            let mut w = core.workspaces_json();
+            w["ok"] = serde_json::json!(true);
+            Resp::json(&w, 200)
+        }
+        Err(message) => Resp::json(&serde_json::json!({"ok": false, "message": message}), 400),
+    }
+}
+
 /// A request from the window. The window is the only thing that can reach this protocol, but
 /// writes still need the page's header, as over HTTP.
 pub fn answer(core: &Core, req: &Request<Vec<u8>>) -> Resp {
@@ -36,11 +60,10 @@ pub fn answer(core: &Core, req: &Request<Vec<u8>>) -> Resp {
     match req.method().as_str() {
         "GET" => core.get(&path, &query),
         "POST" => {
-            if post_action(&path).is_none() {
+            if !is_write_path(&path) {
                 return Resp::not_found();
             }
-            let ok = req.headers().get(WRITE_HEADER.0).and_then(|v| v.to_str().ok()) == Some(WRITE_HEADER.1);
-            if !ok {
+            if !has_header(req) {
                 return Resp::json(&serde_json::json!({"ok": false, "message": "Only the Control Room page may do this."}), 403);
             }
             if req.body().len() > MAX_BODY {
@@ -52,28 +75,30 @@ pub fn answer(core: &Core, req: &Request<Vec<u8>>) -> Resp {
     }
 }
 
-fn default_root() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    crate::aaf::find_workspace(exe.parent()?)
-        .or_else(|| crate::aaf::find_workspace(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))))
-}
-
 pub fn run(opts: Options) {
     let settings = workspaces::load_settings(&opts.config);
     let runner = PythonRunner::new(workspaces::python_path(&settings));
-    // Until workspaces are chosen in the app (feature 4): --root, else the workspace this program
-    // runs from or was built in.
-    let root = opts.root.clone().or_else(default_root).unwrap_or_else(|| PathBuf::from("."));
-    let core = Arc::new(Core::new(root, Aaf::new(Box::new(runner), None, fallback_aaf()), opts.config.clone()));
+    let mut core = Core::with_workspaces(opts.root.clone(), Aaf::new(Box::new(runner), None, fallback_aaf()), opts.config.clone());
+    core.can_pick = true;
+    let core = Arc::new(core);
     let proto_core = core.clone();
     let config = opts.config.clone();
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default()
             .with_filename(config.join("window-state.json").to_string_lossy())
             .build())
-        .register_asynchronous_uri_scheme_protocol("app", move |_ctx, req, responder| {
+        .plugin(tauri_plugin_dialog::init())
+        .register_asynchronous_uri_scheme_protocol("app", move |ctx, req, responder| {
             let core = proto_core.clone();
-            std::thread::spawn(move || responder.respond(to_response(answer(&core, &req))));
+            let app = ctx.app_handle().clone();
+            std::thread::spawn(move || {
+                let r = if req.method() == "POST" && req.uri().path() == "/api/workspaces/pick" && has_header(&req) {
+                    pick_folder(&app, &core)
+                } else {
+                    answer(&core, &req)
+                };
+                responder.respond(to_response(r))
+            });
         })
         .setup(move |app| {
             let url = WebviewUrl::CustomProtocol("app://localhost/".parse().unwrap());

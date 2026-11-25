@@ -12,7 +12,8 @@ connects Playwright with connect_over_cdp, so what is checked is the window itse
   the Push button sends the commits, Pull brings the newer one, Pull is refused (409) while the agent
   works, and a write without the page's header is refused (403);
 - the theme and colour-blind choices, and the window's size and position, survive closing and
-  restarting the app.
+  restarting the app;
+- with no workspace yet, the window welcomes and offers the system folder picker ("Choose a folder…").
 Screenshots: plots/render-desktop-*.png.
 """
 import ctypes
@@ -92,10 +93,11 @@ def listening_ports(pid):
 class App:
     """The running app, its window and its page over CDP."""
 
-    def __init__(self, pw, root, config):
+    def __init__(self, pw, root, config, first_start=False):
         self.port = free_port()
         env = dict(os.environ, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=%d" % self.port)
-        self.proc = subprocess.Popen([app_server.EXE, "--root", root, "--config", config], env=env,
+        args = [app_server.EXE, "--config", config] + (["--root", root] if root else [])
+        self.proc = subprocess.Popen(args, env=env,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.time() + 40
         while True:
@@ -117,11 +119,14 @@ class App:
         self.page.on("pageerror", lambda e: self.errors.append(str(e)))
         self.page.on("console", lambda m: self.errors.append(m.text)
                      if m.type == "error" and not m.text.startswith("Failed to load resource") else None)
-        self.page.wait_for_selector("#projects .proj", timeout=20000)
-        try:  # the first project's detail, not just the rail
-            self.page.wait_for_selector("main [data-section]", timeout=30000)
-        except Exception:
-            problems.append("the window showed the project list but no project in 30 s")
+        if first_start:
+            self.page.wait_for_selector("[data-ws-welcome]", timeout=20000)
+        else:
+            self.page.wait_for_selector("#projects .proj", timeout=20000)
+            try:  # the first project's detail, not just the rail
+                self.page.wait_for_selector("main [data-section]", timeout=30000)
+            except Exception:
+                problems.append("the window showed the project list but no project in 30 s")
         self.page.wait_for_timeout(500)
         deadline = time.time() + 10
         while not self.windows() and time.time() < deadline:
@@ -135,7 +140,13 @@ class App:
         self.page.click('#projects .proj[data-p="%s"]' % name)
         self.page.wait_for_function("n => (document.querySelector('#projects .proj[aria-current=\"true\"]') || {}).dataset?.p === n",
                                     arg=name, timeout=15000)
-        self.page.wait_for_timeout(800)
+        # Its first opening runs aaf.py for the timeline and estimate: wait for the project itself, not a fixed time.
+        try:
+            self.page.wait_for_function("n => !!document.querySelector('main [data-section]')"
+                                        " && document.querySelector('main').innerText.includes(n)", arg=name, timeout=20000)
+        except Exception:
+            pass  # the caller reports what the window shows
+        self.page.wait_for_timeout(300)
 
     def current(self):
         return self.page.evaluate("(document.querySelector('#projects .proj[aria-current=\"true\"]') || {dataset: {}}).dataset.p")
@@ -295,6 +306,26 @@ def check_restart(pw, config, first):
         second.close()
 
 
+def check_first_start(pw):
+    """No workspace yet: the window welcomes and offers the system folder picker ("Choose a folder…")."""
+    config = tempfile.mkdtemp(prefix="aaf-desktop-")
+    app = None
+    try:
+        app = App(pw, None, config, first_start=True)
+        pick = app.page.query_selector("[data-ws-welcome=first] [data-ws-pick]")
+        if not pick or "Choose a folder" not in pick.inner_text() or not pick.is_visible():
+            problems.append("first start: the window offers no 'Choose a folder…' button")
+        if not app.page.evaluate("fetch('/api/workspaces').then(r => r.json()).then(d => d.can_pick === true)"):
+            problems.append("first start: the window says it has no folder picker")
+        app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-first-start.png"))
+        if app.errors:
+            problems.append("first start: JavaScript errors: %s" % app.errors[:3])
+    finally:
+        if app:
+            app.close()
+        shutil.rmtree(config, ignore_errors=True)
+
+
 def main():
     if os.name != "nt":
         print("SKIP: the desktop window check runs on Windows (WebView2)")
@@ -319,6 +350,7 @@ def main():
             finally:
                 app.close()
             check_git(pw)
+            check_first_start(pw)
     except Exception as e:
         problems.append("the window check stopped: %s" % str(e).splitlines()[0])
     finally:

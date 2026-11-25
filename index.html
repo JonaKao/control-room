@@ -433,8 +433,8 @@ p.rec-held { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .plot figcaption span:last-child { color: var(--muted); white-space: nowrap; }
 dialog { border: 0; padding: 0; border-radius: 12px; max-width: 92vw; max-height: 92vh; background: var(--plot-bg); }
 dialog::backdrop { background: var(--backdrop); }
-dialog img { display: block; max-width: 92vw; max-height: 86vh; }
-dialog p { margin: 0; padding: 8px 14px; font-size: 13px; color: var(--plot-ink); }
+#lightbox img { display: block; max-width: 92vw; max-height: 86vh; }
+#lightbox p { margin: 0; padding: 8px 14px; font-size: 13px; color: var(--plot-ink); }
 
 /* More detail */
 .more { padding: 0; }
@@ -526,6 +526,46 @@ details[open] > summary .chev { transform: rotate(45deg); }
 .commit-detail .why { color: var(--muted); font-size: 12.5px; }
 .hint-pick { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
 
+/* Workspaces: the switcher at the top of the rail, its list, the settings panel and the first-start screen. */
+.ws-bar { display: flex; gap: 6px; margin: -4px 4px 14px; }
+.ws-bar[hidden], #ws-menu[hidden] { display: none; }
+#ws-switch { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--rule);
+  border-radius: 7px; padding: 4px 8px; cursor: pointer; text-align: left; height: 30px; }
+#ws-switch .wsl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; flex: none; }
+#ws-switch .wsn { flex: 1; min-width: 0; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ws-switch[data-found="no"] .wsn { color: var(--fail); }
+#ws-switch svg, #gear svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+#gear { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 30px; height: 30px; padding: 0; cursor: pointer; flex: none; display: grid; place-items: center; }
+#gear:hover svg, #ws-switch:hover svg { color: var(--ink); }
+#ws-menu { margin: -10px 4px 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 4px; }
+#ws-menu button { display: flex; align-items: baseline; gap: 8px; width: 100%; background: none; border: 0; border-radius: 6px; padding: 6px 8px; cursor: pointer; text-align: left; }
+#ws-menu button:hover { background: var(--panel2); }
+#ws-menu .wn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ws-menu [aria-checked="true"] .wn { font-weight: 700; }
+#ws-menu [data-ws-manage] { color: var(--accent); border-top: 1px solid var(--grid); border-radius: 0 0 6px 6px; }
+.ws-missing { color: var(--fail); font-size: 11.5px; font-weight: 600; }
+.ws-path { font: 11.5px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.ws-error { color: var(--fail); font-size: 13px; margin: 6px 0 0; }
+.ws-add { margin-top: 14px; }
+.ws-add .or { color: var(--muted); font-size: 13px; margin-left: 10px; }
+.ws-add label { display: block; font-size: 13px; color: var(--muted); }
+.ws-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.settings input[type="text"], .welcome input[type="text"] { flex: 1; min-width: 0; font: 13px var(--sans); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px; }
+.btn { background: var(--panel2); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: 13px; flex: none; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+dialog.settings { background: var(--panel); color: var(--ink); width: min(600px, 94vw); padding: 18px 20px 20px; border: 1px solid var(--rule); }
+.settings .s-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.settings h2 { font: 700 20px var(--cond); margin: 0; }
+.settings h3 { font: 700 13px var(--cond); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 18px 0 4px; }
+.settings h4 { font-size: 13px; margin: 14px 0 0; }
+.settings .hint { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.settings section > p { font-size: 13px; }
+.ws-edit { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 8px 0; border-top: 1px solid var(--grid); }
+.ws-edit .ws-path, .ws-edit .ws-error { grid-column: 1 / -1; }
+.ws-edit label { display: flex; min-width: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .welcome { grid-column: 1 / -1; max-width: 60ch; padding-top: 10vh; }
 .welcome h2 { font: 700 30px var(--cond); margin: 0 0 12px; }
 .welcome ol { padding-left: 20px; }
@@ -538,6 +578,8 @@ details[open] > summary .chev { transform: rotate(45deg); }
   .app { grid-template-columns: minmax(0, 1fr); }
   .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 12px 16px 10px; }
   .brand { margin: 0 0 8px; }
+  .ws-bar { margin: 0 0 8px; }
+  #ws-menu { margin: -4px 0 8px; }
   .rail .sub, .group-label, .proj .meta, .proj .mini, .fleet-words { display: none; }
   .fleet { margin: 0 0 8px; gap: 5px; }
   .fleet > div { padding: 5px 7px; display: flex; align-items: baseline; gap: 5px; }
@@ -577,12 +619,18 @@ details[open] > summary .chev { transform: rotate(45deg); }
     <div class="brand"><span class="logo" aria-hidden="true"></span><div class="bt"><h1>Agent Control Room</h1><span class="sub" id="rail-sub">What each project's agent is doing, live</span></div>
       <button id="palette" type="button" aria-pressed="false" aria-label="Colour-blind friendly colours" title="Colour-blind friendly colours"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.2 8s2.5-4.6 6.8-4.6S14.8 8 14.8 8s-2.5 4.6-6.8 4.6S1.2 8 1.2 8z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/></svg></button>
       <button id="theme" type="button" aria-label="Switch between light and dark" title="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4z" fill="currentColor"/></svg></button></div>
+    <div class="ws-bar" data-ws-bar>
+      <button id="ws-switch" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="ws-menu"><span class="wsl">Workspace</span><span class="wsn">…</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="gear" type="button" aria-label="Settings" title="Settings: workspaces and Python"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div id="ws-menu" role="menu" aria-label="Workspaces" hidden></div>
     <div id="overview"></div>
     <div id="projects"></div>
   </nav>
   <main id="main" aria-live="polite"></main>
 </div>
 <dialog id="lightbox"><img alt=""><p></p></dialog>
+<dialog id="settings" class="settings" aria-labelledby="settings-title"><div class="s-head"><h2 id="settings-title">Settings</h2><button type="button" class="btn" data-settings-close>Close</button></div><div class="s-body"></div></dialog>
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
@@ -1797,20 +1845,209 @@ function select(name) {
   tick();
 }
 
+// ---- Workspaces: several folders of the framework, one shown at a time. The list lives in the app's
+// settings (/api/workspaces); the switcher sits at the top of the rail, the gear opens the settings.
+let wsInfo = null, wsSig = "", wsMenuOpen = false, settingsData = null;
+const examplePath = navigator.platform.startsWith("Win") ? "C:\\Users\\you\\Agentic AI Framework" : "/Users/you/Agentic AI Framework";
+
+async function wsPost(path, body) {
+  try {
+    const res = await fetch(path, { method: "POST",
+      headers: { "Content-Type": "application/json", "X-AAF-Request": "control-room" }, body: JSON.stringify(body || {}) });
+    const d = await res.json().catch(() => ({}));
+    return { ok: res.ok && d.ok !== false, d };
+  } catch (e) { return { ok: false, d: { message: "The app did not answer." } }; }
+}
+function wsCurrent() { return ((wsInfo && wsInfo.workspaces) || []).find(w => w.current) || null; }
+async function loadWorkspaces() {
+  const res = await fetch("/api/workspaces");
+  if (res.status === 404) {
+    // A server without a workspace list (the browser version, server.py): one workspace, no switcher.
+    if (!wsInfo || !wsInfo.single) { wsInfo = { single: true, workspaces: [] }; wsSig = ""; $("[data-ws-bar]").hidden = true; }
+    return;
+  }
+  const text = await res.text();
+  if (text === wsSig) return;
+  wsInfo = JSON.parse(text); wsSig = text;
+  $("[data-ws-bar]").hidden = false;
+  renderSwitcher();
+  if ($("#settings").open) renderSettings();
+}
+function renderSwitcher() {
+  const cur = wsCurrent();
+  $("#ws-switch .wsn").textContent = cur ? cur.name : "None yet";
+  $("#ws-switch").title = cur ? cur.path + (cur.found ? "" : " (not found)") : "Choose a workspace folder";
+  $("#ws-switch").dataset.found = cur && !cur.found ? "no" : "yes";
+  renderWsMenu();
+}
+function renderWsMenu() {
+  const m = $("#ws-menu");
+  m.hidden = !wsMenuOpen;
+  $("#ws-switch").setAttribute("aria-expanded", wsMenuOpen ? "true" : "false");
+  if (!wsMenuOpen) return;
+  const list = (wsInfo && wsInfo.workspaces) || [];
+  m.innerHTML = list.map(w => `<button type="button" role="menuitemradio" aria-checked="${w.current}" data-ws-path="${esc(w.path)}" title="${esc(w.path)}">
+      <span class="wn">${esc(w.name)}</span>${w.found ? "" : `<span class="ws-missing" data-ws-missing>not found</span>`}</button>`).join("")
+    + `<button type="button" role="menuitem" data-ws-manage>${list.length ? "Add, rename or remove…" : "Add a workspace…"}</button>`;
+}
+$("#ws-switch").addEventListener("click", () => { wsMenuOpen = !wsMenuOpen; renderWsMenu(); });
+$("#ws-menu").addEventListener("click", async e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  wsMenuOpen = false; renderWsMenu();
+  if (b.hasAttribute("data-ws-manage")) return openSettings();
+  if (b.getAttribute("aria-checked") !== "true") {
+    const r = await wsPost("/api/workspaces/select", { path: b.dataset.wsPath });
+    if (r.ok) afterWorkspaceChange();
+  }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && wsMenuOpen) { wsMenuOpen = false; renderWsMenu(); $("#ws-switch").focus(); } });
+$("#gear").addEventListener("click", openSettings);
+$("#settings").addEventListener("click", e => { if (e.target.closest("[data-settings-close]") || e.target === e.currentTarget) $("#settings").close(); });
+
+// Another workspace is shown: forget everything about the old one and ask again at once.
+function afterWorkspaceChange() {
+  current = null; lastProjects = ""; lastDetail = ""; fleetRecord = null; lastList = [];
+  gitData = null; gitFor = null; gitPick = null; gitMsg = null; ttPick = null; recPick = null;
+  mapData = null; mapFor = null; mapPick = null;
+  try { localStorage.removeItem("aaf.project"); } catch (e) {}
+  history.replaceState(null, "", location.pathname + location.search);
+  wsSig = "";
+  tick();
+}
+
+function addForm(can) {
+  return `<div class="ws-add" data-ws-add>
+    ${can ? `<button type="button" class="btn primary" data-ws-pick>Choose a folder…</button><span class="or">or type where it is:</span>` : ""}
+    <label>${can ? `<span class="sr">The folder's place on this computer</span>` : "Where is the folder on this computer?"}
+      <span class="ws-add-row"><input type="text" data-ws-add-path placeholder="${esc(examplePath)}" spellcheck="false" autocomplete="off">
+      <button type="button" class="btn" data-ws-add-go>Add</button></span></label>
+    <p class="ws-error" data-ws-error role="alert" hidden></p></div>`;
+}
+function wsError(box, text) {
+  const el = box && $("[data-ws-error]", box);
+  if (!el) return;
+  el.hidden = !text; el.textContent = text || "";
+}
+
+// First start (no workspace yet), or the shown workspace's folder is gone.
+function welcomeWorkspace(missing) {
+  const can = wsInfo && wsInfo.can_pick;
+  $("#main").innerHTML = `<div class="welcome" data-ws-welcome="${missing ? "missing" : "first"}">
+    ${missing ? `<h2>This workspace's folder was not found</h2>
+      <p>The folder of <b>${esc(missing.name)}</b> is no longer at <span class="ws-path">${esc(missing.path)}</span>. It may have
+      been moved or renamed, or it is on a drive that is not plugged in. Pick another workspace at the top of the list on the left,
+      or add the folder from its new place.</p>`
+    : `<h2>Welcome to the Agent Control Room</h2>
+      <p>This app shows, live, what the coding agent in each of your projects is doing and whether anything needs you.</p>
+      <p>First it needs your <b>workspace</b>: the folder of the Agentic AI Framework on this computer. It holds a folder called
+      <i>framework</i> and a folder called <i>projects</i>, with one folder per project. You can add more workspaces later.</p>`}
+    ${addForm(can)}</div>`;
+}
+
+async function openSettings() {
+  renderSettings();
+  if (!$("#settings").open) $("#settings").showModal();
+  try { settingsData = await (await fetch("/api/settings")).json(); } catch (e) { settingsData = null; }
+  renderPython();  // only the Python part: the rest may already hold what the person typed
+}
+function pythonLine(s) {
+  return !s ? "Looking for Python…" : s.python_found ? `Found: ${esc(s.python_found)}`
+    : `<span class="ws-missing">No Python 3 found.</span> Install Python 3, or type where python is above.`;
+}
+function renderPython() {
+  const line = $("#settings [data-python-found]"), input = $("#settings [data-python-path]");
+  if (line) line.innerHTML = pythonLine(settingsData);
+  if (input && document.activeElement !== input) input.value = settingsData ? settingsData.python : "";
+}
+function renderSettings() {
+  const list = (wsInfo && wsInfo.workspaces) || [];
+  const s = settingsData;
+  $("#settings .s-body").innerHTML = `
+    <section data-settings="workspaces"><h3>Workspaces</h3>
+      <p class="hint">Each workspace is a folder of the Agentic AI Framework. One is shown at a time: switch at the top of the list on the left.
+      Removing one here only takes it off this list; its folder stays as it is.</p>
+      ${list.map(w => `<div class="ws-edit" data-ws-row="${esc(w.path)}">
+          <label><span class="sr">Name of ${esc(w.name)}</span><input type="text" value="${esc(w.name)}" data-ws-name maxlength="60" spellcheck="false"></label>
+          <button type="button" class="btn" data-ws-rename-go>Rename</button><button type="button" class="btn" data-ws-remove>Remove</button>
+          <div class="ws-path">${esc(w.path)}${w.found ? "" : ` · <span class="ws-missing">not found</span>`}${w.current ? " · shown now" : ""}</div>
+          <p class="ws-error" data-ws-error role="alert" hidden></p></div>`).join("") || `<p>No workspace yet.</p>`}
+      <h4>Add a workspace</h4>${addForm(wsInfo && wsInfo.can_pick)}</section>
+    <section data-settings="python"><h3>Python</h3>
+      <p class="hint">The task timeline, the time estimate, Git and the change map come from the framework's own tool, which needs Python 3.
+      Leave this empty to let the app find it.</p>
+      <div class="ws-add-row"><label class="sr" for="python-path">Python to use</label>
+        <input type="text" id="python-path" data-python-path value="${esc(s ? s.python : "")}" placeholder="Found by itself" spellcheck="false">
+        <button type="button" class="btn" data-python-go>Save</button></div>
+      <p data-python-found>${pythonLine(s)}</p></section>`;
+}
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-ws-pick],[data-ws-add-go],[data-ws-remove],[data-ws-rename-go],[data-python-go]");
+  if (!t) return;
+  const box = t.closest("[data-ws-row],[data-ws-add],[data-settings]");
+  let r;
+  if (t.hasAttribute("data-ws-pick")) {
+    r = await wsPost("/api/workspaces/pick");
+    if (r.d.cancelled) return;
+  } else if (t.hasAttribute("data-ws-add-go")) {
+    const path = $("[data-ws-add-path]", box).value.trim();
+    if (!path) return wsError(box, "Type where the folder is first.");
+    r = await wsPost("/api/workspaces/add", { path });
+  } else if (t.hasAttribute("data-ws-remove")) {
+    r = await wsPost("/api/workspaces/remove", { path: box.dataset.wsRow });
+  } else if (t.hasAttribute("data-ws-rename-go")) {
+    r = await wsPost("/api/workspaces/rename", { path: box.dataset.wsRow, name: $("[data-ws-name]", box).value });
+    if (!r.ok) return wsError(box, r.d.message || "That did not work.");
+    wsSig = ""; await loadWorkspaces(); renderSettings();
+    return;
+  } else {
+    r = await wsPost("/api/settings", { python: $("[data-python-path]", box).value });
+    if (r.ok) { settingsData = r.d; renderPython(); }
+    return;
+  }
+  if (!r.ok) return wsError(box, r.d.message || "That did not work.");
+  afterWorkspaceChange();
+  await loadWorkspaces();
+  if ($("#settings").open) renderSettings();
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const input = e.target.closest("[data-ws-add-path],[data-ws-name],[data-python-path]");
+  if (!input) return;
+  e.preventDefault();
+  const row = input.closest("[data-ws-add],[data-ws-row],[data-settings]");
+  const go = row && $("[data-ws-add-go],[data-ws-rename-go],[data-python-go]", row);
+  if (go) go.click();
+});
+
 async function tick() {
   try {
+    await loadWorkspaces();
+    const ws = wsCurrent();
+    if (!wsInfo.single && (!ws || !ws.found)) {
+      // No workspace yet, or its folder is gone: an empty rail and the screen that says what to do.
+      if (lastProjects !== "none") { lastProjects = "none"; current = null; renderRail([]); }
+      $("#rail-sub").textContent = ws ? "Its folder was not found" : "No workspace chosen yet";
+      const sig = "ws|" + (ws ? ws.path : "");
+      if (lastDetail !== sig) { lastDetail = sig; welcomeWorkspace(ws); }
+      return;
+    }
     const list = await (await fetch("/api/projects")).json();
     const sig = JSON.stringify(list);
     if (sig !== lastProjects) { lastProjects = sig; if ((current !== WS || !list.length) && !list.some(p => p.name === current)) current = list[0]?.name || null; renderRail(list); loadFleet(); }
     if (!current) { welcome(); return; }
     if (current === WS) {
       const w = await (await fetch("/api/record")).text();
+      if (current !== WS) return;
       if (w !== lastDetail) { lastDetail = w; renderWorkspace(JSON.parse(w)); }
       return;
     }
-    const res = await fetch("/api/project?name=" + encodeURIComponent(current));
+    const asked = current;
+    const res = await fetch("/api/project?name=" + encodeURIComponent(asked));
     if (!res.ok) return;
     const text = await res.text();
+    if (asked !== current) return;  // another project was picked meanwhile: never draw the old one over it
     // While a task runs, redraw every 30 s even without new data, so "gone quiet" can appear.
     // Otherwise leave the page alone: a redraw would drop text the reader has selected.
     let running = false;

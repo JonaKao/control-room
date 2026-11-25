@@ -54,12 +54,18 @@ pub struct Output {
 pub trait Runner: Send + Sync {
     /// `python <args...>` in `cwd`, killed after `timeout`.
     fn python(&self, args: &[String], cwd: &Path, timeout: Duration, env: &[(&str, &str)]) -> Output;
+    /// "Python 3.12.10 at C:\...\python.exe", or None when no Python 3 was found.
+    fn describe(&self) -> Option<String> {
+        None
+    }
+    /// Use this Python from now on (None: look for one).
+    fn set_python(&self, _path: Option<String>) {}
 }
 
 /// The real runner: finds Python once (the configured path, then python3, python, py -3).
 pub struct PythonRunner {
     configured: Mutex<Option<String>>,
-    found: Mutex<Option<Option<Vec<String>>>>,
+    found: Mutex<Option<Option<(Vec<String>, String)>>>,
 }
 
 impl PythonRunner {
@@ -85,8 +91,11 @@ impl PythonRunner {
         c
     }
 
-    /// The command that starts Python 3, and its version line ("Python 3.12.10").
+    /// The command that starts Python 3, and what was found ("Python 3.12.10 at C:\...\python.exe"). A chosen
+    /// Python that does not start is skipped (the next one is used), and the description says so.
     pub fn find(&self) -> Option<(Vec<String>, String)> {
+        let chosen = self.configured.lock().unwrap().clone().filter(|p| !p.trim().is_empty());
+        let mut skipped = false;
         for cand in self.candidates() {
             let mut cmd = Command::new(&cand[0]);
             cmd.args(&cand[1..]).arg("-c").arg("import sys; print('Python %d.%d.%d' % sys.version_info[:3]); print(sys.executable)");
@@ -96,22 +105,41 @@ impl PythonRunner {
                 let mut lines = out.out.lines();
                 let version = lines.next().unwrap_or("").to_string();
                 let exe = lines.next().unwrap_or("").trim().to_string();
-                return Some((cand, if exe.is_empty() { version } else { format!("{} at {}", version, exe) }));
+                let mut d = if exe.is_empty() { version } else { format!("{} at {}", version, exe) };
+                if skipped {
+                    d.push_str(&format!(" (the Python you chose, {}, did not start)", chosen.clone().unwrap_or_default()));
+                }
+                return Some((cand, d));
+            }
+            if chosen.as_deref() == Some(cand[0].as_str()) {
+                skipped = true;
             }
         }
         None
     }
 
-    fn command(&self) -> Option<Vec<String>> {
+    fn found(&self) -> Option<(Vec<String>, String)> {
         let mut found = self.found.lock().unwrap();
         if found.is_none() {
-            *found = Some(self.find().map(|(c, _)| c));
+            *found = Some(self.find());
         }
         found.clone().unwrap()
+    }
+
+    fn command(&self) -> Option<Vec<String>> {
+        self.found().map(|(c, _)| c)
     }
 }
 
 impl Runner for PythonRunner {
+    fn describe(&self) -> Option<String> {
+        self.found().map(|(_, d)| d)
+    }
+
+    fn set_python(&self, path: Option<String>) {
+        self.set_configured(path);
+    }
+
     fn python(&self, args: &[String], cwd: &Path, timeout: Duration, env: &[(&str, &str)]) -> Output {
         let Some(py) = self.command() else {
             return Output { code: None, out: String::new(), err: "Python 3 was not found on this computer".into() };
@@ -621,6 +649,13 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    /// Tests that measure time, and tests that start Python, take turns: run side by side, the
+    /// Python starts could delay the 150 ms steps of the timing tests on a busy machine.
+    static TURNS: Mutex<()> = Mutex::new(());
+    fn turn() -> std::sync::MutexGuard<'static, ()> {
+        TURNS.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     #[test]
     fn iso_times_compare_across_offsets() {
         let a = when(&json!("2026-10-14T09:30:00+01:00")).unwrap();
@@ -797,6 +832,7 @@ mod tests {
 
     #[test]
     fn concurrent_git_info_requests_run_aaf_once() {
+        let _turn = turn();
         let (a, calls, ws) = slow(500);
         let hs: Vec<_> = (0..5).map(|_| ask(&a, ws.path(), false, 0)).collect();
         for h in hs {
@@ -807,6 +843,7 @@ mod tests {
 
     #[test]
     fn fetch_slower_than_cache_life_still_runs_once() {
+        let _turn = turn();
         let (a, calls, ws) = slow(500);
         a.times.lock().unwrap().git = Duration::from_millis(200);
         let started = Instant::now();
@@ -820,6 +857,7 @@ mod tests {
 
     #[test]
     fn fresh_request_does_not_reuse_a_run_that_started_before_it() {
+        let _turn = turn();
         let (a, calls, ws) = slow(500);
         let first = ask(&a, ws.path(), false, 0);
         let second = ask(&a, ws.path(), true, 150);
@@ -830,6 +868,7 @@ mod tests {
 
     #[test]
     fn fresh_request_reuses_a_run_that_started_after_it() {
+        let _turn = turn();
         let (a, calls, ws) = slow(500);
         let x = ask(&a, ws.path(), false, 0);
         let y = ask(&a, ws.path(), true, 150);
@@ -842,6 +881,7 @@ mod tests {
 
     #[test]
     fn pull_refused_while_working_and_one_action_at_a_time() {
+        let _turn = turn();
         let ws = workspace();
         std::fs::write(ws.path().join("projects/p/state/status.json"), "{\"phase\": \"checking\"}").unwrap();
         let (a, calls) = fake(|_| ok(""));
@@ -867,7 +907,21 @@ mod tests {
     }
 
     #[test]
+    fn a_chosen_python_that_does_not_start_is_said() {
+        let _turn = turn();
+        let r = PythonRunner::new(Some("C:/no/such/python.exe".into()));
+        if let Some((_, d)) = r.find() {
+            assert!(d.starts_with("Python 3.") && d.contains("did not start") && d.contains("C:/no/such/python.exe"), "{d}");
+        }
+        let plain = PythonRunner::new(None);
+        if let Some((_, d)) = plain.find() {
+            assert!(!d.contains("did not start"), "{d}");
+        }
+    }
+
+    #[test]
     fn python_snippets_compile() {
+        let _turn = turn();
         assert!(ESTIMATE_CODE.contains("\n    at = real.datetime"), "indentation kept");
         let r = PythonRunner::new(None);
         if r.find().is_none() {
@@ -882,6 +936,7 @@ mod tests {
 
     #[test]
     fn subprocess_time_limit() {
+        let _turn = turn();
         let mut cmd = if cfg!(windows) { let mut c = Command::new("cmd"); c.args(["/C", "ping -n 5 127.0.0.1 >NUL"]); c }
                       else { let mut c = Command::new("sleep"); c.arg("5"); c };
         cmd.stdout(Stdio::piped());

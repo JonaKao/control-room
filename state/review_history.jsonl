@@ -17,3 +17,5 @@
 {"at": "2026-11-24T21:21:29+01:00", "verdict": "pass", "summary": "F1 meets the spec; review-1 fixes in place; 13/13 checks pass; 4 notes"}
 {"at": "2026-11-24T21:59:57+01:00", "verdict": "pass", "summary": "Checks and tests run on the Rust core, nothing imports server.py, no assertion lost; 13/13; 5 notes"}
 {"at": "2026-11-24T22:40:28+01:00", "verdict": "pass", "summary": "Window via app://, no port, desktop check over CDP; 14/14; 1 minor (README), 5 notes"}
+{"at": "2026-11-25T00:23:18+01:00", "verdict": "fail", "summary": "Workspaces work, but the page breaks under server.py (still live until F10); README not updated"}
+{"at": "2026-11-25T00:55:58+01:00", "verdict": "pass", "summary": "Workspaces per spec; server.py page fixed; README updated; 15/15; 6 notes"}

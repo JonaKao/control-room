@@ -3,7 +3,10 @@
 //! window, for the checks and GitHub Actions.
 //!
 //!   control-room [--root <workspace>] [--config DIR]
-//!   control-room serve --root <workspace> [--port N] [--clock ISO] [--config DIR]
+//!   control-room serve [--root <workspace>] [--port N] [--clock ISO] [--config DIR]
+//!
+//! Without --root both show the workspaces saved in the settings (a welcome screen when there are none);
+//! with it, that workspace is shown first, for this run only.
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 use std::path::PathBuf;
@@ -53,10 +56,9 @@ fn main() {
         desktop::run(desktop::Options { root: a.root, config });
         return;
     }
-    let Some(root) = a.root else { usage() };
     let settings = workspaces::load_settings(&config);
     let runner = PythonRunner::new(workspaces::python_path(&settings));
-    let core = Arc::new(Core::new(root, Aaf::new(Box::new(runner), a.clock, fallback_aaf()), config));
+    let core = Arc::new(Core::with_workspaces(a.root, Aaf::new(Box::new(runner), a.clock, fallback_aaf()), config));
     let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
     if let Err(e) = rt.block_on(api::serve(core, a.port)) {
         eprintln!("control-room serve: {}", e);

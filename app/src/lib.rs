@@ -16,16 +16,17 @@ pub mod workspaces;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
 
 use serde_json::{json, Map, Value};
 
 use crate::aaf::Aaf;
 use crate::records as rec;
 
-/// The core: one workspace at a time, and aaf.py with its caches.
+/// The core: the workspace list (one shown at a time), and aaf.py with its caches.
 pub struct Core {
-    root: RwLock<PathBuf>,
+    pub workspaces: workspaces::Workspaces,
+    /// The app window has a system folder picker; `serve` has not.
+    pub can_pick: bool,
     pub aaf: Aaf,
     pub config: PathBuf,
 }
@@ -46,16 +47,20 @@ pub fn fallback_aaf() -> Vec<PathBuf> {
 }
 
 impl Core {
+    /// A core showing `root` for this run (as `--root` does), with settings in `config`.
     pub fn new(root: PathBuf, aaf: Aaf, config: PathBuf) -> Self {
-        Core { root: RwLock::new(absolute(&root)), aaf, config }
+        Self::with_workspaces(Some(root), aaf, config)
     }
 
+    /// A core showing the workspaces of the settings in `config`, and `root` first if given.
+    pub fn with_workspaces(root: Option<PathBuf>, aaf: Aaf, config: PathBuf) -> Self {
+        let workspaces = workspaces::Workspaces::new(config.clone(), root.map(|r| absolute(&r)));
+        Core { workspaces, can_pick: false, aaf, config }
+    }
+
+    /// The workspace shown now. With none (first start), an empty folder name that holds no projects.
     pub fn root(&self) -> PathBuf {
-        self.root.read().unwrap().clone()
-    }
-
-    pub fn set_root(&self, root: &Path) {
-        *self.root.write().unwrap() = absolute(root);
+        self.workspaces.current().unwrap_or_default()
     }
 
     pub fn projects_dir(&self) -> PathBuf {
@@ -63,6 +68,9 @@ impl Core {
     }
 
     pub fn project_names(&self) -> Vec<String> {
+        if self.workspaces.current().is_none() {
+            return Vec::new(); // never the projects folder of wherever the program happens to run
+        }
         rec::project_names(&self.projects_dir())
     }
 

@@ -78,6 +78,8 @@ impl Core {
                 Resp::json(&Value::Array(list), 200)
             }
             "/api/record" => Resp::json(&self.workspace_record(), 200),
+            "/api/workspaces" => Resp::json(&self.workspaces_json(), 200),
+            "/api/settings" => Resp::json(&self.settings_json(), 200),
             "/api/project" => {
                 if !known() {
                     return unknown();
@@ -116,20 +118,65 @@ impl Core {
 
     /// Answer a POST request that already passed the write guard. `body` is at most MAX_BODY bytes.
     pub fn post(&self, path: &str, body: &[u8]) -> Resp {
-        let Some(action) = post_action(path) else { return Resp::not_found() };
+        if !is_write_path(path) {
+            return Resp::not_found();
+        }
         let parsed: Option<Value> = if body.is_empty() { Some(json!({})) } else { serde_json::from_slice(body).ok() };
         let Some(parsed) = parsed else {
             return Resp::json(&json!({"ok": false, "message": "bad request"}), 400);
         };
-        let name = match parsed.get("name") {
-            Some(Value::String(s)) if parsed.is_object() => s.clone(),
-            _ => String::new(),
-        };
-        if !self.project_names().contains(&name) {
-            return Resp::json(&json!({"ok": false, "message": "unknown project"}), 404);
+        // A body that is not an object names nothing (server.py: name "").
+        let text = |k: &str| parsed.as_object().and_then(|o| o.get(k)).and_then(|v| v.as_str()).map(|s| s.to_string());
+        if let Some(action) = post_action(path) {
+            let name = text("name").unwrap_or_default();
+            if !self.project_names().contains(&name) {
+                return Resp::json(&json!({"ok": false, "message": "unknown project"}), 404);
+            }
+            let (code, result) = self.aaf.git_action(&self.root(), &name, action);
+            return Resp::json(&result, code);
         }
-        let (code, result) = self.aaf.git_action(&self.root(), &name, action);
-        Resp::json(&result, code)
+        if path == "/api/settings" {
+            if let Some(p) = text("python") {
+                if let Err(e) = self.workspaces.set_python(&p) {
+                    return Resp::json(&json!({"ok": false, "message": e}), 500);
+                }
+                self.aaf.runner.set_python(self.workspaces.python());
+            }
+            let mut s = self.settings_json();
+            s["ok"] = json!(true);
+            return Resp::json(&s, 200);
+        }
+        let ws = std::path::PathBuf::from(text("path").unwrap_or_default());
+        let result = match path {
+            "/api/workspaces/add" => self.workspaces.add(&ws, text("name").as_deref()).map(|_| ()),
+            "/api/workspaces/select" => self.workspaces.select(&ws),
+            "/api/workspaces/rename" => self.workspaces.rename(&ws, &text("name").unwrap_or_default()),
+            "/api/workspaces/remove" => self.workspaces.remove(&ws),
+            _ => return Resp::not_found(), // /api/workspaces/pick: only the app has a folder picker
+        };
+        match result {
+            Ok(()) => {
+                let mut w = self.workspaces_json();
+                w["ok"] = json!(true);
+                Resp::json(&w, 200)
+            }
+            Err(message) => {
+                let code = if message.contains("not in the list") { 404 } else { 400 };
+                Resp::json(&json!({"ok": false, "message": message}), code)
+            }
+        }
+    }
+
+    /// The workspace list for the page; `can_pick` says whether a system folder picker is available.
+    pub fn workspaces_json(&self) -> Value {
+        let mut w = self.workspaces.to_json();
+        w["can_pick"] = json!(self.can_pick);
+        w
+    }
+
+    /// The settings the page shows: the Python path and which Python was found.
+    pub fn settings_json(&self) -> Value {
+        json!({"python": self.workspaces.python().unwrap_or_default(), "python_found": self.aaf.runner.describe()})
     }
 }
 
@@ -144,7 +191,15 @@ pub fn plain_file_name(file: &str) -> bool {
     matches!((parts.next(), parts.next()), (Some(Component::Normal(n)), None) if n == std::ffi::OsStr::new(file))
 }
 
-/// "push" or "pull" for the two write paths, else None.
+/// The paths that change something: Git push and pull, the workspace list, the settings.
+pub fn is_write_path(path: &str) -> bool {
+    post_action(path).is_some()
+        || path == "/api/settings"
+        || matches!(path, "/api/workspaces/add" | "/api/workspaces/select" | "/api/workspaces/rename"
+                          | "/api/workspaces/remove" | "/api/workspaces/pick")
+}
+
+/// "push" or "pull" for the two Git write paths, else None.
 pub fn post_action(path: &str) -> Option<&'static str> {
     match path {
         "/api/git/push" => Some("push"),
@@ -213,7 +268,7 @@ async fn handle(State(st): State<HttpState>, ConnectInfo(peer): ConnectInfo<Sock
             respond(r.unwrap_or(Resp { status: 500, ctype: "text/plain", body: b"error".to_vec() }), false)
         }
         Method::POST => {
-            if post_action(&path).is_none() {
+            if !is_write_path(&path) {
                 return respond(Resp::not_found(), false);
             }
             if !from_page(peer.ip(), req.headers(), st.port) {
@@ -318,6 +373,32 @@ mod tests {
         for bad in ["", ".", "..", "../x.png", "a/x.png", "a\\x.png", "C:x.png", "C:\\x.png", "\\\\srv\\s\\x.png", ".x.png", "x.png\0"] {
             assert!(!plain_file_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn workspace_endpoints() {
+        let tmp = tempfile::tempdir().unwrap();
+        let ws = tmp.path().join("ws");
+        std::fs::create_dir_all(ws.join("projects").join("demo")).unwrap();
+        let c = Core::with_workspaces(None, Aaf::new(Box::new(NoPython), None, vec![]), tmp.path().join("cfg"));
+        assert_eq!(c.get("/api/projects", "").json_value(), json!([]), "no workspace: no projects, not the folder it runs in");
+        assert_eq!(c.get("/api/workspaces", "").json_value()["current"], Value::Null);
+        let bad = c.post("/api/workspaces/add", br#"{"path": "C:/no/such/folder"}"#);
+        assert_eq!(bad.status, 400);
+        assert_eq!(bad.json_value()["ok"], false);
+        let ok = c.post("/api/workspaces/add", format!(r#"{{"path": {}}}"#, json!(ws.to_string_lossy())).as_bytes());
+        assert_eq!(ok.status, 200);
+        assert_eq!(c.get("/api/projects", "").json_value()[0]["name"], "demo");
+        assert_eq!(c.post("/api/workspaces/select", br#"{"path": "C:/elsewhere"}"#).status, 404);
+        assert_eq!(c.post("/api/workspaces/rename", format!(r#"{{"path": {}, "name": "Home"}}"#, json!(ws.to_string_lossy())).as_bytes()).status, 200);
+        assert_eq!(c.get("/api/workspaces", "").json_value()["workspaces"][0]["name"], "Home");
+        assert_eq!(c.post("/api/workspaces/pick", b"{}").status, 404, "serve has no folder picker");
+        assert_eq!(c.get("/api/workspaces", "").json_value()["can_pick"], false);
+        assert_eq!(c.get("/api/settings", "").json_value()["python_found"], Value::Null);
+        assert!(is_write_path("/api/workspaces/remove") && is_write_path("/api/settings") && !is_write_path("/api/workspaces"));
+        assert_eq!(c.post("/api/workspaces/remove", format!(r#"{{"path": {}}}"#, json!(ws.to_string_lossy())).as_bytes()).status, 200);
+        assert_eq!(c.get("/api/projects", "").json_value(), json!([]));
+        assert!(ws.join("projects").join("demo").is_dir(), "removing a workspace leaves its folder alone");
     }
 
     #[test]
