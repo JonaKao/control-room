@@ -81,7 +81,8 @@ class ReadmeTest(unittest.TestCase):
         for part in ("app/", "control-room serve", "window", "checks/desktop.py",
                      "workspace", "switcher", "settings", "--config", "checks/workspaces.py",
                      "tray", "Quit", "log in", "notification", "checks/notifications.py",
-                     "build.py", "dist folder", "design/icon.svg", "checks/installer.py"):
+                     "build.py", "dist folder", "design/icon.svg", "checks/installer.py",
+                     ".github/workflows/build.yml", "checks/smoke.py", "Not yet tried on a real Mac"):
             self.assertIn(part, built, "'## How it is built' should mention %s" % part)
 
     def test_paths_it_names_exist(self):

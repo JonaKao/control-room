@@ -75,10 +75,10 @@
       "title": "Mac build on GitHub",
       "criteria": ".github/workflows/build.yml on windows-latest and macos-latest: cargo test, build, serve smoke check, installer and .dmg artifacts; a run is green on both (gh run view, link in progress.md); no Windows-only path without a Mac counterpart; unchecked Mac behaviour listed",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:29+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T15:35:13+01:00",
+      "evidence": "GitHub run https://github.com/JonaKao/control-room/actions/runs/45626493353 green on windows-latest and macos-latest (60 Rust tests, smoke check, x64-setup.exe and aarch64.dmg artifacts); checks/smoke.py also local; platform review recorded; unchecked Mac behaviour in README and progress; 18/18; review PASS"
     },
     {
       "id": "F9",

@@ -151,7 +151,15 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   `server.py`, `checks/desktop.py` opens the real window (on Windows) and checks it, and
   `checks/workspaces.py` goes through adding, switching, renaming and removing workspaces, and
   `checks/notifications.py` changes project files the way the agent does and expects one notification each;
-  `checks/installer.py` checks the newest installer in the dist folder.
+  `checks/installer.py` checks the newest installer in the dist folder, and `checks/smoke.py` checks the
+  core without the framework tool.
+- `.github/workflows/build.yml`: on every push to GitHub, Windows and macOS machines there run the Rust
+  tests, build the app (the Windows installer and a Mac `.dmg`), run `checks/smoke.py` on it and keep the
+  installer and the `.dmg` (for Macs with Apple silicon) as downloads of that run. Only this project is on GitHub, without the framework,
+  so the full checks run on the developer's Windows computer. Not yet tried on a real Mac: the icon in the
+  menu bar and its menu, notifications (and the permission a Mac asks for them; clicking one does not open the
+  project there), starting at login, the first opening of an unsigned app (Gatekeeper: right-click, Open),
+  and how the window and Dock behave.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
   changed. Its colours and fonts are the tokens from the approved design.
@@ -216,6 +224,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F8: Mac build on GitHub (first try, review passed)
 - 2026-11-25: F7: Icon and installer (first try, review passed)
 - 2026-11-25: F6: Notifications (2 attempts, review passed)
 - 2026-11-25: F5: Tray and background (first try, review passed)

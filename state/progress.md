@@ -2,6 +2,16 @@
 
 ## Current state
 
+- **Desktop app F8: Mac build on GitHub (2026-11-25)**: `.github/workflows/build.yml` runs on every push on
+  windows-latest and macos-latest: `cargo test`, the Tauri CLI, `cargo tauri build` (NSIS / dmg), `checks/smoke.py` on
+  the release program, and uploads the installer and the `.dmg`. First run green on both:
+  https://github.com/JonaKao/control-room/actions/runs/45626493353 (60 Rust tests and the smoke check on each,
+  `Agent Control Room_0.1.2_x64-setup.exe` 2.9 MB, `Agent Control Room_0.1.2_aarch64.dmg` 3.6 MB as artifacts).
+  New check **Smoke check** (`checks/smoke.py`, also run locally): serve on the fixtures, everything that needs no
+  aaf.py, refusals and the write guard. Platform review: every Windows-only path has its Mac counterpart (decision
+  recorded); the tray now opens its menu on any click on a Mac. Unchecked on a real Mac (also in the README): the
+  menu-bar icon and menu, notifications and their permission (no click route there), start at login, Gatekeeper's
+  first opening of the unsigned app, window and Dock behaviour; the `.dmg` is for Apple silicon only.
 - **Desktop app F7: icon and installer (2026-11-25)**: the human approved `design/icon.svg` (the page's logo ring on the
   dark panel); `python3 build.py` makes every size in `app/icons/` (PNG, ICO, ICNS) from it when it changed, raises the
   version above the last build (`dist/builds.json`), runs `cargo tauri build` (Tauri CLI installed with cargo; the
@@ -333,6 +343,8 @@
 
 ## Next
 
+- F8 review notes: on a Mac a Dock-icon click while the window is hidden probably does nothing (RunEvent::Reopen is not
+  handled; first thing to try on a real Mac); checks/smoke.py, like app_server.py, never reads the core's stderr.
 - F7 review notes: the Installer check reads build output outside Git (fails on a fresh clone until build.py ran); the
   desktop-icon hook puts the icon back on every upgrade; the start-menu capture (0.1.0) still shows the scrollbar fixed
   in 0.1.1; 0.1.2 (window lifted to the front when asked) is built but not installed.
@@ -349,7 +361,8 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F8: Mac build on GitHub Actions (cargo test, build, serve smoke check, installer and .dmg artifacts). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+- Desktop app, next feature F9: plain README for the app (install, first start, SmartScreen/Gatekeeper, tray, notifications, settings).
+- GitHub warns that actions/checkout@v4, setup-python@v5 and upload-artifact@v4 still target Node.js 20 (forced to 24); newer major versions would silence it. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,
