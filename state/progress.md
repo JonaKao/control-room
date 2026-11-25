@@ -2,6 +2,24 @@
 
 ## Current state
 
+- **Desktop app F7: icon and installer (2026-11-25)**: the human approved `design/icon.svg` (the page's logo ring on the
+  dark panel); `python3 build.py` makes every size in `app/icons/` (PNG, ICO, ICNS) from it when it changed, raises the
+  version above the last build (`dist/builds.json`), runs `cargo tauri build` (Tauri CLI installed with cargo; the
+  bundler downloads NSIS once) and copies the installer to `dist/`. NSIS: per user, no admin, Start-menu entry, and a
+  desktop icon from `app/windows/hooks.nsh`. New check **Installer** (`checks/installer.py`): installer for the current
+  version, builds rising, per-user and shortcuts in the generated script, icons from the SVG; failed before the first
+  build. Installed on this machine with the human's OK: 0.1.0, opened from the Start-menu entry
+  (`plots/render-installed-start-menu.png`, window only); 0.1.1 installed over it: settings.json unchanged byte for
+  byte, uninstall entry says 0.1.1, a cold start from the desktop icon shows the human's workspace
+  (`plots/render-installed-desktop-icon.png`). The installed window showed a horizontal scrollbar on real data (the
+  change map's "Show its own records (110)" button could not shrink); fixed (the button shrinks, full text as tooltip)
+  and `checks/desktop.py` now checks for sideways scrolling in the real window at 1280 and 1215 px (failed first).
+  The installed app's settings hold the human's own workspace (added in its window), left as they are.
+  The desktop check's "came back to the front" asked for keyboard focus, which Windows only gives to the program the
+  person used last: it passed twice, then failed every time from a background run. The app now lifts the window above
+  the others when asked (second start, tray, notification), and the check asks for the first place in the stacking
+  order (decision recorded). 0.1.2 is built in dist/ with that change; 0.1.1 is what is installed.
+  Review minor fixed: the Installer check now requires the desktop-icon hook (Tauri's own shortcut is optional).
 - **Desktop app F6: notifications (2026-11-25)**: `watch.rs` looks at every project of every workspace in the settings
   every 5 s (in the app and in `serve`) and raises an event when something becomes true: an unanswered wait that needs
   you (the page's rule), a new draft or the phase becoming waiting with drafts, stuck, done with a passed review, a test
@@ -315,6 +333,9 @@
 
 ## Next
 
+- F7 review notes: the Installer check reads build output outside Git (fails on a fresh clone until build.py ran); the
+  desktop-icon hook puts the icon back on every upgrade; the start-menu capture (0.1.0) still shows the scrollbar fixed
+  in 0.1.1; 0.1.2 (window lifted to the front when asked) is built but not installed.
 - F6 review notes: clicking a notification works while the app runs (not from Action Center later, and the installed
   app's own notification id comes with F7's Start-menu entry); Mac notifications have no click route; a project whose
   phase turns waiting for a question while an already-announced draft is open raises no second decision.
@@ -328,7 +349,7 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F7: icon (design/icon.svg, shown to the human for approval) and the Windows installer. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
+- Desktop app, next feature F8: Mac build on GitHub Actions (cargo test, build, serve smoke check, installer and .dmg artifacts). F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.
 - Colour-blind mode review notes, for the human to decide: (1) the eye button narrows the rail's brand block,

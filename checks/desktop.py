@@ -55,6 +55,8 @@ NAMES = sorted(n for n in os.listdir(os.path.join(FIXTURES, "projects")) if not 
 problems = []
 
 user32 = ctypes.windll.user32 if os.name == "nt" else None
+if user32:  # window handles as pointers, so they compare equal to the ones EnumWindows gives
+    user32.GetTopWindow.restype = user32.GetWindow.restype = user32.GetForegroundWindow.restype = wintypes.HWND
 
 
 def free_port():
@@ -279,6 +281,15 @@ def check_git(pw):
         if "Sent to GitHub" not in app.page.inner_text("body"):
             problems.append("git: the window does not say the push worked")
         app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-git.png"))
+        # The window has real (not overlay) scrollbars: nothing may push the page wider than the window.
+        app.page.wait_for_selector("[data-map-toggle]", timeout=30000)
+        hwnd = app.windows()[0][0]
+        for width in (1280, 1215):  # the default size, and just above the page's 1200 px layout step
+            user32.SetWindowPos(hwnd, 0, 0, 0, width, 820, 0x0002 | 0x0004)  # SWP_NOMOVE | SWP_NOZORDER
+            app.page.wait_for_timeout(700)
+            wide = app.page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+            if wide > 0:
+                problems.append("git: at %d px the page is %d px wider than the window (sideways scrolling)" % (width, wide))
         set_phase(root, "image-classifier", "checking")
         code, d = post(app, "pull", "image-classifier")
         if code != 409:
@@ -330,6 +341,20 @@ def check_restart(pw, config, first):
 
 def visible(hwnd):
     return bool(user32.IsWindowVisible(hwnd))
+
+
+def front_window():
+    """The window in front: the first visible, titled window in the stacking order that is not kept on
+    top of everything (like the taskbar). Keyboard focus is not asked for: Windows gives it only to the
+    program the person used last, which a check started in the background never is."""
+    h = user32.GetTopWindow(0)
+    while h:
+        if user32.IsWindowVisible(h) and not (user32.GetWindowLongW(h, -20) & 0x8):  # WS_EX_TOPMOST
+            title = ctypes.create_unicode_buffer(8)
+            if user32.GetWindowTextW(h, title, 8):
+                return h
+        h = user32.GetWindow(h, 2)  # GW_HWNDNEXT
+    return None
 
 
 def wait_tray(app, cond, seconds=12):
@@ -396,8 +421,8 @@ def check_tray(pw):
             time.sleep(0.2)
         if not visible(hwnd):
             problems.append("second start: the running app's window did not come back")
-        elif user32.GetForegroundWindow() != hwnd:
-            problems.append("second start: the window came back but not to the front")
+        elif front_window() != hwnd:
+            problems.append("second start: the window came back but not in front of the other windows (front: %r)" % front_window())
         app.page.screenshot(path=os.path.join(PLOTS, "render-desktop-tray-back.png"))
         # The tray's workspace entry opens the window on that workspace.
         app.close_window()

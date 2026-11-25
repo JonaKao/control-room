@@ -21,3 +21,4 @@
 {"at": "2026-11-25T00:55:58+01:00", "verdict": "pass", "summary": "Workspaces per spec; server.py page fixed; README updated; 15/15; 6 notes"}
 {"at": "2026-11-25T02:04:33+01:00", "verdict": "pass", "summary": "Tray, close to tray, single instance, login start per spec; 15/15; 5 notes"}
 {"at": "2026-11-25T02:50:56+01:00", "verdict": "pass", "summary": "Notifications per spec; 16/16; 1 minor (two decision notifications for one /fix draft), 4 notes"}
+{"at": "2026-11-25T10:30:29+01:00", "verdict": "pass", "summary": "Icon and installer per spec; 17/17; 1 minor (desktop-icon test too weak), 5 notes"}

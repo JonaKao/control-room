@@ -87,7 +87,11 @@ pub fn show_main(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
         let _ = w.unminimize();
+        // Windows lets only the app the person started take the front; the window is shown because the
+        // person asked (a second start, the tray, a notification), so lift it above the others briefly.
+        let _ = w.set_always_on_top(true);
         let _ = w.set_focus();
+        let _ = w.set_always_on_top(false);
     }
 }
 

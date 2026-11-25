@@ -82,6 +82,11 @@
       "name": "Notifications",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/notifications.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/notifications.py; else python3 checks/notifications.py; fi",
       "timeout": 300
+    },
+    {
+      "name": "Installer",
+      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/installer.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/installer.py; else python3 checks/installer.py; fi",
+      "timeout": 60
     }
   ]
 }

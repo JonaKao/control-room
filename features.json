@@ -65,10 +65,10 @@
       "title": "Icon and installer",
       "criteria": "design/icon.svg approved by the human (decision recorded), app/icons generated from it; build.py produces dist/Agent Control Room_<version>_x64-setup.exe, per-user, desktop and Start-menu shortcuts, version bumped (Installer check); installed once with the human's OK, screenshot; reinstall keeps settings",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:29+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T10:54:18+01:00",
+      "evidence": "Icon approved by the human (decision); build.py makes app/icons from design/icon.svg and dist/Agent Control Room_0.1.x_x64-setup.exe with rising versions; checks/installer.py (per user, Start-menu entry, desktop-icon hook, icons); installed 0.1.0 then 0.1.1 over it with the human's OK: Start-menu and desktop-icon captures, settings.json unchanged; 17/17; review PASS"
     },
     {
       "id": "F8",

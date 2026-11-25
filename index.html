@@ -321,7 +321,8 @@ pre.out { margin: 6px 0 0; padding: 10px 12px; background: var(--panel2); border
   .action .choice .why { display: block; margin: 1px 0 0; }
 }
 .map-intro { margin: 0; font-size: 11.5px; color: var(--muted); }
-.map-toggle { border: 1px solid var(--rule); background: transparent; color: var(--accent); border-radius: 99px; padding: 1px 9px; font-size: 11.5px; font-weight: 600; cursor: pointer; flex: none; }
+.map-toggle { border: 1px solid var(--rule); background: transparent; color: var(--accent); border-radius: 99px; padding: 1px 9px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-toggle[aria-pressed="false"] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .map { position: relative; width: 100%; border-radius: 6px; overflow: hidden; background: var(--bg); }
 .map-group { position: absolute; border-radius: 4px; background: var(--bg); }
@@ -1334,8 +1335,9 @@ function mapShell() {
     return head() + `<p class="empty" data-empty data-map-ready>This project is not saved with Git yet, so there is no history of changes to map. Once the agent saves its first version, every file appears here as a tile.</p></section>`;
   const all = d.files || [], shown = mapShowAll ? all : all.filter(f => !MAP_HIDE.some(p => f.path.startsWith(p)));
   const hidden = all.length - shown.length;
-  const toggle = hidden || mapShowAll ? `<button type="button" class="map-toggle" data-map-toggle aria-pressed="${!mapShowAll}">${
-    mapShowAll ? "Hide its own records" : `Show its own records (${hidden})`}</button>` : "";
+  const toggleWords = mapShowAll ? "Hide its own records" : `Show its own records (${hidden})`;
+  const toggle = hidden || mapShowAll ? `<button type="button" class="map-toggle" data-map-toggle aria-pressed="${!mapShowAll}" title="${toggleWords}">${
+    toggleWords}</button>` : "";
   const pick = shown.find(f => f.path === mapPick);
   const detail = pick ? `<div class="map-detail" data-file-detail>
       <p class="path">${esc(pick.path)}</p><p class="sub">${esc(sizeWords(pick.bytes || 0))}</p>

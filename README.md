@@ -140,12 +140,18 @@ python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwrigh
   and the gear opens the settings (add, rename and remove workspaces; which Python to use). The
   list is kept in the app's own settings file, `settings.json` in its settings folder
   (`--config <folder>` points it elsewhere, which the checks use).
+  `python3 build.py` (in this folder) builds the app and puts its Windows installer in the dist folder
+  (`Agent Control Room_<version>_x64-setup.exe`, for your user only, without admin rights, with a
+  Start-menu entry and a desktop icon); every build gets a higher version, and the icons in
+  `app/icons/` are made from `design/icon.svg`. It needs the Tauri tool once:
+  `cargo install tauri-cli --version "^2" --locked`.
   `control-room serve [--root <workspace>]` runs the same core on this computer only, with no
   window, for the checks. The checks build it with Rust (`rustup`, then `cargo`), so Rust must be
   installed to run them. `checks/parity.py` confirms the core gives the same answers as
   `server.py`, `checks/desktop.py` opens the real window (on Windows) and checks it, and
   `checks/workspaces.py` goes through adding, switching, renaming and removing workspaces, and
-  `checks/notifications.py` changes project files the way the agent does and expects one notification each.
+  `checks/notifications.py` changes project files the way the agent does and expects one notification each;
+  `checks/installer.py` checks the newest installer in the dist folder.
 - `index.html`: the whole page in one file (HTML, CSS and plain JavaScript, no build step,
   no libraries). It asks the server for fresh data every 2.5 seconds and redraws only what
   changed. Its colours and fonts are the tokens from the approved design.
@@ -201,6 +207,7 @@ Every change must pass these before it is committed:
 - **Desktop window**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi`
 - **Workspaces**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/workspaces.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/workspaces.py; else python3 checks/workspaces.py; fi`
 - **Notifications**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/notifications.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/notifications.py; else python3 checks/notifications.py; fi`
+- **Installer**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/installer.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/installer.py; else python3 checks/installer.py; fi`
 <!-- aaf:checks:end -->
 
 ## History
@@ -208,6 +215,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F7: Icon and installer (first try, review passed)
 - 2026-11-25: F6: Notifications (2 attempts, review passed)
 - 2026-11-25: F5: Tray and background (first try, review passed)
 - 2026-11-25: F4: Several workspaces (3 attempts, review passed)

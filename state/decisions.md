@@ -245,3 +245,19 @@ watch.rs keeps each project's last look (phase, drafts, an unanswered wait that 
 ## 2026-11-25: Fixed: one decision notification per draft save
 
 F6 review minor: /fix saves a draft first and sets the phase to waiting later, which raised two decision notifications. Attempt 1 (skip the phase event when every draft already raised one) failed review: draft ids are reused (continue re-saves the same id, each /fix starts at fix-1), so a re-saved draft raised nothing at all. Attempt 2, kept: drafts are keyed by id@created#rounds (aaf.py draft save sets both on every save), and the phase event is skipped only when every current draft save was already raised. Rust test a_fix_set_aside_is_one_decision_even_when_the_phase_follows_later covers draft-then-phase, drafts present at start, an id saved again after removal and while waiting (fails with id-only keys). Fix review PASS.
+
+## 2026-11-25: Icon: the page's logo ring, approved by the human
+
+Human approved on 2026-11-25 (shown as a PNG at 256, 32 and 16 px, also on a dark taskbar): design/icon.svg, a ring of the four stage colours of the page (change #5B93E6, test #F0A92E, review #A07CF0, pass #35C08E, in the logo's order and shares) on the dark panel colour #0C1320 with a #24324A edge, rounded square. Every size in app/icons is generated from it by build.py; it replaces the F3 placeholder. The tray's dot version is drawn on the 32 px icon at run time.
+
+## 2026-11-25: Installer: build.py with the Tauri CLI, NSIS per user, desktop icon by hook
+
+build.py renders design/icon.svg with Playwright into every icon size (ICO and ICNS assembled from PNGs, no extra image library), bumps the patch version when it is not above the last build in dist/builds.json (tauri.conf.json and Cargo.toml together), runs cargo tauri build and copies the installer to dist/. NSIS installs per user (installMode currentUser); Tauri's script makes the Start-menu entry, and app/windows/hooks.nsh adds the desktop icon after install and removes it on uninstall (Tauri's own desktop shortcut depends on a finish-page checkbox). checks/installer.py checks the built result and the generated script; it does not build (a release build takes minutes). Rejected: MSI (needs WiX, admin by default), building inside the check.
+
+## 2026-11-25: Desktop check: in front means first in the stacking order, not keyboard focus
+
+checks/desktop.py asked that, after a second start, the first window be Windows' foreground window. It passed twice and then failed every time: Windows only gives the foreground to the program the person used last, and the second start in the check is launched by a background script, so the result depended on what had focus on the desktop, not on the app. The spec asks that the first window 'comes to the front'. The app now lifts the window above the others when the person asks for it (second start, tray, notification: always-on-top on and off around set_focus), and the check asks that it be the first visible, titled, non-topmost window in the stacking order. When a person double-clicks the icon, Windows also hands over the keyboard focus (the second start calls AllowSetForegroundWindow). This replaces the focus assertion; recorded because it changes what the check asserts.
+
+## 2026-11-25: Fixed: the Installer check sees the desktop-icon hook
+
+F7 review minor: the check found CreateShortcut "$DESKTOP in Tauri's own template (which only runs it if a finish-page box is ticked), so it passed without our hook. Now it requires bundle.windows.nsis.installerHooks, an uncommented $DESKTOP CreateShortcut inside NSIS_HOOK_POSTINSTALL in that file, and the generated script's !include of it; shown to fail with the hook removed from the config and with the line commented out. desktop.py also reads window handles as HWND so they compare equal. Fix review PASS.

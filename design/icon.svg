@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Agent Control Room</title>
+  <!-- The control room's own logo: the agent's loop as a ring of its stage colours
+       (change, test, review, pass, as in index.html) on the dark panel colour. -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#0C1320"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="none" stroke="#24324A" stroke-width="6"/>
+  <g transform="rotate(-90 128 128)" fill="none" stroke-width="46">
+    <circle cx="128" cy="128" r="66" pathLength="100" stroke="#5B93E6" stroke-dasharray="30 70" stroke-dashoffset="0"/>
+    <circle cx="128" cy="128" r="66" pathLength="100" stroke="#F0A92E" stroke-dasharray="25 75" stroke-dashoffset="-30"/>
+    <circle cx="128" cy="128" r="66" pathLength="100" stroke="#A07CF0" stroke-dasharray="20 80" stroke-dashoffset="-55"/>
+    <circle cx="128" cy="128" r="66" pathLength="100" stroke="#35C08E" stroke-dasharray="25 75" stroke-dashoffset="-75"/>
+  </g>
+</svg>
