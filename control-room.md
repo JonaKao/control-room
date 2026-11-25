@@ -12,8 +12,8 @@ includes people who do not know the code behind it.
 
 ## How it works
 
-- The core (`app/src/`, Rust; the router is `api.rs`; the earlier Python `server.py` answers the same until it
-  is retired, and `checks/parity.py` compares them). It reads files from
+- The core (`app/src/`, Rust; the router is `api.rs`; it replaced the Python `server.py` in November 2026, with
+  the same answers). It reads files from
   `<workspace>/projects/*/state/` and `*/plots/` and never writes them itself. Endpoints:
   `/` (the page), `/api/projects`, `/api/project?name=`, `/plot?project=&file=`,
   `/api/git?name=[&fresh=1]` (runs `framework/aaf.py git info <name> --fetch`, cached 15 s),
@@ -77,8 +77,7 @@ Install the app from the newest installer (`python3 build.py`, then `dist/Agent 
 and open it from the Start menu. For development: `cd app && cargo run` opens the window (add `-- --root <workspace>`
 to show one workspace for this run); `cargo run -- serve --root ../fixtures/workspace --port 8770` serves the fixtures
 at http://127.0.0.1:8770. Rust (rustup) is needed; `build.py` also needs the Tauri CLI
-(`cargo install tauri-cli --version "^2" --locked`). Until it is retired, `python3 dashboard/server.py` from the
-workspace root still starts the browser version.
+(`cargo install tauri-cli --version "^2" --locked`).
 
 ## How to check
 
@@ -86,8 +85,9 @@ workspace root still starts the browser version.
 1. **Server API**: tests of the Rust core over HTTP (`control-room serve`, started by
    `checks/app_server.py`) against the fixture workspace (`tests/test_api.py`), the
    Git endpoints against a temporary workspace with real repositories (`tests/test_git.py`),
-   that no check or test still imports `server.py` and no assertion was lost moving them to the
-   core (`tests/test_core_only.py`),
+   that no check or test imports the retired `server.py` and no assertion was lost moving them to the
+   core (`tests/test_core_only.py`), that the browser version stays retired and nothing points to it
+   (`tests/test_retired.py`),
    that each test file runs fully on its own (`tests/test_layout.py`), that built roadmap items
    stay marked done (`tests/test_roadmap.py`) and that `README.md` follows the template, names
    every part of the page and only points to files that exist (`tests/test_readme.py`), and that every
@@ -138,18 +138,15 @@ workspace root still starts the browser version.
    and 3:1 against the panel. It saves `plots/render-colourblind-*.png`, including deuteranopia simulations.
 12. **Rust core**: `cargo test` in `app/` (records, feed, reasons, caches with fake runners, the router and
    write guards, workspaces and settings, the needs-you rule, tray model, events).
-13. **Same answers as before**: `checks/parity.py` compares every GET of `control-room serve` with `server.py` on
-   four workspaces, push and pull, the page on `server.py`, and scans `app/src` for a `git` command (until the
-   browser version is retired).
-14. **Desktop window**: `checks/desktop.py` (Windows) drives the real window over CDP: window and no port, all
+13. **Desktop window**: `checks/desktop.py` (Windows) drives the real window over CDP: window and no port, all
    fixtures, Push/Pull, restart memory, tray and dot, second start, hidden start, start at login, the
    notification-click route, sideways scrolling in the real window. Saves `plots/render-desktop-*.png`.
-15. **Workspaces**: `checks/workspaces.py`: welcome, refusal, add, switch, rename, remove, restart, missing
+14. **Workspaces**: `checks/workspaces.py`: welcome, refusal, add, switch, rename, remove, restart, missing
    folder, Python line, switcher and gear fit the rail.
-16. **Notifications**: `checks/notifications.py`: file changes on two workspace copies give one event each.
-17. **Installer**: `checks/installer.py`: the newest installer in `dist/` for the current version, per user,
+15. **Notifications**: `checks/notifications.py`: file changes on two workspace copies give one event each.
+16. **Installer**: `checks/installer.py`: the newest installer in `dist/` for the current version, per user,
    Start-menu entry and desktop-icon hook, icons from `design/icon.svg` (run `python3 build.py` first).
-18. **Smoke check**: `checks/smoke.py`: `serve` on the fixtures without the framework tool (also on GitHub).
+17. **Smoke check**: `checks/smoke.py`: `serve` on the fixtures without the framework tool (also on GitHub).
 
 GitHub Actions (`.github/workflows/build.yml`) runs the Rust tests, the build and the smoke check on Windows
 and macOS on every push and keeps the installer and the `.dmg`.
@@ -208,7 +205,6 @@ sits in as the workspace, so this needs no changes to aaf.py.
 
 - The app's core must not write project files itself (it writes only its own settings folder) and must
   keep rejecting path traversal. Its only change to a project is Git push/pull through `aaf.py`, behind the
-  page-only checks. Never run `git` from the core (no `Command::new("git")` in `app/src`). The same holds
-  for `server.py` until it is retired.
+  page-only checks. Never run `git` from the core (no `Command::new("git")` in `app/src`).
 - Use the icon in `design/icon.svg` only as approved; a new design needs the human's approval again.
 - `framework/aaf.py` is outside this project; ask before changing the data model.

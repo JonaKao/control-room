@@ -24,3 +24,4 @@
 {"at": "2026-11-25T10:30:29+01:00", "verdict": "pass", "summary": "Icon and installer per spec; 17/17; 1 minor (desktop-icon test too weak), 5 notes"}
 {"at": "2026-11-25T15:35:13+01:00", "verdict": "pass", "summary": "Workflow builds, tests, smoke-checks and uploads on Windows and macOS; run green; 18/18; 5 notes"}
 {"at": "2026-11-25T16:18:29+01:00", "verdict": "pass", "summary": "README explains the app plainly and correctly; tests ask for the new names; 18/18; 4 notes"}
+{"at": "2026-11-25T17:03:12+01:00", "verdict": "pass", "summary": "Browser version retired, guides point to the app, parity removed with decision; 17/17; 6 notes"}

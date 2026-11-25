@@ -103,10 +103,11 @@ class ReadmeTest(unittest.TestCase):
         # Paths inside a longer command count; code blocks are commands to copy, not references, and must
         # not throw off which backticks pair up; a span that is one file name may contain a space.
         sample = ("Run `python3 framework/gone.py stats <name>`, see `/task`.\n\n```\n.venv/bin/pip install x\n```\n\n"
-                  "Then read `old/notes.md` or double-click `Open Dashboard.command`.\n")
-        self.assertEqual(named_paths(sample), {"framework/gone.py", "old/notes.md", "Open Dashboard.command"})
+                  "Then read `old/notes.md` or double-click `Open Old Notes.command`.\n")
+        self.assertEqual(named_paths(sample), {"framework/gone.py", "old/notes.md", "Open Old Notes.command"})
         self.assertFalse(exists("framework/gone.py"))
-        self.assertTrue(exists("aaf.py") and exists("Open Dashboard.command"))
+        self.assertTrue(exists("aaf.py"))  # a bare file name is found anywhere in the workspace
+        self.assertFalse(exists("Open Old Notes.command"))
 
     def test_generated_sections_are_not_references(self):
         # The generated sections list check commands (.venv/bin/python checks/x.py; ...); like code blocks,

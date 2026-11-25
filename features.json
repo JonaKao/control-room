@@ -95,10 +95,10 @@
       "title": "Browser version retired",
       "criteria": "server.py, dashboard/ and Open Dashboard.command removed; workspace README and framework/REFERENCE.md point to the app; parity check removed with a recorded decision; every other check passes; DONE.md server line says the app's core",
       "spec": "specs/desktop-app.md",
-      "passes": false,
+      "passes": true,
       "added": "2026-11-24T20:13:29+01:00",
-      "passed_at": null,
-      "evidence": ""
+      "passed_at": "2026-11-25T17:03:12+01:00",
+      "evidence": "tests/test_retired.py: server.py, checks/parity.py, dashboard/ and Open Dashboard.command gone, no check needs them, workspace README and framework/REFERENCE.md point to the app, DONE.md says the app's core; parity check removed with recorded decision; 17/17; review PASS"
     }
   ]
 }

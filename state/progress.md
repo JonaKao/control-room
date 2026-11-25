@@ -2,6 +2,15 @@
 
 ## Current state
 
+- **Desktop app F10: browser version retired (2026-11-25)**: removed `server.py`, `checks/parity.py`, the workspace's
+  `dashboard/` and `Open Dashboard.command`; the workspace README (start step 3, repository table) and
+  `framework/REFERENCE.md` point to the app; the parity check left `project.json` (decision: it compared with
+  server.py; its other parts stay covered by Rust tests, `tests/test_git.py` and `checks/smoke.py`). DONE.md's server
+  line now says "the app's core". The page's offline message says the core is not reachable and to reopen the app.
+  New `tests/test_retired.py` (failed first): the old files are gone, no check needs them, the guides point to the app,
+  DONE.md's wording. `tests/test_readme.py`'s path-finder example no longer names the removed file (decision).
+  Installer 0.1.4 built. Not changed, outside the spec's list: the workspace's `.claude/launch.json` still starts
+  `dashboard/server.py` (a preview entry for Claude Code's browser pane); a question for the human.
 - **Desktop app F9: plain README for the app (2026-11-25)**: README "How to run" now explains the app for someone
   new: getting the installer (GitHub Actions artifacts or `python3 build.py`), installing on Windows (SmartScreen:
   More info, Run anyway) and on a Mac (Gatekeeper: right-click, Open), the first start (Choose a folder…), the tray,
@@ -352,6 +361,7 @@
 
 ## Next
 
+- F10 review note: the page's offline message (core not reachable) names the Start menu and the tray, which a Mac and `serve` do not have.
 - F9 review note: the README says a click on the tray icon opens the window; on a Mac it opens the menu.
 - F8 review notes: on a Mac a Dock-icon click while the window is hidden probably does nothing (RunEvent::Reopen is not
   handled; first thing to try on a real Mac); checks/smoke.py, like app_server.py, never reads the core's stderr.
@@ -371,7 +381,7 @@
   scheduler repo (its class's tests now depend on each other); `tests/test_core_only.py` counts a Rust test twice if
   a file names it twice (test_api: 149 counted, 139 without repeats, baseline 110); `checks/app_server.py` never reads
   the core's output after its first line (would stall if the core ever logged every request).
-- Desktop app, next feature F10: retire the browser version (server.py, dashboard/, Open Dashboard.command; workspace README and framework/REFERENCE.md point to the app; parity check removed).
+- Desktop app: all ten features of specs/desktop-app.md are done. Open: the human's answer on `.claude/launch.json`; trying the app on a real Mac (see the unchecked list in the README).
 - GitHub warns that actions/checkout@v4, setup-python@v5 and upload-artifact@v4 still target Node.js 20 (forced to 24); newer major versions would silence it. F1 review notes for later: the no-git scan matches only `Command::new("git")`;
   broken UTF-8 in a record is read
   with replacement characters (server.py answered 500); the timestamp parser copies `fromisoformat` by hand.

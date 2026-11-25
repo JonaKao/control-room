@@ -1095,7 +1095,7 @@ async function gitDo(action) {
       headers: { "Content-Type": "application/json", "X-AAF-Request": "control-room" }, body: JSON.stringify({ name }) });
     const d = await res.json().catch(() => ({}));
     ok = res.ok && d.ok; text = d.message || "";
-  } catch (e) { text = "The dashboard server did not answer."; }
+  } catch (e) { text = "The control room's core did not answer."; }
   gitBusy = null;
   if (name !== current) return;
   gitMsg = { ok, text: ok ? (action === "push" ? "Sent to GitHub." : "Got the newest versions from GitHub.")
@@ -1866,7 +1866,7 @@ function wsCurrent() { return ((wsInfo && wsInfo.workspaces) || []).find(w => w.
 async function loadWorkspaces() {
   const res = await fetch("/api/workspaces");
   if (res.status === 404) {
-    // A server without a workspace list (the browser version, server.py): one workspace, no switcher.
+    // A core without a workspace list (an older one): one workspace, no switcher.
     if (!wsInfo || !wsInfo.single) { wsInfo = { single: true, workspaces: [] }; wsSig = ""; $("[data-ws-bar]").hidden = true; }
     return;
   }
@@ -2092,7 +2092,7 @@ async function tick() {
     if (gitFor !== current && !gitLoading) { gitLoading = true; loadGit(false).finally(() => { gitLoading = false; }); }
     if (mapFor !== current && !mapLoading) { mapLoading = true; loadMap().finally(() => { mapLoading = false; }); }
   } catch (e) {
-    $("#main").innerHTML = `<div class="welcome"><h2>Dashboard server not reachable</h2><p>Start it from the workspace folder with <code>python3 dashboard/server.py</code>, then reload this page.</p></div>`;
+    $("#main").innerHTML = `<div class="welcome"><h2>The control room's core is not reachable</h2><p>Close the app with Quit in its tray menu and open it again from the Start menu.</p></div>`;
   }
 }
 let gitLoading = false;

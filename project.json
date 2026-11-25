@@ -64,11 +64,6 @@
       "timeout": 600
     },
     {
-      "name": "Same answers as before",
-      "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi",
-      "timeout": 600
-    },
-    {
       "name": "Desktop window",
       "cmd": "if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi",
       "timeout": 600

@@ -147,8 +147,7 @@ cd projects/control-room
 python3 -m venv .venv && .venv/bin/pip install playwright && .venv/bin/playwright install chromium
 ```
 
-(On Windows the programs are in .venv\Scripts instead of .venv/bin.) Until it is retired, the older browser
-version still starts from the workspace root with `python3 dashboard/server.py`.
+(On Windows the programs are in .venv\Scripts instead of .venv/bin.)
 
 ## How it is built
 
@@ -177,8 +176,6 @@ version still starts from the workspace root with `python3 dashboard/server.py`.
   `checks/notifications.py` changes project files the way the agent does and expects one notification each,
   `checks/installer.py` checks the newest installer in the dist folder, and `checks/smoke.py` checks the core
   without the framework tool.
-- `server.py`: the earlier browser version (a standard-library Python server for the same page), kept until it
-  is retired; `checks/parity.py` confirms the app's core answers exactly as it did.
 - `.github/workflows/build.yml`: on every push to GitHub, Windows and macOS machines there run the Rust
   tests, build the app (the Windows installer and a Mac `.dmg`), run `checks/smoke.py` on it and keep the
   installer and the `.dmg` (for Macs with Apple silicon) as downloads of that run. Only this project is on GitHub, without the framework,
@@ -237,7 +234,6 @@ Every change must pass these before it is committed:
 - **Time estimate**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/estimate.py; else python3 checks/estimate.py; fi`
 - **Colour-blind mode**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/colour_blind.py; else python3 checks/colour_blind.py; fi`
 - **Rust core**: `cd app && PATH="$HOME/.cargo/bin:$PATH" cargo test --quiet`
-- **Same answers as before**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/parity.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/parity.py; else python3 checks/parity.py; fi`
 - **Desktop window**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/desktop.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/desktop.py; else python3 checks/desktop.py; fi`
 - **Workspaces**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/workspaces.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/workspaces.py; else python3 checks/workspaces.py; fi`
 - **Notifications**: `if [ -x .venv/bin/python ]; then .venv/bin/python checks/notifications.py; elif [ -x .venv/Scripts/python.exe ]; then .venv/Scripts/python.exe checks/notifications.py; else python3 checks/notifications.py; fi`
@@ -250,6 +246,7 @@ Every change must pass these before it is committed:
 Finished tasks, newest first. Generated from the project's records on every commit.
 
 <!-- aaf:history:start -->
+- 2026-11-25: F10: Browser version retired (first try, review passed)
 - 2026-11-25: F9: Plain README for the app (first try, review passed)
 - 2026-11-25: F8: Mac build on GitHub (first try, review passed)
 - 2026-11-25: F7: Icon and installer (first try, review passed)

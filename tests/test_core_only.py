@@ -1,4 +1,4 @@
-"""The checks and tests run against the Rust core (`control-room serve`), not server.py, and moving
+"""The checks and tests run against the Rust core (`control-room serve`), not the retired server.py, and moving
 them there removed no assertion.
 
 Assertions are counted per file as before the move (feature 2): lines with `self.assert...`,
@@ -17,8 +17,8 @@ BEFORE = {
     "checks/git_section.py": 41, "checks/glance.py": 30, "checks/layout.py": 42, "checks/render.py": 6,
     "checks/timeline.py": 38, "checks/track_record.py": 57,
 }
-# Only the parity check may still start server.py, to compare against it (until feature 10).
-MAY_IMPORT_SERVER = {"checks/parity.py"}
+# server.py is retired (feature 10): nothing may import it.
+MAY_IMPORT_SERVER = set()
 ASSERTION = re.compile(r"self\.assert|problems\.append|bad\.append|bad \+=|problems \+=")
 NAMED = re.compile(r"""(?:assertRustPassed|rust_test)\(\s*["']([\w:]+)["']""")
 
